@@ -25,6 +25,8 @@ const admin = createClient<Database>(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY, 
 let n = 0;
 async function shot(page: Page, slug: string) {
   await page.waitForLoadState("networkidle");
+  await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+  await page.evaluate(() => window.scrollTo(0, 0));
   const file = `${OUT}/${String(++n).padStart(2, "0")}-${slug}.jpg`;
   await page.screenshot({ path: file, type: "jpeg", quality: 70, fullPage: true });
   console.log(`  shot ${file}`);
@@ -248,9 +250,10 @@ async function main() {
     await d1.page.goto(`${BASE}/driver`);
     await shot(d1.page, "driver1-after-delivered-and-failed");
 
+    await d1.page.goto(`${BASE}/admin/orders`);
+    await shot(d1.page, "driver1-forbidden-admin-orders-redirect");
     await d1.page.goto(`${BASE}/admin`);
-    await d1.page.waitForLoadState("networkidle");
-    await shot(d1.page, "driver1-forbidden-admin-redirect");
+    await shot(d1.page, "driver1-forbidden-admin-root");
 
     await mgr.page.goto(`${BASE}/admin/dispatch`);
     await shot(mgr.page, "admin-dispatch-failed-order");
