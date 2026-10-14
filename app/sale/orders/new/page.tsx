@@ -1,5 +1,11 @@
 import { ActionForm } from "@/components/ActionForm";
-import { Button, Card, Field, inputClass, PageTitle } from "@/components/ui";
+import { PageTitle } from "@/components/page-title";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -24,8 +30,8 @@ export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sa
     <>
       <PageTitle>Tạo đơn cho khách</PageTitle>
       <form className="mb-4 flex gap-2">
-        <input name="phone" type="tel" defaultValue={phone} placeholder="SĐT khách" required className={inputClass} />
-        <Button type="submit" tone="secondary">
+        <Input name="phone" type="tel" defaultValue={phone} placeholder="SĐT khách" required />
+        <Button type="submit" variant="outline">
           Tìm khách
         </Button>
       </form>
@@ -40,53 +46,62 @@ export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sa
         </p>
       )}
       <Card>
-        <ActionForm action={placeStaffOrder} className="space-y-3" key={phone}>
-          <Field label="Số điện thoại">
-            <input name="phone" type="tel" required defaultValue={phone} className={inputClass} />
-          </Field>
-          <Field label="Họ tên">
-            <input name="name" required defaultValue={found?.name ?? ""} className={inputClass} />
-          </Field>
-          <Field label="Địa chỉ">
-            <input name="address" required defaultValue={found?.default_address ?? ""} className={inputClass} />
-          </Field>
-          <Field label="Quận/Huyện">
-            <select name="district" required defaultValue={found?.default_district ?? ""} className={inputClass}>
-              <option value="" disabled>
-                Chọn quận/huyện
-              </option>
-              {DISTRICTS.map((d) => (
-                <option key={d}>{d}</option>
-              ))}
-            </select>
-          </Field>
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-gray-700">Sản phẩm (kg)</legend>
-            {products.map((p) => (
-              <label key={p.id} className="flex items-center justify-between gap-2 text-sm">
-                <span>
-                  {p.name} <span className="text-gray-500">({formatVnd(p.price_per_kg)}/kg)</span>
-                </span>
-                <input
-                  name={`qty_${p.id}`}
-                  aria-label={`Số kg ${p.name}`}
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step={0.5}
-                  placeholder="0"
-                  className="w-24 rounded-lg border border-gray-300 px-2 py-2 text-right text-base"
-                />
-              </label>
-            ))}
-          </fieldset>
-          <Field label="Ghi chú">
-            <textarea name="note" rows={2} className={inputClass} />
-          </Field>
-          <Button type="submit" className="w-full">
-            Tạo đơn
-          </Button>
-        </ActionForm>
+        <CardContent>
+          <ActionForm action={placeStaffOrder} key={phone}>
+            <FieldGroup className="gap-4">
+              <Field>
+                <FieldLabel htmlFor="order-phone">Số điện thoại</FieldLabel>
+                <Input id="order-phone" name="phone" type="tel" required defaultValue={phone} />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="order-name">Họ tên</FieldLabel>
+                <Input id="order-name" name="name" required defaultValue={found?.name ?? ""} />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="order-address">Địa chỉ</FieldLabel>
+                <Input id="order-address" name="address" required defaultValue={found?.default_address ?? ""} />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="order-district">Quận/Huyện</FieldLabel>
+                <NativeSelect id="order-district" name="district" required defaultValue={found?.default_district ?? ""} className="w-full">
+                  <NativeSelectOption value="" disabled>
+                    Chọn quận/huyện
+                  </NativeSelectOption>
+                  {DISTRICTS.map((d) => (
+                    <NativeSelectOption key={d}>{d}</NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </Field>
+              <FieldSet className="gap-2">
+                <FieldLegend variant="label">Sản phẩm (kg)</FieldLegend>
+                {products.map((p) => (
+                  <label key={p.id} className="flex items-center justify-between gap-2 text-sm">
+                    <span>
+                      {p.name} <span className="text-muted-foreground">({formatVnd(p.price_per_kg)}/kg)</span>
+                    </span>
+                    <Input
+                      name={`qty_${p.id}`}
+                      aria-label={`Số kg ${p.name}`}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={0.5}
+                      placeholder="0"
+                      className="w-24 text-right"
+                    />
+                  </label>
+                ))}
+              </FieldSet>
+              <Field>
+                <FieldLabel htmlFor="order-note">Ghi chú</FieldLabel>
+                <Textarea id="order-note" name="note" rows={2} />
+              </Field>
+              <Button type="submit" size="lg" className="w-full">
+                Tạo đơn
+              </Button>
+            </FieldGroup>
+          </ActionForm>
+        </CardContent>
       </Card>
     </>
   );

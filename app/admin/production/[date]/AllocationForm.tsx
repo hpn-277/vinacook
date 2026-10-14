@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { ActionForm } from "@/components/ActionForm";
-import { Button } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import type { ActionResult } from "@/lib/action";
 import { formatKg } from "@/lib/domain/money";
 
@@ -33,67 +36,61 @@ export function AllocationForm({
   return (
     <ActionForm action={action} className="space-y-3">
       <input type="hidden" name="date" value={date} />
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[480px] text-sm">
-          <thead>
-            <tr className="text-left">
-              <th className="p-2">Sản phẩm</th>
-              <th className="p-2">Cần</th>
-              {factories.map((f) => (
-                <th key={f.id} className="p-2">
-                  {f.name}
-                </th>
-              ))}
-              <th className="p-2">Đã chia</th>
-            </tr>
-          </thead>
-          <tbody>
-            {needs.map((p) => {
-              const ok = rowSum(p.id) === round2(p.need);
+      <Table className="min-w-[480px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Sản phẩm</TableHead>
+            <TableHead className="text-right">Cần</TableHead>
+            {factories.map((f) => (
+              <TableHead key={f.id}>{f.name}</TableHead>
+            ))}
+            <TableHead className="text-right">Đã chia</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {needs.map((p) => {
+            const ok = rowSum(p.id) === round2(p.need);
+            return (
+              <TableRow key={p.id} data-product={p.name}>
+                <TableCell className="font-medium">{p.name}</TableCell>
+                <TableCell className="text-right">{formatKg(p.need)}</TableCell>
+                {factories.map((f) => (
+                  <TableCell key={f.id}>
+                    <Input
+                      name={`alloc_${p.id}_${f.id}`}
+                      aria-label={`${p.name} - ${f.name}`}
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={alloc[p.id]?.[f.id] ?? ""}
+                      onChange={(e) => setAlloc((a) => ({ ...a, [p.id]: { ...a[p.id], [f.id]: Number(e.target.value) } }))}
+                      className="w-24 text-right"
+                    />
+                  </TableCell>
+                ))}
+                <TableCell className={cn("text-right font-medium", ok ? "text-green-700" : "text-destructive")}>{formatKg(rowSum(p.id))}</TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell colSpan={2}>Tổng / công suất</TableCell>
+            {factories.map((f) => {
+              const over = colSum(f.id) > f.capacity;
               return (
-                <tr key={p.id} className="border-t" data-product={p.name}>
-                  <td className="p-2 font-medium">{p.name}</td>
-                  <td className="p-2">{formatKg(p.need)}</td>
-                  {factories.map((f) => (
-                    <td key={f.id} className="p-2">
-                      <input
-                        name={`alloc_${p.id}_${f.id}`}
-                        aria-label={`${p.name} - ${f.name}`}
-                        type="number"
-                        min={0}
-                        step={0.5}
-                        value={alloc[p.id]?.[f.id] ?? ""}
-                        onChange={(e) =>
-                          setAlloc((a) => ({ ...a, [p.id]: { ...a[p.id], [f.id]: Number(e.target.value) } }))
-                        }
-                        className="w-24 rounded border border-gray-300 px-2 py-1 text-right"
-                      />
-                    </td>
-                  ))}
-                  <td className={`p-2 font-medium ${ok ? "text-green-700" : "text-red-700"}`}>{formatKg(rowSum(p.id))}</td>
-                </tr>
+                <TableCell key={f.id} className={cn("font-normal", over && "font-semibold text-amber-700")}>
+                  {formatKg(colSum(f.id))} / {formatKg(f.capacity)}
+                  {over && <div role="note">Vượt công suất</div>}
+                </TableCell>
               );
             })}
-            <tr className="border-t bg-gray-50">
-              <td className="p-2" colSpan={2}>
-                Tổng / công suất
-              </td>
-              {factories.map((f) => {
-                const over = colSum(f.id) > f.capacity;
-                return (
-                  <td key={f.id} className={`p-2 ${over ? "font-semibold text-amber-700" : ""}`}>
-                    {formatKg(colSum(f.id))} / {formatKg(f.capacity)}
-                    {over && <div role="note">Vượt công suất</div>}
-                  </td>
-                );
-              })}
-              <td />
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      {!complete && <p className="text-sm text-red-700">Phải chia đủ 100% số kg của từng sản phẩm trước khi gửi.</p>}
-      <Button type="submit" disabled={!complete}>
+            <TableCell />
+          </TableRow>
+        </TableFooter>
+      </Table>
+      {!complete && <p className="text-sm text-destructive">Phải chia đủ 100% số kg của từng sản phẩm trước khi gửi.</p>}
+      <Button type="submit" size="lg" disabled={!complete}>
         Chốt ngày và gửi xưởng
       </Button>
     </ActionForm>

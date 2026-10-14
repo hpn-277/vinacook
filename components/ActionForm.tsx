@@ -18,9 +18,10 @@ type Props = {
   children: ReactNode;
   className?: string;
   confirm?: string;
+  id?: string;
 };
 
-export function ActionForm({ action, children, className, confirm }: Props) {
+export function ActionForm({ action, children, className, confirm, id }: Props) {
   const [state, formAction, pending] = useActionState(action, null);
   const form = useRef<HTMLFormElement>(null);
   const confirmed = useRef(false);
@@ -28,6 +29,7 @@ export function ActionForm({ action, children, className, confirm }: Props) {
   return (
     <form
       ref={form}
+      id={id}
       action={formAction}
       className={className}
       onSubmit={(e) => {

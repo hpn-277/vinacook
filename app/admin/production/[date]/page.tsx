@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
-import { Button, Card, inputClass, PageTitle } from "@/components/ui";
+import { PageTitle } from "@/components/page-title";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { JobBadge } from "@/components/status-badge";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
@@ -36,66 +40,75 @@ export default async function ProductionDayPage({ params }: PageProps<"/admin/pr
   return (
     <>
       <PageTitle>Sản xuất ngày {date}</PageTitle>
-      <p className="mb-4 text-sm">
-        Trạng thái: <b>{closed ? "Đã chốt" : "Đang mở"}</b> ·{" "}
-        <Link href={`/admin/orders?date=${date}`} className="underline">
+      <p className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <span>
+          Trạng thái: <b>{closed ? "Đã chốt" : "Đang mở"}</b>
+        </span>
+        <span className="text-muted-foreground">·</span>
+        <Link href={`/admin/orders?date=${date}`} className="text-primary underline underline-offset-4">
           Xem đơn
-        </Link>{" "}
-        ·{" "}
-        <Link href={`/admin/receiving?date=${date}`} className="underline">
+        </Link>
+        <span className="text-muted-foreground">·</span>
+        <Link href={`/admin/receiving?date=${date}`} className="text-primary underline underline-offset-4">
           Nhận hàng
         </Link>
       </p>
 
       {!closed && placedCount > 0 && (
-        <Card className="mb-4 border-amber-300 bg-amber-50">
-          Còn <b>{placedCount}</b> đơn chưa duyệt. Duyệt hoặc hủy hết trước khi chốt.{" "}
-          <Link href={`/admin/orders?date=${date}&status=placed`} className="underline">
-            Duyệt đơn
-          </Link>
-        </Card>
+        <Alert className="mb-4 border-amber-300 bg-amber-50 text-amber-900">
+          <AlertDescription className="text-amber-900">
+            <p>
+              Còn <b>{placedCount}</b> đơn chưa duyệt. Duyệt hoặc hủy hết trước khi chốt.{" "}
+              <Link href={`/admin/orders?date=${date}&status=placed`}>Duyệt đơn</Link>
+            </p>
+          </AlertDescription>
+        </Alert>
       )}
-      {!closed && placedCount === 0 && needs.size === 0 && <p>Chưa có đơn đã duyệt cho ngày này.</p>}
+      {!closed && placedCount === 0 && needs.size === 0 && <p className="text-muted-foreground">Chưa có đơn đã duyệt cho ngày này.</p>}
       {!closed && placedCount === 0 && needs.size > 0 && (
-        <Card>
-          <AllocationForm
-            date={date}
-            needs={[...needs.values()]}
-            factories={factories.map((f) => ({ id: f.id, name: f.name, capacity: f.capacity_kg_per_day }))}
-            action={closeDay}
-          />
+        <Card size="sm">
+          <CardContent>
+            <AllocationForm
+              date={date}
+              needs={[...needs.values()]}
+              factories={factories.map((f) => ({ id: f.id, name: f.name, capacity: f.capacity_kg_per_day }))}
+              action={closeDay}
+            />
+          </CardContent>
         </Card>
       )}
 
       {jobs.length > 0 && (
         <>
-          <h2 className="mb-2 mt-6 font-semibold">Lệnh sản xuất</h2>
+          <h2 className="mt-6 mb-2 font-semibold">Lệnh sản xuất</h2>
           <ul className="space-y-2">
             {jobs.map((j) => (
               <li key={j.id}>
-                <Card className="space-y-2 text-sm">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <b>#{j.id}</b> {j.products?.name} · {formatKg(j.qty_kg)} · {j.factories?.name}
-                    <JobBadge status={j.status} />
-                    {j.received_kg != null && <span>Nhận {formatKg(j.received_kg)}</span>}
-                  </div>
-                  {j.rejected_reason && <div className="text-red-700">Lý do từ chối: {j.rejected_reason}</div>}
-                  {j.status === "rejected" && j.replaced_by && <div className="text-gray-500">Đã giao lại: lệnh #{j.replaced_by}</div>}
-                  {j.status === "rejected" && !j.replaced_by && (
-                    <ActionForm action={reassignJob} className="flex flex-wrap gap-2">
-                      <input type="hidden" name="job_id" value={j.id} />
-                      <select name="factory_id" required aria-label="Xưởng nhận lại" className={`${inputClass} w-auto`}>
-                        {factories
-                          .filter((f) => f.id !== j.factory_id)
-                          .map((f) => (
-                            <option key={f.id} value={f.id}>
-                              {f.name}
-                            </option>
-                          ))}
-                      </select>
-                      <Button>Giao lại</Button>
-                    </ActionForm>
-                  )}
+                <Card size="sm">
+                  <CardContent className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <b>#{j.id}</b> {j.products?.name} · {formatKg(j.qty_kg)} · {j.factories?.name}
+                      <JobBadge status={j.status} />
+                      {j.received_kg != null && <span className="text-muted-foreground">Nhận {formatKg(j.received_kg)}</span>}
+                    </div>
+                    {j.rejected_reason && <div className="text-destructive">Lý do từ chối: {j.rejected_reason}</div>}
+                    {j.status === "rejected" && j.replaced_by && <div className="text-muted-foreground">Đã giao lại: lệnh #{j.replaced_by}</div>}
+                    {j.status === "rejected" && !j.replaced_by && (
+                      <ActionForm action={reassignJob} className="flex flex-wrap gap-2">
+                        <input type="hidden" name="job_id" value={j.id} />
+                        <NativeSelect name="factory_id" required aria-label="Xưởng nhận lại">
+                          {factories
+                            .filter((f) => f.id !== j.factory_id)
+                            .map((f) => (
+                              <NativeSelectOption key={f.id} value={f.id}>
+                                {f.name}
+                              </NativeSelectOption>
+                            ))}
+                        </NativeSelect>
+                        <Button>Giao lại</Button>
+                      </ActionForm>
+                    )}
+                  </CardContent>
                 </Card>
               </li>
             ))}

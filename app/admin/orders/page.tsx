@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { ADMIN_ORDER_SELECT, AdminOrderCard, type AdminOrder } from "@/components/AdminOrderCard";
-import { Button, inputClass, PageTitle } from "@/components/ui";
+import { PageTitle } from "@/components/page-title";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -37,43 +41,45 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
     <>
       <PageTitle>Đơn hàng ngày {date}</PageTitle>
       <form className="mb-3 flex flex-wrap gap-2">
-        <input type="date" name="date" defaultValue={date} className={`${inputClass} w-auto`} />
-        <select name="status" defaultValue={status ?? ""} className={`${inputClass} w-auto`}>
-          <option value="">Tất cả trạng thái</option>
+        <Input type="date" name="date" defaultValue={date} className="w-auto" />
+        <NativeSelect name="status" defaultValue={status ?? ""}>
+          <NativeSelectOption value="">Tất cả trạng thái</NativeSelectOption>
           {ORDER_STATUSES.map((s) => (
-            <option key={s} value={s}>
+            <NativeSelectOption key={s} value={s}>
               {ORDER_STATUS_LABEL[s]}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
-        <Button tone="secondary">Lọc</Button>
+        </NativeSelect>
+        <Button variant="outline">Lọc</Button>
       </form>
-      <div className="mb-3 flex flex-wrap gap-2 text-sm">
+      <div className="mb-3 flex flex-wrap gap-2">
         {ORDER_STATUSES.filter((s) => counts.get(s)).map((s) => (
-          <Link key={s} href={`/admin/orders?date=${date}&status=${s}`} className="rounded bg-white px-2 py-1 shadow-sm">
-            {ORDER_STATUS_LABEL[s]}: <b>{counts.get(s)}</b>
-          </Link>
+          <Badge key={s} asChild variant="outline" className="h-7 bg-card px-2.5 text-sm font-normal">
+            <Link href={`/admin/orders?date=${date}&status=${s}`}>
+              {ORDER_STATUS_LABEL[s]}: <b>{counts.get(s)}</b>
+            </Link>
+          </Badge>
         ))}
       </div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Link href={`/admin/production/${date}`} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white">
-          {day.data?.status === "closed" ? "Xem lệnh sản xuất" : "Chốt sản xuất ngày này"}
-        </Link>
+        <Button asChild>
+          <Link href={`/admin/production/${date}`}>{day.data?.status === "closed" ? "Xem lệnh sản xuất" : "Chốt sản xuất ngày này"}</Link>
+        </Button>
         {(counts.get("placed") ?? 0) > 0 && (
           <ActionForm action={approveAllPlaced} confirm={`Duyệt tất cả ${counts.get("placed")} đơn mới?`}>
             <input type="hidden" name="date" value={date} />
-            <Button>Duyệt tất cả đơn mới ({counts.get("placed")})</Button>
+            <Button variant="outline">Duyệt tất cả đơn mới ({counts.get("placed")})</Button>
           </ActionForm>
         )}
       </div>
       {kgByProduct.size > 0 && (
-        <p className="mb-3 text-sm text-gray-600">
+        <p className="mb-3 text-sm text-muted-foreground">
           Tổng kg (không tính đơn hủy):{" "}
           {[...kgByProduct].map(([name, kg]) => `${name} ${formatKg(kg)}`).join(" · ")}
         </p>
       )}
       <div className="space-y-3">
-        {orders.length === 0 && <p>Không có đơn.</p>}
+        {orders.length === 0 && <p className="text-muted-foreground">Không có đơn.</p>}
         {orders.map((o) => (
           <AdminOrderCard key={o.id} order={o} />
         ))}

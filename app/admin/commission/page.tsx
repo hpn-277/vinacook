@@ -1,4 +1,8 @@
-import { Button, Card, inputClass, PageTitle } from "@/components/ui";
+import { PageTitle } from "@/components/page-title";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -17,42 +21,44 @@ export default async function CommissionPage({ searchParams }: PageProps<"/admin
     <>
       <PageTitle>Hoa hồng tháng {month}</PageTitle>
       <form className="mb-4 flex gap-2">
-        <input type="month" name="month" defaultValue={month} className={`${inputClass} w-auto`} />
-        <Button tone="secondary">Xem</Button>
+        <Input type="month" name="month" defaultValue={month} className="w-auto" />
+        <Button variant="outline">Xem</Button>
       </form>
-      <Card className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left">
-              <th className="p-2">Nhân viên</th>
-              <th className="p-2">Mã</th>
-              <th className="p-2">Số đơn đã giao</th>
-              <th className="p-2">Doanh số đã giao</th>
-              <th className="p-2">%</th>
-              <th className="p-2">Hoa hồng</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.sale_id} className="border-t" data-ref={r.ref_code}>
-                <td className="p-2">{r.name}</td>
-                <td className="p-2">{r.ref_code}</td>
-                <td className="p-2">{r.delivered_count}</td>
-                <td className="p-2">{formatVnd(r.delivered_total)}</td>
-                <td className="p-2">{r.commission_pct}%</td>
-                <td className="p-2 font-semibold" data-testid={`commission-${r.ref_code}`}>
-                  {formatVnd(r.commission)}
-                </td>
-              </tr>
-            ))}
-            <tr className="border-t font-semibold">
-              <td className="p-2" colSpan={5}>
-                Tổng
-              </td>
-              <td className="p-2">{formatVnd(total)}</td>
-            </tr>
-          </tbody>
-        </table>
+      <Card size="sm">
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nhân viên</TableHead>
+                <TableHead>Mã</TableHead>
+                <TableHead className="text-right">Số đơn đã giao</TableHead>
+                <TableHead className="text-right">Doanh số đã giao</TableHead>
+                <TableHead className="text-right">%</TableHead>
+                <TableHead className="text-right">Hoa hồng</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((r) => (
+                <TableRow key={r.sale_id} data-ref={r.ref_code}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell className="font-mono">{r.ref_code}</TableCell>
+                  <TableCell className="text-right">{r.delivered_count}</TableCell>
+                  <TableCell className="text-right">{formatVnd(r.delivered_total)}</TableCell>
+                  <TableCell className="text-right">{r.commission_pct}%</TableCell>
+                  <TableCell className="text-right font-semibold" data-testid={`commission-${r.ref_code}`}>
+                    {formatVnd(r.commission)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={5}>Tổng</TableCell>
+                <TableCell className="text-right">{formatVnd(total)}</TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </CardContent>
       </Card>
     </>
   );

@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Card, PageTitle } from "@/components/ui";
+import { PageTitle } from "@/components/page-title";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -22,19 +24,21 @@ export default async function SaleCustomersPage() {
           const live = c.orders.filter((o) => o.status !== "cancelled");
           return (
             <li key={c.id}>
-              <Card className="flex items-center justify-between gap-2 text-sm">
-                <div>
-                  <b>{c.name}</b> · <a href={`tel:${c.phone}`}>{c.phone}</a>
-                  <div className="text-gray-500">
-                    {c.default_address}, {c.default_district}
+              <Card size="sm">
+                <CardContent className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <b>{c.name}</b> · <a href={`tel:${c.phone}`}>{c.phone}</a>
+                    <div className="text-muted-foreground">
+                      {c.default_address}, {c.default_district}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {live.length} đơn · {formatVnd(live.reduce((s, o) => s + o.total, 0))}
+                    </div>
                   </div>
-                  <div className="text-gray-500">
-                    {live.length} đơn · {formatVnd(live.reduce((s, o) => s + o.total, 0))}
-                  </div>
-                </div>
-                <Link href={`/sale/orders/new?phone=${c.phone}`} className="rounded-lg border px-3 py-2 font-medium">
-                  Tạo đơn
-                </Link>
+                  <Button asChild variant="outline">
+                    <Link href={`/sale/orders/new?phone=${c.phone}`}>Tạo đơn</Link>
+                  </Button>
+                </CardContent>
               </Card>
             </li>
           );
