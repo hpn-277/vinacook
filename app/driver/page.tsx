@@ -1,13 +1,15 @@
 import { ActionForm } from "@/components/ActionForm";
 import { StaffShell } from "@/components/StaffShell";
 import { PageTitle } from "@/components/page-title";
+import { TierBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { formatKg, formatVnd } from "@/lib/domain/money";
+import { itemLabel } from "@/lib/domain/catalog";
+import { formatVnd } from "@/lib/domain/money";
 import { finishDelivery } from "./actions";
 
 export default async function DriverPage() {
@@ -15,11 +17,12 @@ export default async function DriverPage() {
   const orders = unwrap(
     await db()
       .from("orders")
-      .select("id, code, phone, address, district, note, total, payment_status, customers(name), order_items(product_id, qty_kg, products(name))")
+      .select("id, code, phone, address, district, note, total, payment_status, customers(name), price_tier, order_items(id, pack_name, pack_qty, qty_kg, products(name))")
       .eq("driver_id", me.id)
       .eq("status", "assigned")
       .order("district")
-      .order("id"),
+      .order("id")
+      .order("id", { referencedTable: "order_items" }),
   );
 
   return (
@@ -35,7 +38,10 @@ export default async function DriverPage() {
                 <CardContent className="space-y-3">
                   <div className="space-y-0.5">
                     <div className="flex justify-between gap-2 text-base">
-                      <b>{o.code}</b>
+                      <span className="flex items-center gap-2">
+                        <b>{o.code}</b>
+                        <TierBadge tier={o.price_tier} />
+                      </span>
                       <b className={o.payment_status === "paid" ? "text-green-700" : "text-primary"}>
                         {o.payment_status === "paid" ? "Đã thanh toán" : `Thu ${formatVnd(o.total)}`}
                       </b>
@@ -43,7 +49,7 @@ export default async function DriverPage() {
                     <div className="font-medium">{o.customers?.name}</div>
                     <div>{fullAddress}</div>
                     {o.note && <div className="text-muted-foreground">Ghi chú: {o.note}</div>}
-                    <div className="text-muted-foreground">{o.order_items.map((i) => `${i.products?.name} ${formatKg(i.qty_kg)}`).join(", ")}</div>
+                    <div className="text-muted-foreground">{o.order_items.map(itemLabel).join(", ")}</div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Button asChild variant="outline" className="h-11">

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Mì vàng sợi nhỏ">
+  <rect width="160" height="160" rx="24" fill="#FFF7ED"/>
+  <circle cx="28" cy="132" r="40" fill="#FED7AA" opacity=".5"/>
+  <ellipse cx="80" cy="128" rx="50" ry="9" fill="#C2410C" opacity=".15"/>
+  <g fill="none" stroke-linecap="round" stroke-width="2.2">
+    <path d="M52 30c4 30 0 60 6 94" stroke="#EAB308"/>
+    <path d="M58 28c2 32 2 62 6 96" stroke="#FACC15"/>
+    <path d="M64 27c2 30-2 64 4 98" stroke="#EAB308"/>
+    <path d="M70 26c0 34 2 64 2 99" stroke="#FDE047"/>
+    <path d="M76 26c2 32-2 66 2 99" stroke="#EAB308"/>
+    <path d="M82 26c-2 34 2 64 0 99" stroke="#FACC15"/>
+    <path d="M88 26c2 32-2 66 0 99" stroke="#EAB308"/>
+    <path d="M94 27c-2 32 0 64-4 98" stroke="#FDE047"/>
+    <path d="M100 28c0 32-2 62-6 96" stroke="#EAB308"/>
+    <path d="M106 30c-2 30-4 60-8 94" stroke="#FACC15"/>
+  </g>
+  <rect x="48" y="70" width="64" height="16" rx="5" fill="#DC2626"/>
+  <rect x="48" y="76" width="64" height="4" fill="#FCA5A5" opacity=".7"/>
+  <path d="M112 74l18-8v24l-18-8z" fill="#B91C1C"/>
+</svg>

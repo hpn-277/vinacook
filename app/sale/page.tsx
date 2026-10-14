@@ -3,10 +3,11 @@ import Link from "next/link";
 import { PageTitle } from "@/components/page-title";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { OrderBadge } from "@/components/status-badge";
+import { OrderBadge, TierBadge } from "@/components/status-badge";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { itemLabel } from "@/lib/domain/catalog";
 import { formatVnd } from "@/lib/domain/money";
 import { dayRange, monthRange, today } from "@/lib/period";
 
@@ -22,7 +23,7 @@ export default async function SaleDashboard() {
     db().from("orders").select("total").eq("sale_id", me.id).neq("status", "cancelled").gte("created_at", day.from).lt("created_at", day.to),
     db().from("orders").select("total").eq("sale_id", me.id).neq("status", "cancelled").gte("created_at", month.from).lt("created_at", month.to),
     db().rpc("commission_report", { p_month: date }),
-    db().from("orders").select("id, code, production_date, status, total, customers(name, phone)").eq("sale_id", me.id).order("created_at", { ascending: false }).limit(20),
+    db().from("orders").select("id, code, production_date, status, total, price_tier, customers(name, phone), order_items(id, pack_name, pack_qty, qty_kg, products(name))").eq("sale_id", me.id).order("created_at", { ascending: false }).order("id", { referencedTable: "order_items" }).limit(20),
   ]);
   const sum = (rows: { total: number }[]) => rows.reduce((s, r) => s + r.total, 0);
   const mine = unwrap(commission).find((r) => r.sale_id === me.id);
@@ -55,12 +56,14 @@ export default async function SaleDashboard() {
           <li key={o.id}>
             <Card size="sm">
               <CardContent className="flex items-center justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <b>{o.code}</b> · {o.customers?.name} · {o.customers?.phone}
                   <div className="text-muted-foreground">Ngày SX {o.production_date}</div>
+                  <div className="text-muted-foreground">{o.order_items.map(itemLabel).join(", ")}</div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex shrink-0 flex-col items-end gap-1">
                   <OrderBadge status={o.status} />
+                  <TierBadge tier={o.price_tier} />
                   <div className="font-medium">{formatVnd(o.total)}</div>
                 </div>
               </CardContent>

@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { check, DomainError, run, type ActionResult } from "@/lib/action";
+import { check, DomainError, run, unwrap, type ActionResult } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseForm, phone } from "@/lib/form";
@@ -22,8 +22,49 @@ export async function saveProduct(_prev: ActionResult, fd: FormData): Promise<Ac
   return run(async () => {
     await requireRole("manager");
     const { id, ...row } = parseForm(productSchema, fd);
-    check(id ? await db().from("products").update(row).eq("id", id) : await db().from("products").insert(row));
+    if (id) {
+      check(await db().from("products").update(row).eq("id", id));
+      return "Đã lưu";
+    }
+    const created = unwrap(await db().from("products").insert(row).select("id").single());
+    check(await db().from("product_packs").insert({ product_id: created.id, name: "Kg", kg_per_unit: 1 }));
+    return "Đã thêm sản phẩm với quy cách Kg";
+  });
+}
+
+const packSchema = z.object({
+  id: optionalId,
+  product_id: z.coerce.number({ message: "Chọn sản phẩm" }).int().positive("Chọn sản phẩm"),
+  name: z.string().trim().min(1, "Nhập tên quy cách"),
+  kg_per_unit: z.coerce.number().positive("Số kg mỗi đơn vị phải > 0").max(10000),
+  active: checkbox,
+});
+
+/** Old orders keep their own pack name and kg snapshot, so editing a pack only affects new orders. */
+export async function savePack(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
+  return run(async () => {
+    await requireRole("manager");
+    const { id, product_id, ...row } = parseForm(packSchema, fd);
+    const res = id
+      ? await db().from("product_packs").update(row).eq("id", id)
+      : await db().from("product_packs").insert({ ...row, product_id });
+    if (res.error?.code === "23505") throw new DomainError(`Sản phẩm đã có quy cách "${row.name}"`);
+    check(res);
     return "Đã lưu";
+  });
+}
+
+const pricingSchema = z.object({
+  retail_markup_pct: z.coerce.number().min(0, "% chênh lệch không hợp lệ").max(999),
+  wholesale_min_kg: z.coerce.number().min(0, "Số kg không hợp lệ").max(100000),
+  wholesale_min_total: z.coerce.number().int("Số tiền phải là số nguyên").min(0, "Số tiền không hợp lệ"),
+});
+
+export async function savePricing(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
+  return run(async () => {
+    await requireRole("manager");
+    check(await db().from("settings").update(parseForm(pricingSchema, fd)).eq("id", true));
+    return "Đã lưu cách tính giá; áp dụng cho đơn mới";
   });
 }
 

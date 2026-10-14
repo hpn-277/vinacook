@@ -9,7 +9,7 @@ const geist = Geist({ subsets: ["latin", "vietnamese"], variable: "--font-sans" 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Mì Tươi - Đặt hàng",
+  title: "VinaCook - Đặt hàng",
   description: "Đặt mì, bún, phở tươi giao tận nơi",
 };
 

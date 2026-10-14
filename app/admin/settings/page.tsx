@@ -1,8 +1,9 @@
 import { ActionForm } from "@/components/ActionForm";
 import { PageTitle } from "@/components/page-title";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Separator } from "@/components/ui/separator";
@@ -10,16 +11,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { formatVnd } from "@/lib/domain/money";
+import { packPrice, retailPerKg } from "@/lib/domain/pricing";
 import { getSettings } from "@/lib/orders";
-import { createStaff, saveCutoff, saveFactory, saveProduct, updateStaff } from "./actions";
+import { createStaff, saveCutoff, saveFactory, savePack, savePricing, saveProduct, updateStaff } from "./actions";
 
 const ROLE_LABEL = { manager: "Quản lý", sale: "NVKD", factory: "Xưởng", driver: "Tài xế" } as const;
 
 export default async function SettingsPage() {
   await requireRole("manager");
-  const [settings, products, factories, staff] = await Promise.all([
+  const [settings, products, packs, factories, staff] = await Promise.all([
     getSettings(),
     db().from("products").select("*").order("id").then(unwrap),
+    db().from("product_packs").select("*, products(name, price_per_kg)").order("product_id").order("kg_per_unit").then(unwrap),
     db().from("factories").select("*").order("id").then(unwrap),
     db().from("staff").select("*, factories(name)").order("role").order("id").then(unwrap),
   ]);
@@ -45,6 +49,35 @@ export default async function SettingsPage() {
       <Card size="sm">
         <CardHeader>
           <CardTitle className="font-semibold">
+            <h2>Giá sỉ / giá lẻ</h2>
+          </CardTitle>
+          <CardDescription>
+            Giá lẻ = Giá sỉ × (1 + % chênh lệch), làm tròn 100đ. Đơn được giá sỉ (cả đơn) khi đủ số kg tối thiểu hoặc tổng tiền theo giá lẻ đủ
+            mức tối thiểu. Thay đổi chỉ áp dụng cho đơn mới.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ActionForm action={savePricing} className="grid gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))_auto] sm:items-end">
+            <Field>
+              <FieldLabel htmlFor="retail_markup_pct">% chênh lệch giá lẻ</FieldLabel>
+              <Input id="retail_markup_pct" name="retail_markup_pct" type="number" step="0.01" min={0} defaultValue={settings.retail_markup_pct} required />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="wholesale_min_kg">Giá sỉ từ (kg)</FieldLabel>
+              <Input id="wholesale_min_kg" name="wholesale_min_kg" type="number" step="0.01" min={0} defaultValue={settings.wholesale_min_kg} required />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="wholesale_min_total">hoặc từ (đ, tính theo giá lẻ)</FieldLabel>
+              <Input id="wholesale_min_total" name="wholesale_min_total" type="number" step={1000} min={0} defaultValue={settings.wholesale_min_total} required />
+            </Field>
+            <Button>Lưu</Button>
+          </ActionForm>
+        </CardContent>
+      </Card>
+
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle className="font-semibold">
             <h2>Sản phẩm</h2>
           </CardTitle>
         </CardHeader>
@@ -53,7 +86,8 @@ export default async function SettingsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Tên</TableHead>
-                <TableHead>Giá/kg</TableHead>
+                <TableHead>Giá sỉ/kg</TableHead>
+                <TableHead>Giá lẻ/kg</TableHead>
                 <TableHead>Ảnh</TableHead>
                 <TableHead>Đang bán</TableHead>
                 <TableHead />
@@ -68,7 +102,10 @@ export default async function SettingsPage() {
                       <Input form={form} name="name" defaultValue={p?.name} placeholder="Tên sản phẩm mới" required className="min-w-40" />
                     </TableCell>
                     <TableCell>
-                      <Input form={form} name="price_per_kg" type="number" defaultValue={p?.price_per_kg} placeholder="Giá/kg" required className="w-28" />
+                      <Input form={form} name="price_per_kg" type="number" defaultValue={p?.price_per_kg} placeholder="Giá sỉ/kg" required className="w-28" />
+                    </TableCell>
+                    <TableCell className="align-middle text-muted-foreground">
+                      {p && formatVnd(retailPerKg(p.price_per_kg, settings.retail_markup_pct))}
                     </TableCell>
                     <TableCell>
                       <Input form={form} name="image_url" defaultValue={p?.image_url ?? ""} placeholder="Link ảnh" className="min-w-40" />
@@ -80,6 +117,90 @@ export default async function SettingsPage() {
                       <ActionForm id={form} action={saveProduct}>
                         <input type="hidden" name="id" value={p?.id ?? ""} />
                         <Button variant={p ? "outline" : "default"}>{p ? "Lưu" : "Thêm"}</Button>
+                      </ActionForm>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle className="font-semibold">
+            <h2>Quy cách đóng gói</h2>
+          </CardTitle>
+          <CardDescription>Mỗi quy cách là một số kg cố định. Khách chọn quy cách và số lượng; sản xuất vẫn tính theo kg.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Sản phẩm</TableHead>
+                <TableHead>Quy cách</TableHead>
+                <TableHead>Kg/đơn vị</TableHead>
+                <TableHead>Giá sỉ / lẻ</TableHead>
+                <TableHead>Đang bán</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...packs, null].map((pk, idx) => {
+                const form = `pack-${pk?.id ?? "new"}`;
+                const label = pk ? `${pk.products?.name} - ${pk.name}` : "mới";
+                const wholesale = pk?.products?.price_per_kg ?? 0;
+                const firstOfProduct = pk && packs[idx - 1]?.product_id !== pk.product_id;
+                return (
+                  <TableRow key={form} className={firstOfProduct && idx > 0 ? "border-t-2 align-top" : "align-top"} data-pack={pk ? label : undefined}>
+                    <TableCell className={pk ? "align-middle font-medium" : undefined}>
+                      {pk ? (
+                        firstOfProduct && pk.products?.name
+                      ) : (
+                        <NativeSelect form={form} name="product_id" defaultValue="" aria-label="Sản phẩm của quy cách mới" className="min-w-36">
+                          <NativeSelectOption value="" disabled>
+                            Chọn sản phẩm
+                          </NativeSelectOption>
+                          {products.map((p) => (
+                            <NativeSelectOption key={p.id} value={p.id}>
+                              {p.name}
+                            </NativeSelectOption>
+                          ))}
+                        </NativeSelect>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Input form={form} name="name" defaultValue={pk?.name} placeholder="Thùng, Bao..." aria-label={`Tên quy cách ${label}`} required className="w-28" />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        form={form}
+                        name="kg_per_unit"
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        defaultValue={pk?.kg_per_unit}
+                        placeholder="kg"
+                        aria-label={`Kg mỗi ${label}`}
+                        required
+                        className="w-24"
+                      />
+                    </TableCell>
+                    <TableCell className="align-middle whitespace-nowrap text-muted-foreground">
+                      {pk &&
+                        `${formatVnd(packPrice(pk.kg_per_unit, wholesale))} / ${formatVnd(packPrice(pk.kg_per_unit, retailPerKg(wholesale, settings.retail_markup_pct)))}`}
+                    </TableCell>
+                    <TableCell className="align-middle">
+                      <Checkbox form={form} name="active" defaultChecked={pk?.active ?? true} aria-label={`Đang bán ${label}`} />
+                    </TableCell>
+                    <TableCell>
+                      <ActionForm id={form} action={savePack}>
+                        <input type="hidden" name="id" value={pk?.id ?? ""} />
+                        {pk && <input type="hidden" name="product_id" value={pk.product_id} />}
+                        <Button variant={pk ? "outline" : "default"} aria-label={pk ? `Lưu ${label}` : "Thêm quy cách"}>
+                          {pk ? "Lưu" : "Thêm"}
+                        </Button>
                       </ActionForm>
                     </TableCell>
                   </TableRow>

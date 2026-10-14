@@ -3,6 +3,8 @@
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { run, type ActionResult } from "@/lib/action";
+import { formatVnd } from "@/lib/domain/money";
+import { TIER_LABEL } from "@/lib/domain/pricing";
 import { district, parseForm, phone } from "@/lib/form";
 import { itemsJson, placeOrder, REF_COOKIE, saleIdForRefCode } from "@/lib/orders";
 
@@ -24,6 +26,6 @@ export async function placeCustomerOrder(_prev: ActionResult, fd: FormData): Pro
       createdByStaffId: null,
       claimSaleId: await saleIdForRefCode((await cookies()).get(REF_COOKIE)?.value),
     });
-    return `Đã đặt đơn ${order.code}. Ngày sản xuất: ${order.production_date}.`;
+    return `Đã đặt đơn ${order.code} · ${TIER_LABEL[order.tier]} · Tổng ${formatVnd(order.total)}. Ngày sản xuất: ${order.production_date}.`;
   });
 }

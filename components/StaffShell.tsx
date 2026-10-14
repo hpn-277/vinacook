@@ -11,7 +11,7 @@ export async function StaffShell({ links, children }: { links: { href: string; l
     <div className="min-h-screen md:flex">
       <aside className="sticky top-0 z-10 border-b bg-card md:static md:w-56 md:shrink-0 md:border-r md:border-b-0">
         <nav className="flex items-center gap-1 overflow-x-auto px-2 py-2 md:sticky md:top-0 md:h-screen md:flex-col md:items-stretch md:overflow-visible md:px-3 md:py-4">
-          <div className="hidden px-2.5 pb-3 text-lg font-bold text-primary md:block">Mì Tươi</div>
+          <div className="hidden px-2.5 pb-3 text-lg font-bold text-primary md:block">VinaCook</div>
           <NavLinks links={links} />
           <div className="ml-auto flex shrink-0 items-center gap-1 pl-2 md:mt-auto md:ml-0 md:flex-col md:items-stretch md:pl-0">
             <Separator className="mb-2 hidden md:block" />

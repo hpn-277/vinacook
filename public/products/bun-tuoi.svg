@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Bún tươi">
+  <rect width="160" height="160" rx="24" fill="#FCE7F3"/>
+  <circle cx="132" cy="30" r="34" fill="#FBCFE8" opacity=".7"/>
+  <ellipse cx="80" cy="124" rx="60" ry="14" fill="#A16207" opacity=".25"/>
+  <ellipse cx="80" cy="118" rx="62" ry="14" fill="#65A30D"/>
+  <ellipse cx="80" cy="114" rx="56" ry="10" fill="#84CC16"/>
+  <g fill="#fff" stroke="#E5E7EB" stroke-width="2">
+    <circle cx="52" cy="98" r="20"/>
+    <circle cx="108" cy="98" r="20"/>
+    <circle cx="80" cy="74" r="20"/>
+  </g>
+  <g fill="none" stroke="#D1D5DB" stroke-width="1.6">
+    <circle cx="52" cy="98" r="14"/><circle cx="52" cy="98" r="8"/><circle cx="52" cy="98" r="3"/>
+    <circle cx="108" cy="98" r="14"/><circle cx="108" cy="98" r="8"/><circle cx="108" cy="98" r="3"/>
+    <circle cx="80" cy="74" r="14"/><circle cx="80" cy="74" r="8"/><circle cx="80" cy="74" r="3"/>
+  </g>
+  <path d="M120 66c6-10 16-12 20-8-4 8-12 12-20 8z" fill="#16A34A"/>
+</svg>

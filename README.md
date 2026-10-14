@@ -1,6 +1,6 @@
-# Noodle Distribution MVP
+# VinaCook
 
-Ordering, production and delivery app for a fresh-noodle distributor in Ho Chi Minh City. The UI is Vietnamese. See `MVP_SPEC.md` for scope.
+VinaCook is the ordering, production and delivery app for a fresh-noodle distributor in Ho Chi Minh City. The UI is Vietnamese. See `MVP_SPEC.md` for scope.
 
 Stack: Next.js (App Router) and local Supabase (Postgres and Auth). All data access runs on the server with the Supabase secret key, after a role check in `lib/auth.ts` (`requireRole`).
 
@@ -41,11 +41,11 @@ Customers do not log in. Open `/r/NVKD01` to order as a customer referred by sal
 ## Tests
 
 ```sh
-npm test        # vitest: state-machine tables and the 17:00 production-date cutoff
+npm test        # vitest: state-machine tables, the 17:00 production-date cutoff, and wholesale/retail pricing
 npm run e2e     # full lifecycle in a real browser; needs `npm run dev` running
 ```
 
-`npm run e2e` resets the database first. Pass `-- --no-reset` to keep the current data. The script drives the whole flow through the UI: referral order, a second sale entering an order for the same phone, approval, closing the day with a split across two factories, a factory rejection and reassignment, receiving with a shortfall, dispatch, delivery and failure, payment, and commission. It checks every step against the database.
+`npm run e2e` resets the database first. Pass `-- --no-reset` to keep the current data. The script drives the whole flow through the UI: referral order picked by pack (Kg, Thùng, Bao), wholesale at exactly 50 kg and retail below it, a second sale entering an order for the same phone, approval, closing the day with a split across two factories, a factory rejection and reassignment, receiving with a shortfall, dispatch, delivery and failure, payment, commission, and a one-tap reorder from `/orders` with a deactivated pack skipped. It checks every step against the database.
 
 After a schema change, run `npm run gen:types` to regenerate `lib/database.types.ts`.
 
@@ -53,4 +53,6 @@ After a schema change, run `npm run gen:types` to regenerate `lib/database.types
 
 - `lib/domain/status.ts` holds the order and production-job state machines. Every single-row status change goes through `transition()` in `lib/transition.ts`.
 - `status_transitions` and a trigger in the first migration hold the same tables in the database, so bulk moves inside SQL functions are checked too. The e2e script asserts that the two copies match.
+- `lib/domain/pricing.ts` is the only pricing rule. `products.price_per_kg` is the wholesale price; retail adds `settings.retail_markup_pct` rounded to 100đ. An order gets wholesale when it reaches `wholesale_min_kg` or a retail total of `wholesale_min_total`. Server actions price every order with it and pass the snapshots to `place_order` / `edit_order`, which refuse a snapshot whose pack size or wholesale price no longer matches the catalog. Each order stores its tier and the terms it was priced with, so a manager edit re-derives the tier without applying today's prices.
+- Customers order packs (`product_packs`, managed in `/admin/settings`). `order_items.qty_kg` is generated from pack quantity × kg per pack, so production, receiving and dispatch still work in kg.
 - `close_production_day`, `reassign_job` and `receive_job` in `supabase/migrations` are atomic. Running close-day again on a closed day raises an error and creates no jobs.

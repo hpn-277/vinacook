@@ -9,7 +9,9 @@ import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { DISTRICTS, isDistrict } from "@/lib/domain/districts";
-import { formatKg, formatVnd } from "@/lib/domain/money";
+import { itemLabel } from "@/lib/domain/catalog";
+import { formatVnd } from "@/lib/domain/money";
+import { TIER_LABEL } from "@/lib/domain/pricing";
 import { assignDriver } from "./actions";
 
 export default async function DispatchPage({ searchParams }: PageProps<"/admin/dispatch">) {
@@ -17,11 +19,11 @@ export default async function DispatchPage({ searchParams }: PageProps<"/admin/d
   const raw = (await searchParams).district;
   const district = typeof raw === "string" && isDistrict(raw) ? raw : null;
 
-  let readyQuery = db().from("orders").select(ADMIN_ORDER_SELECT).eq("status", "ready").order("district").order("id");
+  let readyQuery = db().from("orders").select(ADMIN_ORDER_SELECT).eq("status", "ready").order("district").order("id").order("id", { referencedTable: "order_items" });
   if (district) readyQuery = readyQuery.eq("district", district);
   const [ready, inFlight, drivers] = await Promise.all([
     readyQuery.then(unwrap) as Promise<AdminOrder[]>,
-    db().from("orders").select(ADMIN_ORDER_SELECT).in("status", ["assigned", "failed"]).order("status").order("id").then(unwrap) as Promise<AdminOrder[]>,
+    db().from("orders").select(ADMIN_ORDER_SELECT).in("status", ["assigned", "failed"]).order("status").order("id").order("id", { referencedTable: "order_items" }).then(unwrap) as Promise<AdminOrder[]>,
     db().from("staff").select("id, name").eq("role", "driver").eq("active", true).order("name").then(unwrap),
   ]);
 
@@ -56,7 +58,7 @@ export default async function DispatchPage({ searchParams }: PageProps<"/admin/d
                         {o.address}, <b>{o.district}</b>
                         <br />
                         <span className="text-muted-foreground">
-                          {o.order_items.map((i) => `${i.products?.name} ${formatKg(i.qty_kg)}`).join(", ")} · {formatVnd(o.total)}
+                          {o.order_items.map(itemLabel).join(", ")} · {formatVnd(o.total)} ({TIER_LABEL[o.price_tier]})
                         </span>
                       </span>
                     </label>

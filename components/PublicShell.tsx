@@ -8,7 +8,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-10 border-b bg-card">
         <div className="mx-auto flex max-w-3xl items-center gap-1 px-4 py-2">
           <Link href="/" className="mr-auto text-lg font-bold text-primary">
-            Mì Tươi
+            VinaCook
           </Link>
           <Button asChild variant="ghost">
             <Link href="/checkout">Giỏ hàng</Link>

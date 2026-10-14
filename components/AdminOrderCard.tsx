@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { OrderBadge } from "@/components/status-badge";
+import { OrderBadge, TierBadge } from "@/components/status-badge";
 import { DISTRICTS } from "@/lib/domain/districts";
-import { formatKg, formatVnd } from "@/lib/domain/money";
+import { itemLabel } from "@/lib/domain/catalog";
+import { formatVnd } from "@/lib/domain/money";
+import type { PriceTier } from "@/lib/domain/pricing";
 import { MANAGER_ORDER_MOVES, MOVE_LABEL, ORDER_EDITABLE, type OrderStatus } from "@/lib/domain/status";
 
 export type AdminOrder = {
@@ -15,6 +17,7 @@ export type AdminOrder = {
   status: OrderStatus;
   payment_status: "paid" | "unpaid";
   total: number;
+  price_tier: PriceTier;
   phone: string;
   address: string;
   district: string;
@@ -24,11 +27,19 @@ export type AdminOrder = {
   customers: { name: string } | null;
   sale: { name: string } | null;
   driver: { name: string } | null;
-  order_items: { product_id: number; qty_kg: number; unit_price: number; products: { name: string } | null }[];
+  order_items: {
+    id: number;
+    pack_name: string;
+    pack_qty: number;
+    qty_kg: number;
+    price_per_kg: number;
+    line_total: number;
+    products: { name: string } | null;
+  }[];
 };
 
 export const ADMIN_ORDER_SELECT =
-  "id, code, status, payment_status, total, phone, address, district, note, fail_reason, production_date, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(name), order_items(product_id, qty_kg, unit_price, products(name))";
+  "id, code, status, payment_status, total, price_tier, phone, address, district, note, fail_reason, production_date, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name))";
 
 export function AdminOrderCard({ order }: { order: AdminOrder }) {
   const moves = MANAGER_ORDER_MOVES[order.status] ?? [];
@@ -38,6 +49,7 @@ export function AdminOrderCard({ order }: { order: AdminOrder }) {
         <div className="flex flex-wrap items-center gap-2">
           <b className="text-base">{order.code}</b>
           <OrderBadge status={order.status} />
+          <TierBadge tier={order.price_tier} />
           <span className={order.payment_status === "paid" ? "text-green-700" : "text-muted-foreground"}>
             {order.payment_status === "paid" ? "Đã thanh toán" : "Chưa thanh toán"}
           </span>
@@ -54,8 +66,8 @@ export function AdminOrderCard({ order }: { order: AdminOrder }) {
         {order.fail_reason && <div className="text-destructive">Lý do thất bại: {order.fail_reason}</div>}
         <ul>
           {order.order_items.map((i) => (
-            <li key={i.product_id}>
-              {i.products?.name} × {formatKg(i.qty_kg)} @ {formatVnd(i.unit_price)}
+            <li key={i.id}>
+              {itemLabel(i)} <span className="text-muted-foreground">@ {formatVnd(i.price_per_kg)}/kg = {formatVnd(i.line_total)}</span>
             </li>
           ))}
         </ul>
@@ -80,10 +92,21 @@ export function AdminOrderCard({ order }: { order: AdminOrder }) {
             <summary className="w-fit cursor-pointer font-medium text-primary">Sửa đơn</summary>
             <ActionForm action={editOrder} className="mt-2 max-w-md space-y-2 rounded-lg border bg-muted/40 p-3">
               <input type="hidden" name="order_id" value={order.id} />
+              <p className="text-xs text-muted-foreground">Số lượng theo quy cách, 0 = bỏ. Giá sỉ/lẻ được tính lại theo tổng đơn.</p>
               {order.order_items.map((i) => (
-                <label key={i.product_id} className="flex items-center justify-between gap-2">
-                  <span>{i.products?.name} (kg, 0 = bỏ)</span>
-                  <Input name={`qty_${i.product_id}`} type="number" step={0.5} min={0} defaultValue={i.qty_kg} className="w-24 text-right" />
+                <label key={i.id} className="flex items-center justify-between gap-2">
+                  <span>
+                    {i.products?.name} · {i.pack_name}
+                  </span>
+                  <Input
+                    name={`qty_${i.id}`}
+                    aria-label={`Sửa ${i.products?.name} - ${i.pack_name}`}
+                    type="number"
+                    step={1}
+                    min={0}
+                    defaultValue={i.pack_qty}
+                    className="w-24 text-right"
+                  />
                 </label>
               ))}
               <Input name="address" defaultValue={order.address} />

@@ -42,7 +42,8 @@ order by g, c.id;
 
 -- ~5% cancelled; older than a week all paid, recent ones ~60% paid; deliveries happen the morning after production.
 insert into orders (customer_id, sale_id, created_by, created_by_staff_id, production_date, address, district, phone,
-                    status, payment_status, total, driver_id, delivered_at, created_at)
+                    status, payment_status, total, driver_id, delivered_at, created_at,
+                    price_tier, retail_markup_pct, wholesale_min_kg, wholesale_min_total)
 select p.customer_id, p.sale_id,
        case when p.sale_id is not null and p.r1 < 0.4 then 'sale' else 'customer' end::order_creator,
        case when p.sale_id is not null and p.r1 < 0.4 then p.sale_id end,
@@ -52,19 +53,49 @@ select p.customer_id, p.sale_id,
        0,
        case when p.r2 >= 0.05 then (select id from staff where name = case when p.r3 < 0.5 then 'Tài xế 1' else 'Tài xế 2' end) end,
        case when p.r2 >= 0.05 then ((p.pdate + 1) + time '08:00' + p.r1 * interval '6 hours') at time zone 'Asia/Ho_Chi_Minh' end,
-       (p.pdate + time '07:00' + p.r3 * interval '9 hours') at time zone 'Asia/Ho_Chi_Minh'
-from plan p
+       (p.pdate + time '07:00' + p.r3 * interval '9 hours') at time zone 'Asia/Ho_Chi_Minh',
+       'le', s.retail_markup_pct, s.wholesale_min_kg, s.wholesale_min_total
+from plan p cross join settings s
 order by p.pdate, p.customer_id;
 
-insert into order_items (order_id, product_id, qty_kg, unit_price)
-select o.id, pr.id, greatest(1, round(i.value::numeric * (0.8 + random() * 0.4))), pr.price_per_kg
+create temp table want on commit drop as
+select o.id as order_id, pr.id as product_id, pr.price_per_kg as wholesale,
+       greatest(1, round(i.value::numeric * (0.8 + random() * 0.4))) as kg
 from plan p
 join orders o on o.customer_id = p.customer_id and o.production_date = p.pdate
 cross join lateral jsonb_each_text(p.items) i
 join products pr on pr.name = i.key;
 
+-- Same rule as lib/domain/pricing.ts: wholesale for the whole order at >= min kg or a retail total >= min total.
+create temp table priced on commit drop as
+select w.*, t.tier, case t.tier when 'si' then w.wholesale else w.retail end as price
+from (select w.*, round(w.wholesale * (100 + s.retail_markup_pct) / 10000) * 100 as retail from want w cross join settings s) w
+join (
+  select w.order_id,
+         case when sum(w.kg) >= s.wholesale_min_kg
+                or sum(w.kg * round(w.wholesale * (100 + s.retail_markup_pct) / 10000) * 100) >= s.wholesale_min_total
+              then 'si' else 'le' end::price_tier as tier
+  from want w cross join settings s
+  group by w.order_id, s.wholesale_min_kg, s.retail_markup_pct, s.wholesale_min_total
+) t using (order_id);
+
+update orders o set price_tier = t.tier from (select distinct order_id, tier from priced) t where t.order_id = o.id;
+
+-- Each product's kg is ordered as the largest pack that fits plus loose kg, e.g. 43 kg = 1 Bao 25 kg + 18 Kg.
+insert into order_items (order_id, product_id, pack_id, pack_name, kg_per_unit, pack_qty, wholesale_price_per_kg, price_per_kg, line_total)
+select p.order_id, p.product_id, pk.id, pk.name, pk.kg_per_unit, l.qty, p.wholesale, p.price, round(l.qty * pk.kg_per_unit * p.price)
+from priced p
+left join lateral (
+  select id, kg_per_unit, floor(p.kg / kg_per_unit) as n from product_packs
+  where product_id = p.product_id and kg_per_unit > 1 and kg_per_unit <= p.kg order by kg_per_unit desc limit 1
+) big on true
+cross join lateral (select id from product_packs where product_id = p.product_id and name = 'Kg') loose
+cross join lateral (values (big.id, big.n), (loose.id, p.kg - coalesce(big.n * big.kg_per_unit, 0))) l(pack_id, qty)
+join product_packs pk on pk.id = l.pack_id
+where l.qty > 0;
+
 update orders o set total = t.total
-from (select order_id, sum(round(qty_kg * unit_price))::bigint as total from order_items group by order_id) t
+from (select order_id, sum(line_total)::bigint as total from order_items group by order_id) t
 where t.order_id = o.id and o.customer_id in (select customer_id from plan);
 
 insert into production_days (date, status, closed_at)
@@ -94,5 +125,5 @@ join factories f on f.name = j.factory;
 
 commit;
 
-select count(*) as orders, sum(total) as revenue_vnd, min(production_date) as from_date, max(production_date) as to_date
+select count(*) as orders, count(*) filter (where price_tier = 'si') as wholesale_orders, sum(total) as revenue_vnd, min(production_date) as from_date, max(production_date) as to_date
 from orders where phone like '0912%';

@@ -1,28 +1,33 @@
 import { ActionForm } from "@/components/ActionForm";
 import { PageTitle } from "@/components/page-title";
+import { wholesaleRule } from "@/components/PricingSummary";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { packSize } from "@/lib/domain/catalog";
 import { DISTRICTS } from "@/lib/domain/districts";
 import { formatVnd } from "@/lib/domain/money";
+import { retailPerKg } from "@/lib/domain/pricing";
+import { getSettings, loadCatalog, pricingTerms } from "@/lib/orders";
 import { placeStaffOrder } from "./actions";
 
 export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sale/orders/new">) {
   const me = await requireRole("sale", "manager");
   const raw = (await searchParams).phone;
   const phone = typeof raw === "string" ? raw.replace(/[\s.-]/g, "") : "";
-  const [products, customer] = await Promise.all([
-    db().from("products").select("id, name, price_per_kg").eq("active", true).order("id").then(unwrap),
+  const [catalog, settings, customer] = await Promise.all([
+    loadCatalog(),
+    getSettings(),
     phone
       ? db().from("customers").select("name, phone, default_address, default_district, sale_id, staff(name)").eq("phone", phone).maybeSingle()
       : null,
   ]);
+  const terms = pricingTerms(settings);
   const found = customer?.data ?? null;
   const ownedByOther = found?.sale_id != null && found.sale_id !== me.id;
 
@@ -72,24 +77,35 @@ export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sa
                   ))}
                 </NativeSelect>
               </Field>
-              <FieldSet className="gap-2">
-                <FieldLegend variant="label">Sản phẩm (kg)</FieldLegend>
-                {products.map((p) => (
-                  <label key={p.id} className="flex items-center justify-between gap-2 text-sm">
-                    <span>
-                      {p.name} <span className="text-muted-foreground">({formatVnd(p.price_per_kg)}/kg)</span>
-                    </span>
-                    <Input
-                      name={`qty_${p.id}`}
-                      aria-label={`Số kg ${p.name}`}
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      step={0.5}
-                      placeholder="0"
-                      className="w-24 text-right"
-                    />
-                  </label>
+              <FieldSet className="gap-3">
+                <FieldLegend variant="label">Sản phẩm (số lượng theo quy cách)</FieldLegend>
+                <FieldDescription>{wholesaleRule(terms)}, áp dụng cho cả đơn; giá được tính khi lưu.</FieldDescription>
+                {catalog.map((p) => (
+                  <div key={p.id} className="rounded-lg border p-2.5">
+                    <div className="mb-2 text-sm">
+                      <b>{p.name}</b>{" "}
+                      <span className="text-muted-foreground">
+                        Sỉ {formatVnd(p.price_per_kg)}/kg · Lẻ {formatVnd(retailPerKg(p.price_per_kg, terms.retailMarkupPct))}/kg
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {p.packs.map((pack) => (
+                        <label key={pack.id} className="text-xs text-muted-foreground">
+                          {packSize(pack)}
+                          <Input
+                            name={`qty_${pack.id}`}
+                            aria-label={`Số lượng ${p.name} - ${pack.name}`}
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            step={1}
+                            placeholder="0"
+                            className="mt-1 text-right"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </FieldSet>
               <Field>

@@ -73,7 +73,7 @@ async function login(browser: Browser, email: string, mobile: boolean) {
 type Info = { name: string; phone: string; address: string; district: string; note?: string };
 async function customerCheckout(page: Page, items: Record<string, number>, info: Info, slug?: string) {
   await page.goto(`${BASE}/`);
-  for (const [product, kg] of Object.entries(items)) await page.getByLabel(`Số kg ${product}`).fill(String(kg));
+  for (const [pack, qty] of Object.entries(items)) await page.getByLabel(`Số lượng ${pack}`, { exact: true }).fill(String(qty));
   if (slug) await shot(page, `${slug}-shop`);
   await page.getByRole("link", { name: "Đặt hàng" }).click();
   await page.waitForURL("**/checkout");
@@ -102,21 +102,26 @@ async function main() {
     await customer.page.goto(`${BASE}/r/NVKD01`);
     const A = await customerCheckout(
       customer.page,
-      { "Mì trứng": 30, "Bún tươi": 20 },
+      { "Mì trứng - Bao": 1, "Mì trứng - Kg": 5, "Bún tươi - Thùng": 2 },
       { name: "Chị Mai", phone: "0909111222", address: "100 Nguyễn Trãi", district: "Quận 5", note: "Giao buổi sáng, gọi trước khi đến" },
       "customer",
     );
 
     const s2 = await login(browser, "sale2@local", true);
     await s2.page.goto(`${BASE}/sale/orders/new?phone=0909111222`);
-    await s2.page.getByLabel("Số kg Mì trứng").fill("10");
+    await s2.page.getByLabel("Số lượng Mì trứng - Thùng", { exact: true }).fill("1");
     await shot(s2.page, "sale2-new-order-other-sale-warning");
     await s2.page.getByRole("button", { name: "Tạo đơn" }).click();
     const B = /DH\d{6}/.exec(await s2.page.getByRole("status").innerText())![0];
     await shot(s2.page, "sale2-order-saved");
 
     const walkIn = await newPage(browser, true);
-    const C = await customerCheckout(walkIn.page, { "Mì trứng": 15 }, { name: "Anh Tùng", phone: "0909333444", address: "5 Hoàng Văn Thụ", district: "Tân Bình" });
+    const C = await customerCheckout(
+      walkIn.page,
+      { "Mì trứng - Thùng": 1, "Mì trứng - Kg": 5 },
+      { name: "Anh Tùng", phone: "0909333444", address: "5 Hoàng Văn Thụ", district: "Tân Bình" },
+      "walkin-retail",
+    );
     const D = (await order(A)).production_date as IsoDate;
 
     const s1 = await login(browser, "sale1@local", true);
@@ -280,6 +285,13 @@ async function main() {
 
     await customer.page.goto(`${BASE}/orders?phone=0909111222`);
     await shot(customer.page, "customer-orders-lookup");
+    await customer.page.goto(`${BASE}/`);
+    await customer.page.getByTestId("last-order").waitFor();
+    await shot(customer.page, "customer-shop-reorder-card");
+    await customer.page.goto(`${BASE}/orders?phone=0909111222`);
+    await customer.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Đặt lại" }).click();
+    await customer.page.waitForURL("**/checkout?**");
+    await shot(customer.page, "customer-reorder-checkout-prefilled");
   } finally {
     await browser.close();
   }

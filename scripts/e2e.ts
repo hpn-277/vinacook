@@ -9,6 +9,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import type { Database } from "../lib/database.types";
 import { DISTRICTS } from "../lib/domain/districts";
 import { formatVnd } from "../lib/domain/money";
+import { retailPerKg } from "../lib/domain/pricing";
 import { JOB_TRANSITIONS, ORDER_TRANSITIONS } from "../lib/domain/status";
 import { addDays, type IsoDate } from "../lib/domain/time";
 
@@ -77,9 +78,11 @@ async function login(browser: Browser, email: string, mobile = false) {
   return s;
 }
 
+/** items: "<product> - <pack>" -> pack quantity. Returns the order code and the shop's tier hint before checkout. */
 async function customerCheckout(page: Page, items: Record<string, number>, info: { name: string; phone: string; address: string; district: string }) {
   await page.goto(`${BASE}/`);
-  for (const [product, kg] of Object.entries(items)) await page.getByLabel(`Số kg ${product}`).fill(String(kg));
+  for (const [pack, qty] of Object.entries(items)) await page.getByLabel(`Số lượng ${pack}`, { exact: true }).fill(String(qty));
+  const hint = await page.getByTestId("tier-hint").innerText();
   await page.getByRole("link", { name: "Đặt hàng" }).click();
   await page.waitForURL("**/checkout");
   await page.getByLabel("Họ tên").fill(info.name);
@@ -90,7 +93,17 @@ async function customerCheckout(page: Page, items: Record<string, number>, info:
   const text = await page.getByRole("status").innerText();
   const code = /DH\d{6}/.exec(text)?.[0];
   assert(code, `customer order placed: "${text}"`);
-  return code;
+  return { code, hint, message: text };
+}
+
+async function items(code: string) {
+  const { data, error } = await admin
+    .from("order_items")
+    .select("pack_id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name), orders!inner(code)")
+    .eq("orders.code", code)
+    .order("id");
+  if (error) throw error;
+  return data;
 }
 
 async function structuralChecks() {
@@ -126,10 +139,27 @@ async function main() {
     await customer.page.goto(`${BASE}/r/NVKD01`);
     const ref = (await customer.ctx.cookies()).find((c) => c.name === "ref");
     eq(ref?.value, "NVKD01", "ref cookie stored");
-    const A = await customerCheckout(customer.page, { "Mì trứng": 30, "Bún tươi": 20 }, { name: "Chị Mai", phone: "0909111222", address: "100 Nguyễn Trãi", district: "Quận 5" });
+    eq(await customer.page.title(), "VinaCook - Đặt hàng", "page title carries the VinaCook brand");
+    eq((await customer.page.locator("header a").first().innerText()).trim(), "VinaCook", "shop header shows VinaCook");
+    const placedA = await customerCheckout(
+      customer.page,
+      { "Mì trứng - Bao": 1, "Mì trứng - Kg": 5, "Bún tươi - Thùng": 2 },
+      { name: "Chị Mai", phone: "0909111222", address: "100 Nguyễn Trãi", district: "Quận 5" },
+    );
+    const A = placedA.code;
     const a0 = await order(A);
     eq(a0.sale_id, sale1, "order A snapshots sale1");
-    eq(a0.total, 30 * 25000 + 20 * 15000, "order A total in VND from snapshot prices");
+    assert(placedA.hint.includes("giá sỉ") && placedA.hint.includes("50 kg"), `shop shows wholesale for exactly 50 kg: "${placedA.hint}"`);
+    eq(a0.price_tier, "si", "1 Bao + 5 Kg + 2 Thùng = exactly 50 kg gets wholesale (Sỉ)");
+    eq(a0.total, 30 * 25000 + 20 * 15000, "order A total at wholesale per-kg prices");
+    assert(placedA.message.includes("Giá sỉ") && placedA.message.includes(formatVnd(a0.total)), `confirmation shows tier and total: "${placedA.message}"`);
+    eq(
+      (await items(A)).map((i) => `${i.products!.name}:${i.pack_qty} ${i.pack_name}=${i.qty_kg}kg@${i.price_per_kg}`),
+      ["Mì trứng:5 Kg=5kg@25000", "Mì trứng:1 Bao=25kg@25000", "Bún tươi:2 Thùng=20kg@15000"],
+      "A keeps one line per pack, snapshots pack and converts to kg",
+    );
+    const confirmLines = await customer.page.locator("main").innerText();
+    assert(confirmLines.includes("Mì trứng · 1 Bao (25 kg)") && confirmLines.includes("Bún tươi · 2 Thùng (20 kg)"), "checkout confirmation lists packs");
     const { data: cust } = await admin.from("customers").select("sale_id").eq("phone", "0909111222").single();
     eq(cust!.sale_id, sale1, "new customer bound to sale1");
 
@@ -137,20 +167,32 @@ async function main() {
     const s2 = await login(browser, "sale2@local", true);
     await s2.page.goto(`${BASE}/sale/orders/new?phone=0909111222`);
     assert((await s2.page.getByRole("note").innerText()).includes("NVKD 01"), "sale2 is warned the customer belongs to NVKD 01");
-    await s2.page.getByLabel("Số kg Mì trứng").fill("10");
+    await s2.page.getByLabel("Số lượng Mì trứng - Thùng", { exact: true }).fill("1");
     await s2.page.getByRole("button", { name: "Tạo đơn" }).click();
     const s2msg = await s2.page.getByRole("status").innerText();
     assert(s2msg.includes("thuộc nhân viên khác"), `sale2 sees ownership warning after save: "${s2msg}"`);
     const B = /DH\d{6}/.exec(s2msg)![0];
     const b0 = await order(B);
     eq([b0.sale_id, b0.created_by, b0.created_by_staff_id], [sale1, "sale", sale2], "order B saved, commission stays with sale1");
+    eq([b0.price_tier, b0.total], ["le", 10 * retailPerKg(25000, 25)], "sale-entered 1 Thùng (10 kg) is priced retail by the server");
+    assert(s2msg.includes("Giá lẻ"), "sale sees the tier in the confirmation");
     const { data: cust2 } = await admin.from("customers").select("sale_id").eq("phone", "0909111222").single();
     eq(cust2!.sale_id, sale1, "customer owner not overwritten");
 
     step("walk-in customer without ref in another district");
     const walkIn = await newPage(browser, true);
-    const C = await customerCheckout(walkIn.page, { "Mì trứng": 15 }, { name: "Anh Tùng", phone: "0909333444", address: "5 Hoàng Văn Thụ", district: "Tân Bình" });
-    eq((await order(C)).sale_id, null, "order C has no sale");
+    const placedC = await customerCheckout(
+      walkIn.page,
+      { "Mì trứng - Thùng": 1, "Mì trứng - Kg": 5 },
+      { name: "Anh Tùng", phone: "0909333444", address: "5 Hoàng Văn Thụ", district: "Tân Bình" },
+    );
+    const C = placedC.code;
+    const c0 = await order(C);
+    eq(c0.sale_id, null, "order C has no sale");
+    assert(placedC.hint.includes("Đặt thêm 35 kg"), `shop hints how far 15 kg is from wholesale: "${placedC.hint}"`);
+    eq(retailPerKg(25000, 25), 31300, "retail Mì trứng = 25.000 × 1.25 rounded to 100đ");
+    eq([c0.price_tier, c0.total], ["le", 15 * 31300], "15 kg order is retail at wholesale × 1.25");
+    eq((await items(C)).map((i) => i.price_per_kg), [31300, 31300], "every C line snapshots the retail per-kg price");
 
     const D = a0.production_date as IsoDate;
     eq([b0.production_date, (await order(C)).production_date], [D, D], `all orders share production date ${D}`);
@@ -161,6 +203,24 @@ async function main() {
     assert((await mgr.page.getByText("đơn chưa duyệt").innerText()).includes("3"), "close blocked: 3 placed orders");
     const early = await admin.rpc("close_production_day", { p_date: D, p_alloc: [] });
     assert(early.error?.message.includes("chưa duyệt"), `RPC also refuses: ${early.error?.message}`);
+
+    step("manager edit re-derives the tier from the order's own pricing terms");
+    const editB = async (packs: number) => {
+      await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+      const card = mgr.page.locator(`[data-order-code="${B}"]`);
+      await card.getByText("Sửa đơn").click();
+      await card.getByLabel("Sửa Mì trứng - Thùng").fill(String(packs));
+      await card.getByRole("button", { name: "Lưu" }).click();
+    };
+    await editB(5);
+    const b5 = await until(() => order(B), (o) => o.price_tier === "si", "B edited to 5 Thùng");
+    eq(b5.total, 50 * 25000, "B raised to 5 Thùng (50 kg) becomes wholesale");
+    await editB(1);
+    const b1 = await until(() => order(B), (o) => o.price_tier === "le", "B edited back to 1 Thùng");
+    eq(b1.total, 10 * 31300, "B back to 1 Thùng is retail again");
+    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+    const cardA = await mgr.page.locator(`[data-order-code="${A}"]`).innerText();
+    assert(cardA.includes("Mì trứng · 1 Bao (25 kg)") && cardA.includes("Sỉ"), "admin card shows packs and the Sỉ badge");
 
     step("manager approves");
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
@@ -180,7 +240,7 @@ async function main() {
     await mgr.page.getByLabel("Mì trứng - Xưởng Bình Tân").fill("30");
     assert(await submit.isDisabled(), "send disabled while Mì trứng is under-allocated");
     await mgr.page.getByLabel("Mì trứng - Xưởng Hóc Môn").fill("25");
-    assert(await submit.isEnabled(), "send enabled once 30 + 25 = 55 kg");
+    assert(await submit.isEnabled(), "send enabled once 30 + 25 = 55 kg (1 Bao + 5 Kg + 1 Thùng + 1 Thùng + 5 Kg)");
     await mgr.page.getByLabel("Bún tươi - Xưởng Hóc Môn").fill("0");
     await submit.click();
     await mgr.page.getByRole("heading", { name: "Lệnh sản xuất" }).waitFor();
@@ -200,7 +260,7 @@ async function main() {
 
     step("late order after close rolls to next open day");
     const late = await newPage(browser, true);
-    const L = await customerCheckout(late.page, { "Bún tươi": 5 }, { name: "Cô Ba", phone: "0909555666", address: "9 Lê Lợi", district: "Quận 1" });
+    const { code: L } = await customerCheckout(late.page, { "Bún tươi - Túi": 1 }, { name: "Cô Ba", phone: "0909555666", address: "9 Lê Lợi", district: "Quận 1" });
     eq((await order(L)).production_date, addDays(D, 1), "order on closed day goes to next day");
 
     step("factory1 accepts and ships; factory2 rejects");
@@ -262,9 +322,9 @@ async function main() {
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     const cardC = mgr.page.locator(`[data-order-code="${C}"]`);
     await cardC.getByText("Sửa đơn").click();
-    await cardC.locator('input[name^="qty_"]').fill("13");
+    await cardC.getByLabel("Sửa Mì trứng - Kg").fill("3");
     await cardC.getByRole("button", { name: "Lưu" }).click();
-    await until(async () => (await order(C)).total, (t) => t === 13 * 25000, "C total recomputed");
+    await until(async () => (await order(C)).total, (t) => t === 13 * 31300, "C total recomputed at its retail snapshot (1 Thùng + 3 Kg = 13 kg)");
 
     step("dispatch filtered by district");
     await mgr.page.goto(`${BASE}/admin/dispatch`);
@@ -316,6 +376,46 @@ async function main() {
     await customer.page.goto(`${BASE}/orders?phone=0909111222`);
     const lookup = await customer.page.locator("main").innerText();
     assert(lookup.includes(A) && lookup.includes(B) && lookup.includes("Đã giao"), "lookup lists both orders with status");
+    assert(lookup.includes("Bún tươi · 2 Thùng (20 kg)"), "lookup lists packs");
+
+    step("one-tap reorder");
+    await mgr.page.goto(`${BASE}/admin/settings`);
+    await mgr.page.getByLabel("Đang bán Bún tươi - Thùng").click();
+    await mgr.page.getByRole("button", { name: "Lưu Bún tươi - Thùng" }).click();
+    const thungId = (await items(A)).find((i) => i.pack_name === "Thùng")!.pack_id;
+    await until(async () => (await admin.from("product_packs").select("active").eq("id", thungId).single()).data!.active, (a) => !a, "pack deactivated in settings");
+
+    await customer.page.goto(`${BASE}/`);
+    const lastCard = customer.page.getByTestId("last-order");
+    await lastCard.waitFor();
+    assert((await lastCard.innerText()).includes(B), "shop offers to reorder the phone's latest order (B)");
+    eq(await customer.page.locator('[aria-label^="Số lượng Bún tươi - Thùng"]').count(), 0, "deactivated pack is gone from the shop");
+
+    await customer.page.goto(`${BASE}/orders?phone=0909111222`);
+    await customer.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Đặt lại" }).click();
+    await customer.page.waitForURL("**/checkout?**");
+    const notice = await customer.page.getByTestId("reorder-notice").innerText();
+    assert(notice.includes(A) && notice.includes("Bún tươi · 2 Thùng (20 kg)"), `reorder notice names the order and the skipped pack: "${notice}"`);
+    eq(
+      [
+        await customer.page.getByLabel("Họ tên").inputValue(),
+        await customer.page.getByLabel("Số điện thoại").inputValue(),
+        await customer.page.getByLabel("Địa chỉ").inputValue(),
+        await customer.page.getByLabel("Quận/Huyện").inputValue(),
+      ],
+      ["Chị Mai", "0909111222", "100 Nguyễn Trãi", "Quận 5"],
+      "reorder prefills the customer",
+    );
+    eq(await customer.page.getByTestId("checkout-total").innerText(), formatVnd(30 * 31300), "reorder of the remaining 30 kg is priced at today's retail");
+    await customer.page.getByRole("button", { name: "Xác nhận đặt hàng" }).click();
+    const R = /DH\d{6}/.exec(await customer.page.getByRole("status").innerText())![0];
+    const r0 = await order(R);
+    eq(
+      (await items(R)).map((i) => `${i.pack_id}x${i.pack_qty}`),
+      (await items(A)).filter((i) => i.pack_id !== thungId).map((i) => `${i.pack_id}x${i.pack_qty}`),
+      "reorder repeats A's packs and quantities minus the inactive one",
+    );
+    eq([r0.price_tier, r0.total, r0.sale_id], ["le", 30 * 31300, sale1], "reorder is repriced server-side and stays with sale1");
   } finally {
     await browser.close();
   }

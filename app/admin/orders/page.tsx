@@ -5,6 +5,7 @@ import { PageTitle } from "@/components/page-title";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AutoSubmitForm } from "@/components/AutoSubmitForm";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
@@ -21,7 +22,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   const date = parseIsoDate(typeof sp.date === "string" ? sp.date : null) ?? today();
   const status = ORDER_STATUSES.find((s) => s === sp.status);
 
-  let query = db().from("orders").select(ADMIN_ORDER_SELECT).eq("production_date", date).order("id");
+  let query = db().from("orders").select(ADMIN_ORDER_SELECT).eq("production_date", date).order("id").order("id", { referencedTable: "order_items" });
   if (status) query = query.eq("status", status);
   const [orders, day] = await Promise.all([
     query.then(unwrap) as Promise<AdminOrder[]>,
@@ -40,7 +41,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   return (
     <>
       <PageTitle>Đơn hàng ngày {date}</PageTitle>
-      <form className="mb-3 flex flex-wrap gap-2">
+      <AutoSubmitForm action="/admin/orders" className="mb-3 flex flex-wrap gap-2">
         <Input type="date" name="date" defaultValue={date} className="w-auto" />
         <NativeSelect name="status" defaultValue={status ?? ""}>
           <NativeSelectOption value="">Tất cả trạng thái</NativeSelectOption>
@@ -50,8 +51,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
             </NativeSelectOption>
           ))}
         </NativeSelect>
-        <Button variant="outline">Lọc</Button>
-      </form>
+      </AutoSubmitForm>
       <div className="mb-3 flex flex-wrap gap-2">
         {ORDER_STATUSES.filter((s) => counts.get(s)).map((s) => (
           <Badge key={s} asChild variant="outline" className="h-7 bg-card px-2.5 text-sm font-normal">

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Bánh phở tươi">
+  <rect width="160" height="160" rx="24" fill="#ECFDF5"/>
+  <circle cx="30" cy="30" r="36" fill="#A7F3D0" opacity=".5"/>
+  <ellipse cx="80" cy="126" rx="58" ry="10" fill="#047857" opacity=".15"/>
+  <g stroke="#CBD5E1" stroke-width="2">
+    <path d="M26 112c18-8 36-8 54 0s36 8 54 0v-12c-18 8-36 8-54 0s-36-8-54 0z" fill="#fff"/>
+    <path d="M30 94c18-8 34-8 50 0s34 8 50 0V82c-16 8-32 8-50 0s-32-8-50 0z" fill="#F8FAFC"/>
+    <path d="M34 76c16-8 30-8 46 0s30 8 46 0V64c-16 8-30 8-46 0s-30-8-46 0z" fill="#fff"/>
+  </g>
+  <path d="M40 66h80" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round"/>
+  <path d="M112 54c10-24 30-26 34-22-2 14-16 28-34 22z" fill="#16A34A"/>
+  <path d="M112 54c10-8 18-14 30-20" stroke="#14532D" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M100 52c-4-18 6-30 12-30 4 10 0 24-12 30z" fill="#22C55E"/>
+  <circle cx="44" cy="48" r="7" fill="#EF4444"/>
+  <path d="M44 41c2-4 6-6 8-4" stroke="#15803D" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>
