@@ -11,7 +11,8 @@
     "env": "node scripts/env.mjs",
     "gen:types": "supabase gen types typescript --local > lib/database.types.ts",
     "e2e": "tsx scripts/e2e.ts",
-    "qa:shots": "tsx scripts/qa-screenshots.ts"
+    "qa:shots": "tsx scripts/qa-screenshots.ts",
+    "seed:history": "psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -q -f scripts/seed-history.sql"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

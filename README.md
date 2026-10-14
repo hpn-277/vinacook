@@ -17,6 +17,7 @@ npx supabase start          # first run pulls Docker images
 npx supabase db reset       # applies supabase/migrations and supabase/seed.sql
 npm run env                 # writes .env.local from `supabase status`
 npm run dev                 # http://localhost:3000
+npm run seed:history        # optional: 6 weeks of past orders for demos (run right after db reset)
 ```
 
 `.env.local` holds `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`. All three are server-only.
