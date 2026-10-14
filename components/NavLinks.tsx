@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function NavLinks({ links }: { links: { href: string; label: string }[] }) {
   const pathname = usePathname();
@@ -12,14 +14,17 @@ export function NavLinks({ links }: { links: { href: string; label: string }[] }
   return links.map((l) => {
     const active = l.href === activeHref;
     return (
-      <Link
+      <Button
         key={l.href}
-        href={l.href}
-        aria-current={active ? "page" : undefined}
-        className={`whitespace-nowrap rounded px-3 py-2 font-medium hover:bg-orange-50 ${active ? "bg-orange-100 text-orange-900" : ""}`}
+        asChild
+        variant="ghost"
+        size="lg"
+        className={cn("md:justify-start", active && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary")}
       >
-        {l.label}
-      </Link>
+        <Link href={l.href} aria-current={active ? "page" : undefined}>
+          {l.label}
+        </Link>
+      </Button>
     );
   });
 }
