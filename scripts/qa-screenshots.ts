@@ -56,7 +56,6 @@ const DESKTOP = { viewport: { width: 1280, height: 800 } };
 async function newPage(browser: Browser, mobile: boolean): Promise<{ ctx: BrowserContext; page: Page }> {
   const ctx = await browser.newContext(mobile ? MOBILE : DESKTOP);
   const page = await ctx.newPage();
-  page.on("dialog", (d) => d.accept());
   page.on("pageerror", (e) => console.error("  page error:", e.message));
   return { ctx, page };
 }
@@ -142,6 +141,9 @@ async function main() {
     await mgr.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Duyệt" }).click();
     await until(() => orderStatus(A), (s) => s === "approved", "A approved");
     await mgr.page.getByRole("button", { name: /Duyệt tất cả đơn mới/ }).click();
+    const confirm = mgr.page.getByRole("alertdialog");
+    await shot(mgr.page, "admin-orders-confirm");
+    await confirm.getByRole("button", { name: "Xác nhận" }).click();
     await until(() => orderStatus(C), (s) => s === "approved", "C approved");
     await mgr.page.reload();
     await shot(mgr.page, "admin-orders-approved");

@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
-import { Card, OrderBadge, PageTitle } from "@/components/ui";
+import { Card, PageTitle } from "@/components/ui";
+import { OrderBadge } from "@/components/status-badge";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";

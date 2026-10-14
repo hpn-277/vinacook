@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
-import { Button, Card, inputClass, JobBadge, PageTitle } from "@/components/ui";
+import { Button, Card, inputClass, PageTitle } from "@/components/ui";
+import { JobBadge } from "@/components/status-badge";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";

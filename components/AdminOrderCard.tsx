@@ -1,6 +1,7 @@
 import { moveOrder, setPaid, editOrder } from "@/app/admin/orders/actions";
 import { ActionForm } from "@/components/ActionForm";
-import { Button, Card, inputClass, OrderBadge } from "@/components/ui";
+import { Button, Card, inputClass } from "@/components/ui";
+import { OrderBadge } from "@/components/status-badge";
 import { DISTRICTS } from "@/lib/domain/districts";
 import { formatKg, formatVnd } from "@/lib/domain/money";
 import { MANAGER_ORDER_MOVES, MOVE_LABEL, ORDER_EDITABLE, type OrderStatus } from "@/lib/domain/status";

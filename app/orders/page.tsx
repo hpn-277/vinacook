@@ -1,5 +1,6 @@
 import { PublicShell } from "@/components/PublicShell";
-import { Button, Card, inputClass, OrderBadge, PageTitle } from "@/components/ui";
+import { Button, Card, inputClass, PageTitle } from "@/components/ui";
+import { OrderBadge } from "@/components/status-badge";
 import { unwrap } from "@/lib/action";
 import { db } from "@/lib/db";
 import { formatKg, formatVnd } from "@/lib/domain/money";

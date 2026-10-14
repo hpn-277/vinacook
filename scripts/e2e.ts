@@ -63,7 +63,6 @@ const MOBILE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch
 async function newPage(browser: Browser, mobile = false): Promise<{ ctx: BrowserContext; page: Page }> {
   const ctx = await browser.newContext(mobile ? MOBILE : { viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
-  page.on("dialog", (d) => d.accept());
   page.on("pageerror", (e) => console.error("  page error:", e.message));
   return { ctx, page };
 }
@@ -168,6 +167,9 @@ async function main() {
     await mgr.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Duyệt" }).click();
     await until(() => orderStatus(A), (s) => s === "approved", "A approved");
     await mgr.page.getByRole("button", { name: /Duyệt tất cả đơn mới/ }).click();
+    const confirm = mgr.page.getByRole("alertdialog");
+    assert((await confirm.innerText()).includes("Duyệt tất cả 2 đơn mới?"), "approve-all asks for confirmation with the count");
+    await confirm.getByRole("button", { name: "Xác nhận" }).click();
     await until(() => orderStatus(C), (s) => s === "approved", "C approved");
     eq(await orderStatus(B), "approved", "B approved");
 
