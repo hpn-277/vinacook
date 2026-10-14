@@ -1,5 +1,5 @@
 import { PublicShell } from "@/components/PublicShell";
-import { PageTitle } from "@/components/ui";
+import { PageTitle } from "@/components/page-title";
 import { unwrap } from "@/lib/action";
 import { db } from "@/lib/db";
 import { placeCustomerOrder } from "./actions";

@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useActionState, useEffect } from "react";
 import { setCart, useCart } from "@/components/cart";
-import { Button, Field, inputClass } from "@/components/ui";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import type { ActionResult } from "@/lib/action";
 import { DISTRICTS } from "@/lib/domain/districts";
 import { formatKg, formatVnd, lineTotal } from "@/lib/domain/money";
@@ -25,12 +31,12 @@ export function CheckoutForm({
 
   if (state?.ok) {
     return (
-      <div role="status" className="space-y-3 rounded-xl border border-green-300 bg-green-50 p-4">
-        <p className="font-semibold text-green-800">{state.message}</p>
-        <Link href="/orders" className="underline">
-          Tra cứu đơn hàng
-        </Link>
-      </div>
+      <Alert role="status" className="border-green-200 bg-green-50 p-4 text-green-800">
+        <AlertTitle className="font-semibold">{state.message}</AlertTitle>
+        <AlertDescription>
+          <Link href="/orders">Tra cứu đơn hàng</Link>
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -40,7 +46,7 @@ export function CheckoutForm({
     return (
       <p>
         Giỏ hàng trống.{" "}
-        <Link href="/" className="underline">
+        <Link href="/" className="text-primary underline underline-offset-4">
           Chọn sản phẩm
         </Link>
       </p>
@@ -49,52 +55,63 @@ export function CheckoutForm({
 
   return (
     <form action={formAction} className="space-y-4">
-      <ul className="divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white">
-        {lines.map((p) => (
-          <li key={p.id} className="flex justify-between p-3 text-sm">
-            <span>
-              {p.name} × {formatKg(cart[p.id])}
-            </span>
-            <span>{formatVnd(lineTotal(cart[p.id], p.price_per_kg))}</span>
-          </li>
-        ))}
-        <li className="flex justify-between p-3 font-semibold">
-          <span>Tổng</span>
-          <span>{formatVnd(total)}</span>
-        </li>
-      </ul>
-      <input type="hidden" name="items" value={JSON.stringify(lines.map((p) => ({ product_id: p.id, qty_kg: cart[p.id] })))} />
-      <fieldset disabled={pending} className="space-y-3">
-        <Field label="Họ tên">
-          <input name="name" required className={inputClass} />
-        </Field>
-        <Field label="Số điện thoại">
-          <input name="phone" type="tel" inputMode="tel" required className={inputClass} />
-        </Field>
-        <Field label="Địa chỉ">
-          <input name="address" required className={inputClass} />
-        </Field>
-        <Field label="Quận/Huyện">
-          <select name="district" required defaultValue="" className={inputClass}>
-            <option value="" disabled>
-              Chọn quận/huyện
-            </option>
-            {DISTRICTS.map((d) => (
-              <option key={d}>{d}</option>
+      <Card size="sm">
+        <CardContent>
+          <ul className="divide-y">
+            {lines.map((p) => (
+              <li key={p.id} className="flex justify-between py-2">
+                <span>
+                  {p.name} × {formatKg(cart[p.id])}
+                </span>
+                <span>{formatVnd(lineTotal(cart[p.id], p.price_per_kg))}</span>
+              </li>
             ))}
-          </select>
-        </Field>
-        <Field label="Ghi chú">
-          <textarea name="note" rows={2} className={inputClass} />
-        </Field>
-        <Button type="submit" className="w-full py-3 text-base">
-          Xác nhận đặt hàng
-        </Button>
+            <li className="flex justify-between pt-2 text-base font-semibold">
+              <span>Tổng</span>
+              <span>{formatVnd(total)}</span>
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
+      <input type="hidden" name="items" value={JSON.stringify(lines.map((p) => ({ product_id: p.id, qty_kg: cart[p.id] })))} />
+      <fieldset disabled={pending}>
+        <FieldGroup className="gap-4">
+          <Field>
+            <FieldLabel htmlFor="checkout-name">Họ tên</FieldLabel>
+            <Input id="checkout-name" name="name" required />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="checkout-phone">Số điện thoại</FieldLabel>
+            <Input id="checkout-phone" name="phone" type="tel" inputMode="tel" required />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="checkout-address">Địa chỉ</FieldLabel>
+            <Input id="checkout-address" name="address" required />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="checkout-district">Quận/Huyện</FieldLabel>
+            <NativeSelect id="checkout-district" name="district" required defaultValue="" className="w-full">
+              <NativeSelectOption value="" disabled>
+                Chọn quận/huyện
+              </NativeSelectOption>
+              {DISTRICTS.map((d) => (
+                <NativeSelectOption key={d}>{d}</NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="checkout-note">Ghi chú</FieldLabel>
+            <Textarea id="checkout-note" name="note" rows={2} />
+          </Field>
+          <Button type="submit" size="lg" className="h-11 w-full text-base">
+            Xác nhận đặt hàng
+          </Button>
+        </FieldGroup>
       </fieldset>
       {state && !state.ok && (
-        <p role="alert" className="text-sm text-red-700">
-          {state.error}
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
       )}
     </form>
   );

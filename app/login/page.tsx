@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
-import { Button, Card, Field, inputClass, PageTitle } from "@/components/ui";
+import { PageTitle } from "@/components/page-title";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { currentStaff, ROLE_HOME } from "@/lib/auth";
 import { login } from "./actions";
 
@@ -11,17 +15,23 @@ export default async function LoginPage() {
     <main className="mx-auto max-w-sm p-4 pt-16">
       <PageTitle>Đăng nhập nhân viên</PageTitle>
       <Card>
-        <ActionForm action={login} className="space-y-3">
-          <Field label="Email">
-            <input name="email" type="email" required autoComplete="username" className={inputClass} />
-          </Field>
-          <Field label="Mật khẩu">
-            <input name="password" type="password" required autoComplete="current-password" className={inputClass} />
-          </Field>
-          <Button type="submit" className="w-full">
-            Đăng nhập
-          </Button>
-        </ActionForm>
+        <CardContent>
+          <ActionForm action={login}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="login-email">Email</FieldLabel>
+                <Input id="login-email" name="email" type="email" required autoComplete="username" />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="login-password">Mật khẩu</FieldLabel>
+                <Input id="login-password" name="password" type="password" required autoComplete="current-password" />
+              </Field>
+              <Button type="submit" size="lg" className="w-full">
+                Đăng nhập
+              </Button>
+            </FieldGroup>
+          </ActionForm>
+        </CardContent>
       </Card>
     </main>
   );

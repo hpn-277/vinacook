@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { setCart, useCart } from "@/components/cart";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { formatVnd } from "@/lib/domain/money";
 
 type Product = { id: number; name: string; price_per_kg: number; image_url: string | null };
@@ -13,48 +16,48 @@ export function Shop({ products }: { products: Product[] }) {
     <>
       <ul className="grid gap-3 sm:grid-cols-2">
         {products.map((p) => (
-          <li key={p.id} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3">
-            {p.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={p.image_url} alt="" className="h-16 w-16 rounded-lg object-cover" />
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-orange-100 text-xl font-bold text-orange-700">
-                {p.name.charAt(0)}
+          <li key={p.id}>
+            <Card size="sm" className="flex-row items-center gap-3 px-3">
+              {p.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.image_url} alt="" className="size-16 rounded-lg object-cover" />
+              ) : (
+                <div className="flex size-16 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xl font-bold text-primary">
+                  {p.name.charAt(0)}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold">{p.name}</div>
+                <div className="text-muted-foreground">{formatVnd(p.price_per_kg)}/kg</div>
               </div>
-            )}
-            <div className="flex-1">
-              <div className="font-semibold">{p.name}</div>
-              <div className="text-sm text-gray-600">{formatVnd(p.price_per_kg)}/kg</div>
-            </div>
-            <label className="flex items-center gap-1 text-sm">
-              <input
-                aria-label={`Số kg ${p.name}`}
-                type="number"
-                inputMode="decimal"
-                min={0}
-                step={0.5}
-                value={cart[p.id] ?? ""}
-                placeholder="0"
-                onChange={(e) => setCart({ ...cart, [p.id]: Number(e.target.value) })}
-                className="w-20 rounded-lg border border-gray-300 px-2 py-2 text-right text-base"
-              />
-              kg
-            </label>
+              <label className="flex items-center gap-1.5 text-muted-foreground">
+                <Input
+                  aria-label={`Số kg ${p.name}`}
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step={0.5}
+                  value={cart[p.id] ?? ""}
+                  placeholder="0"
+                  onChange={(e) => setCart({ ...cart, [p.id]: Number(e.target.value) })}
+                  className="h-10 w-20 text-right"
+                />
+                kg
+              </label>
+            </Card>
           </li>
         ))}
       </ul>
-      <div className="sticky bottom-0 mt-4 flex items-center justify-between rounded-xl border border-gray-200 bg-white p-3 shadow">
+      <Card size="sm" className="sticky bottom-3 mt-4 flex-row items-center justify-between px-3 shadow-lg">
         <span>
           Tạm tính: <b>{formatVnd(total)}</b>
         </span>
-        <Link
-          href="/checkout"
-          aria-disabled={total === 0}
-          className={`rounded-lg px-4 py-2 font-medium text-white ${total === 0 ? "pointer-events-none bg-gray-400" : "bg-orange-600"}`}
-        >
-          Đặt hàng
-        </Link>
-      </div>
+        <Button asChild size="lg" className="px-5 aria-disabled:pointer-events-none aria-disabled:opacity-50">
+          <Link href="/checkout" aria-disabled={total === 0}>
+            Đặt hàng
+          </Link>
+        </Button>
+      </Card>
     </>
   );
 }

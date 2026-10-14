@@ -1,6 +1,6 @@
 import { PublicShell } from "@/components/PublicShell";
 import { Shop } from "@/components/Shop";
-import { PageTitle } from "@/components/ui";
+import { PageTitle } from "@/components/page-title";
 import { unwrap } from "@/lib/action";
 import { db } from "@/lib/db";
 
@@ -11,7 +11,7 @@ export default async function HomePage() {
   return (
     <PublicShell>
       <PageTitle>Mì, bún, phở tươi mỗi ngày</PageTitle>
-      <p className="mb-4 text-sm text-gray-600">Nhập số kg cần đặt. Đặt trước 17:00 giao trong ngày sản xuất hôm nay.</p>
+      <p className="mb-4 text-sm text-muted-foreground">Nhập số kg cần đặt. Đặt trước 17:00 giao trong ngày sản xuất hôm nay.</p>
       <Shop products={products} />
     </PublicShell>
   );
