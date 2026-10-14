@@ -15,7 +15,7 @@ export async function StaffShell({ links, children }: { links: { href: string; l
           <NavLinks links={links} />
           <div className="ml-auto flex shrink-0 items-center gap-1 pl-2 md:mt-auto md:ml-0 md:flex-col md:items-stretch md:pl-0">
             <Separator className="mb-2 hidden md:block" />
-            <span className="px-2.5 text-sm whitespace-nowrap text-muted-foreground">{staff?.name}</span>
+            <span className="hidden px-2.5 text-sm whitespace-nowrap text-muted-foreground sm:inline md:block">{staff?.name}</span>
             <form action={logout}>
               <Button variant="ghost" size="lg" className="text-muted-foreground md:w-full md:justify-start">
                 Đăng xuất
