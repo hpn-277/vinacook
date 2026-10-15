@@ -7,7 +7,6 @@ import type { District } from "@/lib/domain/districts";
 import { priceLines, type PriceTier, type PricingTerms } from "@/lib/domain/pricing";
 import { productionDate } from "@/lib/domain/time";
 
-export const REF_COOKIE = "ref";
 
 const packQty = z.number().int("Số lượng phải là số nguyên").positive().max(100000);
 

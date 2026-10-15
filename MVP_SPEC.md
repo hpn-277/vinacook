@@ -8,8 +8,8 @@ Next.js (App Router) + Supabase (Postgres + Auth for staff) + Vercel. UI Vietnam
 |---|---|---|
 | Customer | none (guest, phone = ID) | browse, order, lookup orders by phone |
 | Sale | yes | share ref link, enter orders for own customers, see own customers/orders/commission |
-| Manager (admin) | yes | everything: products, factories, sales, drivers, commission %, cutoff, orders, production, receiving, dispatch, mark paid |
-| Factory | yes | see assigned jobs, accept/reject, mark shipped |
+| Manager (admin) | yes | everything: products, factories, sales, drivers, commission %, cutoff, orders, production, receiving, dispatch, mark paid. The only role that moves orders and production jobs |
+| Factory | yes | read-only: own jobs for today and tomorrow (date, product, kg, status) |
 | Driver | yes | see assigned deliveries, mark delivered/failed |
 
 ## Data model
@@ -21,33 +21,32 @@ Next.js (App Router) + Supabase (Postgres + Auth for staff) + Vercel. UI Vietnam
 - `orders` (id, code, customer_id, sale_id NULL — snapshot at creation, created_by[customer|sale|manager], created_by_staff_id NULL, production_date, address, district, phone, note, status, payment_status[unpaid|paid], total, driver_id NULL, fail_reason NULL, delivered_at NULL, created_at)
 - `order_items` (id, order_id, product_id, pack_id, pack_name, kg_per_unit, pack_qty, qty_kg = pack_qty × kg_per_unit, wholesale_price_per_kg, price_per_kg, line_total — snapshots); `orders` also snapshot price_tier (si|le) and the pricing terms
 - `production_days` (date PK, status[open|closed])
-- `production_jobs` (id, date, product_id, factory_id, qty_kg, status, received_kg NULL, rejected_reason NULL, timestamps)
+- `production_jobs` (id, date, product_id, factory_id, qty_kg, status, received_kg NULL, timestamps)
 - `settings` (cutoff_time = 17:00, Asia/Ho_Chi_Minh, retail_markup_pct = 25, wholesale_min_kg = 50, wholesale_min_total = 2.000.000đ)
 - `district` = fixed list of HCMC districts (dropdown; used to filter dispatch)
 
 ## Order lifecycle
 ```
-placed ──(manager approves)──> approved ──(day closed)──> in_production ──(all its products received)──> ready
-   │                                                                        │
-cancelled (manager, from placed/approved)                              assigned (driver set)
-                                                                            │
-                                                       delivered  |  failed ──> back to ready / cancelled
+placed ──(manager closes day)──> in_production ──(manager receives day)──> ready ──(dispatch)──> assigned
+   │                                                                                               │
+cancelled (manager, from placed)                                          delivered  |  failed ──> back to ready / cancelled
 ```
+Labels: placed "Chờ xử lý", in_production "Đang sản xuất", ready "Đã nhận hàng", assigned "Đang giao", delivered "Đã giao", failed "Giao thất bại", cancelled "Đã hủy". There is no approval step.
 `payment_status` independent; manager toggles `paid`.
 
 ## Production job lifecycle
 ```
-assigned ──> accepted ──> shipped ──> received (manager enters received_kg)
-   └──> rejected ──> manager reassigns qty to another factory (new job)
+producing ──(manager receives day)──> received (received_kg = qty_kg)
 ```
+Close day creates jobs as `producing` ("Đang sản xuất"); receive day marks them `received` ("Đã nhận hàng"). Factories never change a job.
 
 ## Flows
 1. **Customer order** – `/` product list → cart (pack + quantity per line, converted to kg; wholesale or retail for the whole order) → name, phone, address, note → submit. If `?ref=CODE` (stored in cookie) and customer phone has no sale → bind sale (sticky forever). Existing owner never overwritten. production_date = today if before cutoff else tomorrow.
 2. **Sale order** – sale picks/creates customer by phone. If phone owned by another sale → order saved, `sale_id` = existing owner, warning shown.
-3. **Review** (manager) – each `placed` order for the date → approve / cancel. Close is blocked while any `placed` order remains for that date.
-4. **Close day** (manager) – only `approved` orders; shows totals kg per product for date. Manager splits each product across factories (inputs per factory, capacity warning if sum per factory > capacity). Must allocate 100% before send. Send → jobs `assigned`, orders → `in_production`, day `closed`, orders locked.
-5. **Factory** – sees today's/tomorrow's jobs → accept/reject(reason) → mark shipped.
-6. **Receive** (manager) – on `/admin/orders` for the closed day, one "Xác nhận đã nhận hàng" button once every factory job is shipped: all jobs received at planned kg, orders → ready. Factories are expected to produce exactly what is required.
+3. **Review** (manager) – `placed` orders need no approval; the manager cancels unwanted ones before closing the day.
+4. **Close day** (manager) – every `placed` order of the date; shows totals kg per product for date. Manager splits each product across factories (inputs per factory, capacity warning if sum per factory > capacity). Must allocate 100% before send. Send → jobs `producing`, orders → `in_production`, day `closed`, orders locked.
+5. **Factory** – read-only list of its own jobs for today and tomorrow. No buttons; never shows customers or prices.
+6. **Receive** (manager) – on `/admin/orders` for a closed day with orders in production, one "Xác nhận đã nhận hàng" button (with confirmation): all jobs received at planned kg, orders → ready ("Đã nhận hàng"). Refused on an open day. Factories are expected to produce exactly what is required.
 7. **Dispatch** (manager) – list `ready` orders, filter by district, assign driver.
 8. **Driver** – list assigned, call/Maps buttons, Delivered or Failed(reason).
 9. **Mark paid** (manager) – toggle on order.
@@ -68,8 +67,8 @@ OTP, per-customer price lists, online payment, e-invoice/MISA, Zalo OA, forecast
 
 ## Known risks
 - Phone lookup without OTP exposes order history to anyone knowing the phone.
-- Guest checkout allows spam orders → manager review before close mitigates.
-- Order "ready" requires all its products received; partial shortfall handled manually.
+- Guest checkout allows spam orders → manager cancels them before closing the day; anything still `placed` at close goes to production.
+- The manager receives a whole day at the planned kg; a factory shortfall is handled manually outside the app.
 
 ## Seed data (local)
 - Products (wholesale per kg; packs Kg 1 kg plus Thùng/Bao/Túi): Mì trứng 25.000đ/kg, Mì vàng sợi nhỏ 24.000đ/kg, Hủ tiếu dai 22.000đ/kg, Bánh phở tươi 18.000đ/kg, Bún tươi 15.000đ/kg, Mì quảng 26.000đ/kg

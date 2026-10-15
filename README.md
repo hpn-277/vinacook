@@ -45,7 +45,7 @@ npm test        # vitest: state-machine tables, the 17:00 production-date cutoff
 npm run e2e     # full lifecycle in a real browser; needs `npm run dev` running
 ```
 
-`npm run e2e` resets the database first. Pass `-- --no-reset` to keep the current data. The script drives the whole flow through the UI: referral order picked by pack (Kg, Thùng, Bao), wholesale at exactly 50 kg and retail below it, a second sale entering an order for the same phone, approval, closing the day with a split across two factories, a factory rejection and reassignment, one-click receiving of the whole day, dispatch, delivery and failure, payment, commission, and a one-tap reorder from `/orders` with a deactivated pack skipped. It checks every step against the database.
+`npm run e2e` resets the database first. Pass `-- --no-reset` to keep the current data. The script drives the whole flow through the UI: referral order picked by pack (Kg, Thùng, Bao), wholesale at exactly 50 kg and retail below it, a second sale entering an order for the same phone, cancelling a spam order, closing the day with a split across two factories, each factory's read-only job list, one-click receiving of the whole day (refused while the day is open), dispatch, delivery and failure, payment, commission, and a one-tap reorder from `/orders` with a deactivated pack skipped. It checks every step against the database.
 
 After a schema change, run `npm run gen:types` to regenerate `lib/database.types.ts`.
 
@@ -55,4 +55,5 @@ After a schema change, run `npm run gen:types` to regenerate `lib/database.types
 - `status_transitions` and a trigger in the first migration hold the same tables in the database, so bulk moves inside SQL functions are checked too. The e2e script asserts that the two copies match.
 - `lib/domain/pricing.ts` is the only pricing rule. `products.price_per_kg` is the wholesale price; retail adds `settings.retail_markup_pct` rounded to 100đ. An order gets wholesale when it reaches `wholesale_min_kg` or a retail total of `wholesale_min_total`. Server actions price every order with it and pass the snapshots to `place_order`, which refuses a snapshot whose pack size or wholesale price no longer matches the catalog. Each order stores its tier and the terms it was priced with. Orders can be cancelled but not edited.
 - Customers order packs (`product_packs`, managed in `/admin/settings`). `order_items.qty_kg` is generated from pack quantity × kg per pack, so production and dispatch still work in kg.
-- `close_production_day`, `reassign_job` and `receive_day` in `supabase/migrations` are atomic. Running close-day again on a closed day raises an error and creates no jobs.
+- Only the manager moves orders and jobs. Closing a day sends every `placed` order to production and creates `producing` jobs; receiving the day marks them `received` and the orders `ready` ("Đã nhận hàng"). Factories only read their jobs.
+- `close_production_day` and `receive_day` in `supabase/migrations` are atomic. Running close-day again on a closed day raises an error and creates no jobs.

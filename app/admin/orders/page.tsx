@@ -13,19 +13,17 @@ import { formatKg } from "@/lib/domain/money";
 import { ORDER_STATUS_LABEL, ORDER_STATUSES, type OrderStatus } from "@/lib/domain/status";
 import { parseIsoDate } from "@/lib/domain/time";
 import { today } from "@/lib/period";
-import { approveAllPlaced, receiveDay } from "./actions";
+import { receiveDay } from "./actions";
 
 export default async function AdminOrdersPage({ searchParams }: PageProps<"/admin/orders">) {
   await requireRole("manager");
   const sp = await searchParams;
   const date = parseIsoDate(typeof sp.date === "string" ? sp.date : null) ?? today();
 
-  const [orders, day, jobs] = await Promise.all([
-    db().from("orders").select(ADMIN_ORDER_SELECT).eq("production_date", date).order("id").order("id", { referencedTable: "order_items" }).then(unwrap) as Promise<AdminOrder[]>,
+  const [orders, day] = await Promise.all([
+    db().from("orders").select(ADMIN_ORDER_SELECT).eq("production_date", date).order("created_at", { ascending: false }).order("id", { ascending: false }).order("id", { referencedTable: "order_items" }).then(unwrap) as Promise<AdminOrder[]>,
     db().from("production_days").select("status").eq("date", date).maybeSingle(),
-    db().from("production_jobs").select("status, replaced_by").eq("date", date).then(unwrap),
   ]);
-  const unshippedJobs = jobs.filter((j) => j.status === "assigned" || j.status === "accepted" || (j.status === "rejected" && j.replaced_by == null)).length;
   const counts = new Map<OrderStatus, number>();
   for (const o of orders) counts.set(o.status, (counts.get(o.status) ?? 0) + 1);
 
@@ -52,21 +50,10 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
         <Button asChild>
           <Link href={`/admin/production/${date}`}>{day.data?.status === "closed" ? "Xem lệnh sản xuất" : "Chốt sản xuất ngày này"}</Link>
         </Button>
-        {(counts.get("in_production") ?? 0) > 0 &&
-          (unshippedJobs > 0 ? (
-            <Button variant="outline" disabled>
-              Chờ xưởng xuất hàng ({unshippedJobs} lệnh)
-            </Button>
-          ) : (
-            <ActionForm action={receiveDay} confirm={`Xác nhận đã nhận đủ hàng ngày ${date}?`}>
-              <input type="hidden" name="date" value={date} />
-              <Button>Xác nhận đã nhận hàng</Button>
-            </ActionForm>
-          ))}
-        {(counts.get("placed") ?? 0) > 0 && (
-          <ActionForm action={approveAllPlaced} confirm={`Duyệt tất cả ${counts.get("placed")} đơn mới?`}>
+        {(counts.get("in_production") ?? 0) > 0 && (
+          <ActionForm action={receiveDay} confirm={`Xác nhận đã nhận đủ hàng ngày ${date}?`}>
             <input type="hidden" name="date" value={date} />
-            <Button variant="outline">Duyệt tất cả đơn mới ({counts.get("placed")})</Button>
+            <Button>Xác nhận đã nhận hàng</Button>
           </ActionForm>
         )}
       </div>

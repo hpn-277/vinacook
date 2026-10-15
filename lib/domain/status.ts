@@ -1,21 +1,11 @@
-export const ORDER_STATUSES = [
-  "placed",
-  "approved",
-  "in_production",
-  "ready",
-  "assigned",
-  "delivered",
-  "failed",
-  "cancelled",
-] as const;
+export const ORDER_STATUSES = ["placed", "in_production", "ready", "assigned", "delivered", "failed", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
-export const JOB_STATUSES = ["assigned", "accepted", "rejected", "shipped", "received"] as const;
+export const JOB_STATUSES = ["producing", "received"] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];
 
 export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
-  placed: ["approved", "cancelled"],
-  approved: ["in_production", "cancelled"],
+  placed: ["in_production", "cancelled"],
   in_production: ["ready"],
   ready: ["assigned"],
   assigned: ["delivered", "failed"],
@@ -25,10 +15,7 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
 };
 
 export const JOB_TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
-  assigned: ["accepted", "rejected"],
-  accepted: ["shipped"],
-  shipped: ["received"],
-  rejected: [],
+  producing: ["received"],
   received: [],
 };
 
@@ -45,10 +32,9 @@ export function canTransition<M extends Machine>(machine: M, from: StatusOf<M>, 
 }
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  placed: "Mới đặt",
-  approved: "Đã duyệt",
+  placed: "Chờ xử lý",
   in_production: "Đang sản xuất",
-  ready: "Sẵn sàng giao",
+  ready: "Đã nhận hàng",
   assigned: "Đang giao",
   delivered: "Đã giao",
   failed: "Giao thất bại",
@@ -56,23 +42,17 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
 };
 
 export const JOB_STATUS_LABEL: Record<JobStatus, string> = {
-  assigned: "Chờ xưởng nhận",
-  accepted: "Xưởng đã nhận",
-  rejected: "Xưởng từ chối",
-  shipped: "Đã xuất hàng",
+  producing: "Đang sản xuất",
   received: "Đã nhận hàng",
 };
 
-
 /** Order edges a manager clicks directly; the others happen via close-day, receive-day, dispatch, or the driver. */
 export const MANAGER_ORDER_MOVES: Partial<Record<OrderStatus, readonly OrderStatus[]>> = {
-  placed: ["approved", "cancelled"],
-  approved: ["cancelled"],
+  placed: ["cancelled"],
   failed: ["ready", "cancelled"],
 };
 
 export const MOVE_LABEL: Partial<Record<OrderStatus, string>> = {
-  approved: "Duyệt",
   cancelled: "Hủy",
   ready: "Giao lại",
 };

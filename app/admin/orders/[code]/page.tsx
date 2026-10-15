@@ -66,7 +66,7 @@ export default async function OrderDetailPage({ params }: PageProps<"/admin/orde
     db().from("production_days").select("status, closed_at").eq("date", order.production_date).maybeSingle(),
     db()
       .from("production_jobs")
-      .select("id, qty_kg, received_kg, status, rejected_reason, updated_at, products(name), factories(name)")
+      .select("id, qty_kg, received_kg, status, updated_at, products(name), factories(name)")
       .eq("date", order.production_date)
       .in("product_id", productIds)
       .order("id")
@@ -80,11 +80,11 @@ export default async function OrderDetailPage({ params }: PageProps<"/admin/orde
   const atWholesale = order.items.reduce((s, i) => s + Math.round(i.qty_kg * i.wholesale_price_per_kg), 0);
   const owner = order.customer?.owner;
   const commission = order.sale && owner?.commission_pct != null && order.status === "delivered" ? Math.round((order.total * owner.commission_pct) / 100) : null;
-  const shipped = jobs.filter((j) => j.status === "shipped" || j.status === "received").map((j) => j.updated_at);
+  const received = jobs.filter((j) => j.status === "received").map((j) => j.updated_at);
   const timeline = [
     { label: "Đặt hàng", at: when(order.created_at), note: CREATED_BY[order.created_by] + (order.creator ? ` (${order.creator.name})` : "") },
     { label: "Chốt sản xuất", at: when(day.data?.closed_at), note: day.data?.status === "closed" ? "Đã gửi lệnh cho xưởng" : "Ngày chưa chốt" },
-    { label: "Xưởng xuất / kho nhận", at: shipped.length ? when(shipped.sort().at(-1)) : null, note: jobs.length ? `${jobs.length} lệnh liên quan` : "Chưa có lệnh" },
+    { label: "Nhận hàng từ xưởng", at: received.length ? when(received.sort().at(-1)) : null, note: jobs.length ? `${received.length}/${jobs.length} lệnh đã nhận` : "Chưa có lệnh" },
     { label: "Giao cho tài xế", at: null, note: order.driver ? order.driver.name : "Chưa phân công" },
     { label: "Giao thành công", at: when(order.delivered_at), note: order.status === "failed" ? `Thất bại: ${order.fail_reason}` : order.status === "cancelled" ? "Đơn đã hủy" : "" },
   ];
@@ -204,7 +204,6 @@ export default async function OrderDetailPage({ params }: PageProps<"/admin/orde
                     <span className="font-medium">#{j.id}</span> {j.products?.name} · {formatKg(j.qty_kg)} · {j.factories?.name}
                     <JobBadge status={j.status} />
                     {j.received_kg != null && <span className="text-muted-foreground">Thực nhận {formatKg(j.received_kg)}</span>}
-                    {j.rejected_reason && <span className="text-destructive">Lý do: {j.rejected_reason}</span>}
                   </li>
                 ))}
               </ul>

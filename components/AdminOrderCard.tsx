@@ -62,7 +62,7 @@ export function OrderInfo({ order }: { order: AdminOrder }) {
   );
 }
 
-export function OrderActions({ order, size }: { order: AdminOrder; size?: "sm" }) {
+export function OrderActions({ order, size, withPaid = true }: { order: AdminOrder; size?: "sm"; withPaid?: boolean }) {
   const moves = MANAGER_ORDER_MOVES[order.status] ?? [];
   return (
     <>
@@ -75,16 +75,42 @@ export function OrderActions({ order, size }: { order: AdminOrder; size?: "sm" }
           </Button>
         </ActionForm>
       ))}
-      {order.status !== "cancelled" && (
-        <ActionForm action={setPaid}>
-          <input type="hidden" name="order_id" value={order.id} />
-          <input type="hidden" name="paid" value={order.payment_status === "paid" ? "unpaid" : "paid"} />
-          <Button size={size} variant="outline">
-            {order.payment_status === "paid" ? "Bỏ đánh dấu đã trả" : "Đánh dấu đã trả"}
-          </Button>
-        </ActionForm>
-      )}
+      {withPaid && <PaidToggle order={order} size={size} />}
     </>
+  );
+}
+
+export function PaidToggle({ order, size }: { order: AdminOrder; size?: "sm" }) {
+  if (order.status === "cancelled") return null;
+  return (
+    <ActionForm action={setPaid}>
+      <input type="hidden" name="order_id" value={order.id} />
+      <input type="hidden" name="paid" value={order.payment_status === "paid" ? "unpaid" : "paid"} />
+      <Button size={size} variant="outline">
+        {order.payment_status === "paid" ? "Bỏ đánh dấu đã trả" : "Đánh dấu đã trả"}
+      </Button>
+    </ActionForm>
+  );
+}
+
+/** One-click pill for tables: shows the payment state and toggles it. */
+export function PaidPill({ order }: { order: AdminOrder }) {
+  const paid = order.payment_status === "paid";
+  if (order.status === "cancelled") return <span className="text-xs text-muted-foreground">—</span>;
+  return (
+    <ActionForm action={setPaid}>
+      <input type="hidden" name="order_id" value={order.id} />
+      <input type="hidden" name="paid" value={paid ? "unpaid" : "paid"} />
+      <Button
+        size="xs"
+        variant="outline"
+        aria-label={paid ? "Bỏ đánh dấu đã trả" : "Đánh dấu đã trả"}
+        title={paid ? "Bấm để bỏ đánh dấu đã trả" : "Bấm để đánh dấu đã trả"}
+        className={paid ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800" : "text-muted-foreground"}
+      >
+        {paid ? "✓ Đã trả" : "Chưa trả"}
+      </Button>
+    </ActionForm>
   );
 }
 

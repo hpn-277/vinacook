@@ -189,14 +189,14 @@ isOneToOne: false
                   ]
                 },"production_jobs": {
                   Row: {
-                    "created_at": string,"date": string,"factory_id": number,"id": number,"product_id": number,"qty_kg": number,"received_kg": number | null,"rejected_reason": string | null,"replaced_by": number | null,"status": Database["public"]['Enums']["job_status"],"updated_at": string
+                    "created_at": string,"date": string,"factory_id": number,"id": number,"product_id": number,"qty_kg": number,"received_kg": number | null,"status": Database["public"]['Enums']["job_status"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"date": string,"factory_id": number,"id"?: never,"product_id": number,"qty_kg": number,"received_kg"?: number | null,"rejected_reason"?: string | null,"replaced_by"?: number | null,"status"?: Database["public"]['Enums']["job_status"],"updated_at"?: string
+                    "created_at"?: string,"date": string,"factory_id": number,"id"?: never,"product_id": number,"qty_kg": number,"received_kg"?: number | null,"status"?: Database["public"]['Enums']["job_status"],"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"date"?: string,"factory_id"?: number,"id"?: never,"product_id"?: number,"qty_kg"?: number,"received_kg"?: number | null,"rejected_reason"?: string | null,"replaced_by"?: number | null,"status"?: Database["public"]['Enums']["job_status"],"updated_at"?: string
+                    "created_at"?: string,"date"?: string,"factory_id"?: number,"id"?: never,"product_id"?: number,"qty_kg"?: number,"received_kg"?: number | null,"status"?: Database["public"]['Enums']["job_status"],"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -216,12 +216,6 @@ isOneToOne: false
       columns: ["product_id"]
 isOneToOne: false
       referencedRelation: "products"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "production_jobs_replaced_by_fkey"
-      columns: ["replaced_by"]
-isOneToOne: false
-      referencedRelation: "production_jobs"
       referencedColumns: ["id"]
     }
                   ]
@@ -309,9 +303,6 @@ isOneToOne: false
 "place_order":
 { Args: { "p_address": string,"p_claim_sale_id"?: number,"p_created_by": Database["public"]['Enums']["order_creator"],"p_created_by_staff_id"?: number,"p_district": string,"p_items": Json,"p_name": string,"p_note": string,"p_phone": string,"p_price_tier": Database["public"]['Enums']["price_tier"],"p_production_date": string,"p_retail_markup_pct": number,"p_wholesale_min_kg": number,"p_wholesale_min_total": number }; Returns: Json
                            },
-"reassign_job":
-{ Args: { "p_factory_id": number,"p_job_id": number }; Returns: number
-                           },
 "receive_day":
 { Args: { "p_date": string }; Returns: number
                            },
@@ -320,7 +311,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "day_status": "open"|"closed","job_status": "assigned"|"accepted"|"rejected"|"shipped"|"received","order_creator": "customer"|"sale"|"manager","order_status": "placed"|"approved"|"in_production"|"ready"|"assigned"|"delivered"|"failed"|"cancelled","payment_status": "unpaid"|"paid","price_tier": "si"|"le","staff_role": "manager"|"sale"|"factory"|"driver"
+            "day_status": "open"|"closed","job_status": "producing"|"received","order_creator": "customer"|"sale"|"manager","order_status": "placed"|"in_production"|"ready"|"assigned"|"delivered"|"failed"|"cancelled","payment_status": "unpaid"|"paid","price_tier": "si"|"le","staff_role": "manager"|"sale"|"factory"|"driver"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -440,7 +431,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "day_status": ["open", "closed"],"job_status": ["assigned", "accepted", "rejected", "shipped", "received"],"order_creator": ["customer", "sale", "manager"],"order_status": ["placed", "approved", "in_production", "ready", "assigned", "delivered", "failed", "cancelled"],"payment_status": ["unpaid", "paid"],"price_tier": ["si", "le"],"staff_role": ["manager", "sale", "factory", "driver"]
+            "day_status": ["open", "closed"],"job_status": ["producing", "received"],"order_creator": ["customer", "sale", "manager"],"order_status": ["placed", "in_production", "ready", "assigned", "delivered", "failed", "cancelled"],"payment_status": ["unpaid", "paid"],"price_tier": ["si", "le"],"staff_role": ["manager", "sale", "factory", "driver"]
           }
         }
 } as const

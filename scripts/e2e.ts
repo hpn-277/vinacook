@@ -197,30 +197,31 @@ async function main() {
     const D = a0.production_date as IsoDate;
     eq([b0.production_date, (await order(C)).production_date], [D, D], `all orders share production date ${D}`);
 
-    step("manager review: close blocked while orders are placed");
-    const mgr = await login(browser, "manager@local");
-    await mgr.page.goto(`${BASE}/admin/production/${D}`);
-    assert((await mgr.page.getByText("đơn chưa duyệt").innerText()).includes("3"), "close blocked: 3 placed orders");
-    const early = await admin.rpc("close_production_day", { p_date: D, p_alloc: [] });
-    assert(early.error?.message.includes("chưa duyệt"), `RPC also refuses: ${early.error?.message}`);
+    step("spam order to be cancelled before close");
+    const spam = await newPage(browser, true);
+    const { code: S } = await customerCheckout(spam.page, { "Mì quảng - Kg": 3 }, { name: "Khách lạ", phone: "0909777888", address: "1 Lê Duẩn", district: "Quận 1" });
+    eq((await order(S)).production_date, D, "spam order lands on the same day");
 
+    step("manager reviews placed orders without an approval step");
+    const mgr = await login(browser, "manager@local");
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     const cardA = await mgr.page.locator(`[data-order-code="${A}"]`).innerText();
     assert(cardA.includes("Mì trứng · 1 Bao (25 kg)") && cardA.includes("Sỉ"), "admin card shows packs and the Sỉ badge");
+    assert(cardA.includes("Đặt ") && !cardA.includes("Chờ xử lý"), "placed order shows booking time, no status badge");
+    eq(await mgr.page.getByRole("button", { name: /Duyệt/ }).count(), 0, "no approve buttons anywhere");
+    eq(await mgr.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).count(), 0, "no receive button on an open day");
+    const openReceive = await admin.rpc("receive_day", { p_date: D });
+    assert(openReceive.error?.message.includes("chưa chốt"), `receive_day refused on an open day: ${openReceive.error?.message}`);
 
-    step("manager approves");
-    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    await mgr.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Duyệt" }).click();
-    await until(() => orderStatus(A), (s) => s === "approved", "A approved");
-    await mgr.page.getByRole("button", { name: /Duyệt tất cả đơn mới/ }).click();
-    const confirm = mgr.page.getByRole("alertdialog");
-    assert((await confirm.innerText()).includes("Duyệt tất cả 2 đơn mới?"), "approve-all asks for confirmation with the count");
-    await confirm.getByRole("button", { name: "Xác nhận" }).click();
-    await until(() => orderStatus(C), (s) => s === "approved", "C approved");
-    eq(await orderStatus(B), "approved", "B approved");
+    await mgr.page.locator(`[data-order-code="${S}"]`).getByRole("button", { name: "Hủy" }).click();
+    const cancelDialog = mgr.page.getByRole("alertdialog");
+    assert((await cancelDialog.innerText()).includes(`Hủy đơn ${S}?`), "cancel asks for confirmation");
+    await cancelDialog.getByRole("button", { name: "Xác nhận" }).click();
+    await until(() => orderStatus(S), (s) => s === "cancelled", "spam order cancelled");
 
     step("manager closes the day splitting Mì trứng across two factories");
     await mgr.page.goto(`${BASE}/admin/production/${D}`);
+    eq(await mgr.page.locator('[data-product="Mì quảng"]').count(), 0, "cancelled order is not in the allocation");
     const submit = mgr.page.getByRole("button", { name: "Chốt ngày và gửi xưởng" });
     assert(await submit.isEnabled(), "default allocation (all to first factory) is complete");
     await mgr.page.getByLabel("Mì trứng - Xưởng Bình Tân").fill("30");
@@ -230,13 +231,15 @@ async function main() {
     await mgr.page.getByLabel("Bún tươi - Xưởng Hóc Môn").fill("0");
     await submit.click();
     await mgr.page.getByRole("heading", { name: "Lệnh sản xuất" }).waitFor();
-    const { data: jobs0 } = await admin.from("production_jobs").select("id, qty_kg, products(name), factories(name)").eq("date", D).order("id");
+    const { data: jobs0 } = await admin.from("production_jobs").select("id, qty_kg, status, products(name), factories(name)").eq("date", D).order("id");
     eq(
-      jobs0!.map((j) => `${j.products!.name}@${j.factories!.name}=${j.qty_kg}`).sort(),
-      ["Bún tươi@Xưởng Bình Tân=20", "Mì trứng@Xưởng Bình Tân=30", "Mì trứng@Xưởng Hóc Môn=25"],
-      "jobs created per product x factory",
+      jobs0!.map((j) => `${j.products!.name}@${j.factories!.name}=${j.qty_kg}:${j.status}`).sort(),
+      ["Bún tươi@Xưởng Bình Tân=20:producing", "Mì trứng@Xưởng Bình Tân=30:producing", "Mì trứng@Xưởng Hóc Môn=25:producing"],
+      "producing jobs created per product x factory",
     );
-    eq([await orderStatus(A), await orderStatus(B), await orderStatus(C)], ["in_production", "in_production", "in_production"], "approved orders -> in_production");
+    eq([await orderStatus(A), await orderStatus(B), await orderStatus(C)], ["in_production", "in_production", "in_production"], "every placed order -> in_production");
+    eq(await orderStatus(S), "cancelled", "cancelled order stays cancelled");
+    eq(await mgr.page.locator("main").getByRole("button").count(), 0, "closed production page has no job actions");
 
     step("close day is idempotent");
     const again = await admin.rpc("close_production_day", { p_date: D, p_alloc: [{ product_id: 1, factory_id: 1, qty_kg: 55 }] });
@@ -249,61 +252,45 @@ async function main() {
     const { code: L } = await customerCheckout(late.page, { "Bún tươi - Túi": 1 }, { name: "Cô Ba", phone: "0909555666", address: "9 Lê Lợi", district: "Quận 1" });
     eq((await order(L)).production_date, addDays(D, 1), "order on closed day goes to next day");
 
-    step("factory1 accepts and ships; factory2 rejects");
+    step("factories see only their own jobs, read-only");
     const f1 = await login(browser, "factory1@local", true);
     const f2 = await login(browser, "factory2@local", true);
     const jobId = (name: string, factory: string) => jobs0!.find((j) => j.products!.name === name && j.factories!.name === factory)!.id;
-    const jobStatus = async (id: number) => (await admin.from("production_jobs").select("status").eq("id", id).single()).data!.status;
-    const factoryDo = async (page: Page, id: number, button: string, reason?: string) => {
+    const f1Jobs = [jobId("Mì trứng", "Xưởng Bình Tân"), jobId("Bún tươi", "Xưởng Bình Tân")];
+    const f2Job = jobId("Mì trứng", "Xưởng Hóc Môn");
+    const factoryView = async (page: Page) => {
       await page.goto(`${BASE}/factory`);
-      const card = page.locator(`[data-job-id="${id}"]`);
-      if (reason) await card.getByPlaceholder("Lý do từ chối").fill(reason);
-      await card.getByRole("button", { name: button }).click();
+      const main = page.locator("main");
+      eq([await main.getByRole("button").count(), await main.locator("input, select, textarea").count()], [0, 0], "factory portal has no buttons or inputs");
+      const text = await main.innerText();
+      assert(![A, B, C, "Chị Mai", "Anh Tùng", "0909111222"].some((x) => text.includes(x)) && !/\d\.\d{3}đ/.test(text), "factory portal shows no customers or prices");
+      return page;
     };
-    for (const id of [jobId("Mì trứng", "Xưởng Bình Tân"), jobId("Bún tươi", "Xưởng Bình Tân")]) {
-      await factoryDo(f1.page, id, "Nhận lệnh");
-      await until(() => jobStatus(id), (s) => s === "accepted", `job ${id} accepted`);
-      await factoryDo(f1.page, id, "Đã xuất hàng");
-      await until(() => jobStatus(id), (s) => s === "shipped", `job ${id} shipped`);
-    }
-    const rejected = jobId("Mì trứng", "Xưởng Hóc Môn");
-    await f1.page.goto(`${BASE}/factory`);
-    eq(await f1.page.locator(`[data-job-id="${rejected}"]`).count(), 0, "factory1 cannot see factory2's job");
-    await factoryDo(f2.page, rejected, "Từ chối", "Hết bột");
-    await until(() => jobStatus(rejected), (s) => s === "rejected", "factory2 rejected");
-
-    step("receiving waits for every factory job");
-    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    assert((await mgr.page.getByRole("button", { name: /Chờ xưởng xuất hàng \(1 lệnh\)/ }).isDisabled()), "receive blocked while the rejected job is not reassigned");
-    const early2 = await admin.rpc("receive_day", { p_date: D });
-    assert(early2.error?.message.includes("chưa xuất hàng"), `RPC also refuses: ${early2.error?.message}`);
-
-    step("manager reassigns the rejected qty to factory1");
-    await mgr.page.goto(`${BASE}/admin/production/${D}`);
-    await mgr.page.getByLabel("Xưởng nhận lại").selectOption({ label: "Xưởng Bình Tân" });
-    await mgr.page.getByRole("button", { name: "Giao lại" }).click();
-    const old = await until(
-      async () => (await admin.from("production_jobs").select("replaced_by").eq("id", rejected).single()).data!.replaced_by,
-      (v) => v != null,
-      "rejected job replaced",
-    );
-    const { data: replacement } = await admin.from("production_jobs").select("qty_kg, status, factories(name)").eq("id", old!).single();
-    eq([replacement!.qty_kg, replacement!.status, replacement!.factories!.name], [25, "assigned", "Xưởng Bình Tân"], "replacement job for 25 kg at factory1");
-    await factoryDo(f1.page, old!, "Nhận lệnh");
-    await until(() => jobStatus(old!), (s) => s === "accepted", "replacement accepted");
-    await factoryDo(f1.page, old!, "Đã xuất hàng");
-    await until(() => jobStatus(old!), (s) => s === "shipped", "replacement shipped");
+    await factoryView(f1.page);
+    eq(await f1.page.locator(`[data-job-id="${f1Jobs[0]}"]`).innerText().then((t) => t.replace(/\s+/g, " ").trim()), "Mì trứng 30 kg Đang sản xuất", "factory1 sees its Mì trứng job: product, kg, status");
+    eq(await f1.page.locator(`[data-job-id="${f1Jobs[1]}"]`).count(), 1, "factory1 sees its Bún tươi job");
+    assert((await f1.page.locator(`[data-factory-day="${D}"]`).innerText()).includes(D), "jobs are listed under their date");
+    eq(await f1.page.locator(`[data-job-id="${f2Job}"]`).count(), 0, "factory1 cannot see factory2's job");
+    await factoryView(f2.page);
+    eq(await f2.page.locator(`[data-job-id="${f2Job}"]`).count(), 1, "factory2 sees its job");
+    eq(await f2.page.locator(`[data-job-id="${f1Jobs[0]}"]`).count(), 0, "factory2 cannot see factory1's jobs");
 
     step("manager confirms the whole day received");
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+    eq(await mgr.page.getByRole("button", { name: /Chờ xưởng/ }).count(), 0, "no waiting-for-factory state");
     await mgr.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
     const receiveDialog = mgr.page.getByRole("alertdialog");
     assert((await receiveDialog.innerText()).includes(`Xác nhận đã nhận đủ hàng ngày ${D}?`), "receive asks for confirmation");
     await receiveDialog.getByRole("button", { name: "Xác nhận" }).click();
     await until(() => orderStatus(A), (s) => s === "ready", "A ready");
     eq([await orderStatus(B), await orderStatus(C)], ["ready", "ready"], "all orders of the day -> ready");
-    const { data: receivedJobs } = await admin.from("production_jobs").select("status, qty_kg, received_kg").eq("date", D).neq("status", "rejected");
-    assert(receivedJobs!.every((j) => j.status === "received" && j.received_kg === j.qty_kg), "every live job received at its planned kg");
+    const { data: receivedJobs } = await admin.from("production_jobs").select("status, qty_kg, received_kg").eq("date", D);
+    assert(receivedJobs!.every((j) => j.status === "received" && j.received_kg === j.qty_kg), "every job received at its planned kg");
+    await mgr.page.reload();
+    assert((await mgr.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Đã nhận hàng"), "orders table labels ready orders Đã nhận hàng");
+    eq(await mgr.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).count(), 0, "receive button gone once received");
+    await f1.page.reload();
+    assert((await f1.page.locator(`[data-job-id="${f1Jobs[0]}"]`).innerText()).includes("Đã nhận hàng"), "factory1 sees its job received");
 
     step("dispatch filtered by district");
     await mgr.page.goto(`${BASE}/admin/dispatch`);

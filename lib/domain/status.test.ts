@@ -3,10 +3,8 @@ import { canTransition, JOB_STATUSES, MANAGER_ORDER_MOVES, ORDER_STATUSES, type 
 
 describe("order transitions", () => {
   it.each([
-    ["placed", "approved"],
+    ["placed", "in_production"],
     ["placed", "cancelled"],
-    ["approved", "in_production"],
-    ["approved", "cancelled"],
     ["in_production", "ready"],
     ["ready", "assigned"],
     ["assigned", "delivered"],
@@ -18,11 +16,12 @@ describe("order transitions", () => {
   });
 
   it.each([
-    ["placed", "in_production"],
+    ["placed", "ready"],
     ["placed", "delivered"],
-    ["approved", "ready"],
     ["in_production", "cancelled"],
+    ["in_production", "assigned"],
     ["ready", "delivered"],
+    ["ready", "cancelled"],
     ["assigned", "cancelled"],
     ["delivered", "failed"],
     ["cancelled", "placed"],
@@ -39,27 +38,13 @@ describe("order transitions", () => {
 });
 
 describe("job transitions", () => {
-  it("follows assigned -> accepted -> shipped -> received", () => {
-    expect(canTransition("production_jobs", "assigned", "accepted")).toBe(true);
-    expect(canTransition("production_jobs", "accepted", "shipped")).toBe(true);
-    expect(canTransition("production_jobs", "shipped", "received")).toBe(true);
+  it("only producing -> received", () => {
+    expect(canTransition("production_jobs", "producing", "received")).toBe(true);
+    expect(canTransition("production_jobs", "received", "producing")).toBe(false);
   });
 
-  it("only an assigned job can be rejected", () => {
-    const rejectable = JOB_STATUSES.filter((s) => canTransition("production_jobs", s, "rejected"));
-    expect(rejectable).toEqual(["assigned"]);
-  });
-
-  it("cannot skip shipping", () => {
-    expect(canTransition("production_jobs", "accepted", "received")).toBe(false);
-    expect(canTransition("production_jobs", "assigned", "shipped")).toBe(false);
-  });
-
-  it("rejected and received are terminal", () => {
-    for (const to of JOB_STATUSES) {
-      expect(canTransition("production_jobs", "rejected", to)).toBe(false);
-      expect(canTransition("production_jobs", "received", to)).toBe(false);
-    }
+  it("received is terminal", () => {
+    for (const to of JOB_STATUSES) expect(canTransition("production_jobs", "received", to)).toBe(false);
   });
 });
 

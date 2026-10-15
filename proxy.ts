@@ -1,7 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { REF_COOKIE } from "@/lib/ref";
 
 export async function proxy(request: NextRequest) {
+  const ref = /^\/r\/([^/]+)\/?$/.exec(request.nextUrl.pathname)?.[1];
+  if (ref) {
+    const response = NextResponse.next();
+    response.cookies.set(REF_COOKIE, decodeURIComponent(ref).toUpperCase(), { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", httpOnly: true });
+    return response;
+  }
   let response = NextResponse.next({ request });
   const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
     cookies: {
@@ -19,5 +26,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/sale/:path*", "/factory/:path*", "/driver/:path*", "/login"],
+  matcher: ["/r/:code", "/admin/:path*", "/sale/:path*", "/factory/:path*", "/driver/:path*", "/login"],
 };

@@ -140,20 +140,6 @@ async function main() {
     await shot(mgr.page, "admin-order-detail");
 
     await mgr.page.goto(`${BASE}/admin/production/${D}`);
-    await shot(mgr.page, "admin-production-close-blocked");
-
-    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    await mgr.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Duyệt" }).click();
-    await until(() => orderStatus(A), (s) => s === "approved", "A approved");
-    await mgr.page.getByRole("button", { name: /Duyệt tất cả đơn mới/ }).click();
-    const confirm = mgr.page.getByRole("alertdialog");
-    await shot(mgr.page, "admin-orders-confirm");
-    await confirm.getByRole("button", { name: "Xác nhận" }).click();
-    await until(() => orderStatus(C), (s) => s === "approved", "C approved");
-    await mgr.page.reload();
-    await shot(mgr.page, "admin-orders-approved");
-
-    await mgr.page.goto(`${BASE}/admin/production/${D}`);
     await shot(mgr.page, "admin-production-allocation-default");
     await mgr.page.getByLabel("Mì trứng - Xưởng Hóc Môn").fill("350");
     await shot(mgr.page, "admin-production-over-capacity-warning");
@@ -165,65 +151,26 @@ async function main() {
     await mgr.page.getByRole("heading", { name: "Lệnh sản xuất" }).waitFor();
     await shot(mgr.page, "admin-production-closed-jobs");
 
-    const { data: jobs0 } = await admin.from("production_jobs").select("id, products(name), factories(name)").eq("date", D);
-    const jobId = (name: string, factory: string) => jobs0!.find((j) => j.products!.name === name && j.factories!.name === factory)!.id;
-    const jobStatus = async (id: number) => (await admin.from("production_jobs").select("status").eq("id", id).single()).data!.status;
-
     const f1 = await login(browser, "factory1@local", true);
+    await f1.page.goto(`${BASE}/factory`);
+    await shot(f1.page, "factory1-jobs-readonly");
     const f2 = await login(browser, "factory2@local", true);
-    const factoryDo = async (page: Page, id: number, button: string, reason?: string, snap?: string) => {
-      await page.goto(`${BASE}/factory`);
-      const card = page.locator(`[data-job-id="${id}"]`);
-      if (reason) await card.getByPlaceholder("Lý do từ chối").fill(reason);
-      if (snap) await shot(page, snap);
-      await card.getByRole("button", { name: button }).click();
-    };
-    const f1Jobs = [jobId("Mì trứng", "Xưởng Bình Tân"), jobId("Bún tươi", "Xưởng Bình Tân")];
-    await f1.page.goto(`${BASE}/factory`);
-    await shot(f1.page, "factory1-jobs-assigned");
-    for (const id of f1Jobs) {
-      await factoryDo(f1.page, id, "Nhận lệnh");
-      await until(() => jobStatus(id), (s) => s === "accepted", `job ${id} accepted`);
-    }
-    await f1.page.goto(`${BASE}/factory`);
-    await shot(f1.page, "factory1-jobs-accepted");
-    for (const id of f1Jobs) {
-      await factoryDo(f1.page, id, "Đã xuất hàng");
-      await until(() => jobStatus(id), (s) => s === "shipped", `job ${id} shipped`);
-    }
-    await f1.page.goto(`${BASE}/factory`);
-    await shot(f1.page, "factory1-after-ship");
-
-    const rejected = jobId("Mì trứng", "Xưởng Hóc Môn");
-    await factoryDo(f2.page, rejected, "Từ chối", "Hết bột", "factory2-reject-reason-filled");
-    await until(() => jobStatus(rejected), (s) => s === "rejected", "factory2 rejected");
     await f2.page.goto(`${BASE}/factory`);
-    await shot(f2.page, "factory2-after-reject");
-
-    await mgr.page.goto(`${BASE}/admin/production/${D}`);
-    await mgr.page.getByLabel("Xưởng nhận lại").selectOption({ label: "Xưởng Bình Tân" });
-    await shot(mgr.page, "admin-production-rejected-reassign");
-    await mgr.page.getByRole("button", { name: "Giao lại" }).click();
-    const replacement = await until(
-      async () => (await admin.from("production_jobs").select("replaced_by").eq("id", rejected).single()).data!.replaced_by,
-      (v) => v != null,
-      "rejected job replaced",
-    );
-    await mgr.page.reload();
-    await shot(mgr.page, "admin-production-after-reassign");
-    await factoryDo(f1.page, replacement!, "Nhận lệnh");
-    await until(() => jobStatus(replacement!), (s) => s === "accepted", "replacement accepted");
-    await factoryDo(f1.page, replacement!, "Đã xuất hàng");
-    await until(() => jobStatus(replacement!), (s) => s === "shipped", "replacement shipped");
+    await shot(f2.page, "factory2-jobs-readonly");
 
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+    await shot(mgr.page, "admin-orders-closed-receive-button");
     await mgr.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
     await mgr.page.getByRole("alertdialog").waitFor();
     await shot(mgr.page, "admin-orders-receive-confirm");
     await mgr.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
-    await until(() => jobStatus(replacement!), (s) => s === "received", "day received");
+    await until(() => orderStatus(A), (s) => s === "ready", "day received");
     await mgr.page.reload();
     await shot(mgr.page, "admin-orders-received");
+    await mgr.page.goto(`${BASE}/admin/orders/${A}`);
+    await shot(mgr.page, "admin-order-detail-received");
+    await f1.page.reload();
+    await shot(f1.page, "factory1-jobs-received");
 
     await mgr.page.goto(`${BASE}/admin/dispatch`);
     await shot(mgr.page, "admin-dispatch-all-ready");

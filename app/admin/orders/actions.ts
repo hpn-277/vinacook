@@ -4,7 +4,7 @@ import { z } from "zod";
 import { check, DomainError, run, unwrap, type ActionResult } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { MANAGER_ORDER_MOVES, ORDER_STATUSES } from "@/lib/domain/status";
+import { MANAGER_ORDER_MOVES, ORDER_STATUS_LABEL, ORDER_STATUSES } from "@/lib/domain/status";
 import { id, parseForm } from "@/lib/form";
 import { transition } from "@/lib/transition";
 
@@ -20,22 +20,12 @@ export async function moveOrder(_prev: ActionResult, fd: FormData): Promise<Acti
   });
 }
 
-export async function approveAllPlaced(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
-  return run(async () => {
-    await requireRole("manager");
-    const date = z.string().parse(fd.get("date"));
-    const placed = unwrap(await db().from("orders").select("id").eq("production_date", date).eq("status", "placed"));
-    for (const o of placed) await transition("orders", o.id, "approved");
-    return `Đã duyệt ${placed.length} đơn`;
-  });
-}
-
 export async function receiveDay(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
   return run(async () => {
     await requireRole("manager");
     const date = z.string().parse(fd.get("date"));
     const jobs = unwrap(await db().rpc("receive_day", { p_date: date }));
-    return `Đã nhận hàng ${jobs} lệnh; đơn chuyển sang Sẵn sàng giao`;
+    return `Đã nhận hàng ${jobs} lệnh; đơn chuyển sang ${ORDER_STATUS_LABEL.ready}`;
   });
 }
 

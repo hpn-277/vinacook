@@ -40,9 +40,9 @@ export default async function DispatchPage({ searchParams }: PageProps<"/admin/d
         <Button variant="outline">Lọc</Button>
       </form>
 
-      <h2 className="mb-2 font-semibold">Sẵn sàng giao ({ready.length})</h2>
+      <h2 className="mb-2 font-semibold">Chờ giao ({ready.length})</h2>
       {ready.length === 0 ? (
-        <p className="mb-6 text-sm text-muted-foreground">Không có đơn sẵn sàng.</p>
+        <p className="mb-6 text-sm text-muted-foreground">Không có đơn chờ giao.</p>
       ) : (
         <Card size="sm" className="mb-6">
           <CardContent>

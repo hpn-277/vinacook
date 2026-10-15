@@ -1,82 +1,110 @@
-import { ActionForm } from "@/components/ActionForm";
-import { StaffShell } from "@/components/StaffShell";
 import { PageTitle } from "@/components/page-title";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { JobBadge } from "@/components/status-badge";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatKg } from "@/lib/domain/money";
 import { addDays } from "@/lib/domain/time";
 import { today } from "@/lib/period";
-import { moveJob } from "./actions";
+
+type Row = { key: string; product: string; kg: number; status?: "producing" | "received" };
+
+function DayTable({ rows, draft }: { rows: Row[]; draft: boolean }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Sản phẩm</TableHead>
+          <TableHead className="text-right">Kg</TableHead>
+          <TableHead>Trạng thái</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((r) => (
+          <TableRow key={r.key} data-job-id={draft ? undefined : r.key}>
+            <TableCell className="font-medium">{r.product}</TableCell>
+            <TableCell className="text-right tabular-nums">{formatKg(r.kg)}</TableCell>
+            <TableCell>{r.status ? <JobBadge status={r.status} /> : <Badge variant="outline">Dự kiến</Badge>}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+      <TableFooter>
+        <TableRow>
+          <TableCell>Tổng</TableCell>
+          <TableCell className="text-right tabular-nums">{formatKg(rows.reduce((s, r) => s + r.kg, 0))}</TableCell>
+          <TableCell />
+        </TableRow>
+      </TableFooter>
+    </Table>
+  );
+}
 
 export default async function FactoryPage() {
   const me = await requireRole("factory");
   const date = today();
-  const jobs = unwrap(
-    await db()
-      .from("production_jobs")
-      .select("id, date, qty_kg, status, received_kg, rejected_reason, products(name)")
-      .eq("factory_id", me.factory_id!)
-      .gte("date", date)
-      .lte("date", addDays(date, 1))
-      .order("date")
-      .order("id"),
-  );
+  const days = [
+    { date, label: "Hôm nay" },
+    { date: addDays(date, 1), label: "Ngày mai" },
+  ];
+  const dates = days.map((d) => d.date);
+  const [jobs, closedDays, draftItems] = await Promise.all([
+    db().from("production_jobs").select("id, date, qty_kg, status, products(name)").eq("factory_id", me.factory_id!).in("date", dates).order("product_id").order("id").then(unwrap),
+    db().from("production_days").select("date").eq("status", "closed").in("date", dates).then(unwrap),
+    db().from("order_items").select("qty_kg, product_id, products(name), orders!inner(production_date, status)").in("orders.production_date", dates).eq("orders.status", "placed").then(unwrap),
+  ]);
+  const closed = new Set(closedDays.map((d) => d.date));
+
+  function draftRows(day: string): Row[] {
+    const byProduct = new Map<number, Row>();
+    for (const i of draftItems.filter((i) => i.orders.production_date === day)) {
+      const row = byProduct.get(i.product_id) ?? { key: String(i.product_id), product: i.products?.name ?? "?", kg: 0 };
+      row.kg += i.qty_kg;
+      byProduct.set(i.product_id, row);
+    }
+    return [...byProduct.values()].sort((a, b) => a.product.localeCompare(b.product, "vi"));
+  }
 
   return (
-    <StaffShell links={[{ href: "/factory", label: "Lệnh sản xuất" }]}>
-      <PageTitle>Lệnh sản xuất hôm nay & ngày mai</PageTitle>
-      {jobs.length === 0 && <p className="text-muted-foreground">Chưa có lệnh.</p>}
-      <ul className="space-y-3">
-        {jobs.map((j) => (
-          <li key={j.id}>
-            <Card data-job-id={j.id}>
-              <CardContent className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="text-lg font-semibold">
-                      {j.products?.name}: {formatKg(j.qty_kg)}
-                    </div>
-                    <div className="text-muted-foreground">
-                      Lệnh #{j.id} · Ngày {j.date}
-                    </div>
-                  </div>
-                  <JobBadge status={j.status} />
-                </div>
-                {j.rejected_reason && <div className="text-destructive">Lý do: {j.rejected_reason}</div>}
-                {j.status === "assigned" && (
-                  <div className="space-y-2">
-                    <ActionForm action={moveJob}>
-                      <input type="hidden" name="job_id" value={j.id} />
-                      <input type="hidden" name="to" value="accepted" />
-                      <Button className="h-11 w-full text-base">Nhận lệnh</Button>
-                    </ActionForm>
-                    <ActionForm action={moveJob} className="flex gap-2">
-                      <input type="hidden" name="job_id" value={j.id} />
-                      <input type="hidden" name="to" value="rejected" />
-                      <Input name="reason" placeholder="Lý do từ chối" required className="h-11" />
-                      <Button variant="destructive" className="h-11">
-                        Từ chối
-                      </Button>
-                    </ActionForm>
-                  </div>
-                )}
-                {j.status === "accepted" && (
-                  <ActionForm action={moveJob}>
-                    <input type="hidden" name="job_id" value={j.id} />
-                    <input type="hidden" name="to" value="shipped" />
-                    <Button className="h-11 w-full text-base">Đã xuất hàng</Button>
-                  </ActionForm>
+    <>
+      <PageTitle>Lệnh sản xuất</PageTitle>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Trước khi quản lý chốt, xưởng thấy số kg dự kiến của cả ngày để chuẩn bị. Sau khi chốt, đây là lệnh chính thức của xưởng.
+      </p>
+      <div className="space-y-4">
+        {days.map((d) => {
+          const isClosed = closed.has(d.date);
+          const rows: Row[] = isClosed
+            ? jobs.filter((j) => j.date === d.date).map((j) => ({ key: String(j.id), product: j.products?.name ?? "?", kg: j.qty_kg, status: j.status }))
+            : draftRows(d.date);
+          return (
+            <Card key={d.date} size="sm" data-factory-day={d.date}>
+              <CardHeader>
+                <CardTitle>
+                  <h2 className="flex flex-wrap items-center gap-2">
+                    {d.label} <span className="font-normal text-muted-foreground">· {d.date}</span>
+                    {isClosed ? <Badge variant="secondary">Đã chốt</Badge> : <Badge variant="outline">Dự kiến (chưa chốt)</Badge>}
+                  </h2>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {rows.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{isClosed ? "Xưởng không có lệnh ngày này." : "Chưa có đơn."}</p>
+                ) : (
+                  <>
+                    <DayTable rows={rows} draft={!isClosed} />
+                    {!isClosed && (
+                      <p className="mt-2 text-xs text-muted-foreground">Tổng nhu cầu của cả ngày, chưa chia cho từng xưởng. Số kg có thể thay đổi đến khi chốt.</p>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
-          </li>
-        ))}
-      </ul>
-    </StaffShell>
+          );
+        })}
+      </div>
+    </>
   );
 }

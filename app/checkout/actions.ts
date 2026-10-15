@@ -6,7 +6,8 @@ import { run, type ActionResult } from "@/lib/action";
 import { formatVnd } from "@/lib/domain/money";
 import { TIER_LABEL } from "@/lib/domain/pricing";
 import { district, parseForm, phone } from "@/lib/form";
-import { itemsJson, placeOrder, REF_COOKIE, saleIdForRefCode } from "@/lib/orders";
+import { itemsJson, placeOrder, saleIdForRefCode } from "@/lib/orders";
+import { REF_COOKIE } from "@/lib/ref";
 
 const checkoutSchema = z.object({
   name: z.string().trim().min(1, "Nhập tên"),
