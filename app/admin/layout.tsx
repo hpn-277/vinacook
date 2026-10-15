@@ -1,8 +1,7 @@
 import { StaffShell } from "@/components/StaffShell";
 
 const LINKS = [
-  { href: "/admin/orders", label: "Đơn hàng" },
-  { href: "/admin/receiving", label: "Nhận hàng" },
+  { href: "/admin", label: "Tổng quan" },
   { href: "/admin/dispatch", label: "Điều phối" },
   { href: "/admin/commission", label: "Hoa hồng" },
   { href: "/admin/settings", label: "Cài đặt" },

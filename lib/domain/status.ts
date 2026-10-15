@@ -63,9 +63,8 @@ export const JOB_STATUS_LABEL: Record<JobStatus, string> = {
   received: "Đã nhận hàng",
 };
 
-export const ORDER_EDITABLE: ReadonlySet<OrderStatus> = new Set(["placed", "approved", "in_production", "ready"]);
 
-/** Order edges a manager clicks directly; the others happen via close-day, receiving, dispatch, or the driver. */
+/** Order edges a manager clicks directly; the others happen via close-day, receive-day, dispatch, or the driver. */
 export const MANAGER_ORDER_MOVES: Partial<Record<OrderStatus, readonly OrderStatus[]>> = {
   placed: ["approved", "cancelled"],
   approved: ["cancelled"],

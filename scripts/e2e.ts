@@ -204,20 +204,6 @@ async function main() {
     const early = await admin.rpc("close_production_day", { p_date: D, p_alloc: [] });
     assert(early.error?.message.includes("chưa duyệt"), `RPC also refuses: ${early.error?.message}`);
 
-    step("manager edit re-derives the tier from the order's own pricing terms");
-    const editB = async (packs: number) => {
-      await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-      const card = mgr.page.locator(`[data-order-code="${B}"]`);
-      await card.getByText("Sửa đơn").click();
-      await card.getByLabel("Sửa Mì trứng - Thùng").fill(String(packs));
-      await card.getByRole("button", { name: "Lưu" }).click();
-    };
-    await editB(5);
-    const b5 = await until(() => order(B), (o) => o.price_tier === "si", "B edited to 5 Thùng");
-    eq(b5.total, 50 * 25000, "B raised to 5 Thùng (50 kg) becomes wholesale");
-    await editB(1);
-    const b1 = await until(() => order(B), (o) => o.price_tier === "le", "B edited back to 1 Thùng");
-    eq(b1.total, 10 * 31300, "B back to 1 Thùng is retail again");
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     const cardA = await mgr.page.locator(`[data-order-code="${A}"]`).innerText();
     assert(cardA.includes("Mì trứng · 1 Bao (25 kg)") && cardA.includes("Sỉ"), "admin card shows packs and the Sỉ badge");
@@ -286,6 +272,12 @@ async function main() {
     await factoryDo(f2.page, rejected, "Từ chối", "Hết bột");
     await until(() => jobStatus(rejected), (s) => s === "rejected", "factory2 rejected");
 
+    step("receiving waits for every factory job");
+    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+    assert((await mgr.page.getByRole("button", { name: /Chờ xưởng xuất hàng \(1 lệnh\)/ }).isDisabled()), "receive blocked while the rejected job is not reassigned");
+    const early2 = await admin.rpc("receive_day", { p_date: D });
+    assert(early2.error?.message.includes("chưa xuất hàng"), `RPC also refuses: ${early2.error?.message}`);
+
     step("manager reassigns the rejected qty to factory1");
     await mgr.page.goto(`${BASE}/admin/production/${D}`);
     await mgr.page.getByLabel("Xưởng nhận lại").selectOption({ label: "Xưởng Bình Tân" });
@@ -302,29 +294,16 @@ async function main() {
     await factoryDo(f1.page, old!, "Đã xuất hàng");
     await until(() => jobStatus(old!), (s) => s === "shipped", "replacement shipped");
 
-    step("manager receives with a shortfall");
-    const receive = async (id: number, kg?: number) => {
-      await mgr.page.goto(`${BASE}/admin/receiving?date=${D}`);
-      if (kg != null) await mgr.page.getByLabel(`Thực nhận lệnh ${id}`).fill(String(kg));
-      await mgr.page.getByLabel(`Thực nhận lệnh ${id}`).locator("xpath=..").getByRole("button", { name: "Nhận" }).click();
-      await until(() => jobStatus(id), (s) => s === "received", `job ${id} received`);
-    };
-    await receive(jobId("Mì trứng", "Xưởng Bình Tân"), 28);
-    eq(await orderStatus(A), "in_production", "orders wait while jobs are outstanding");
-    await receive(jobId("Bún tươi", "Xưởng Bình Tân"));
-    await receive(old!);
-    eq([await orderStatus(A), await orderStatus(B), await orderStatus(C)], ["ready", "ready", "ready"], "all jobs received -> orders ready");
-    await mgr.page.goto(`${BASE}/admin/receiving?date=${D}`);
-    eq((await mgr.page.locator('[data-shortfall-product="Mì trứng"] [data-testid="shortfall"]').innerText()).trim(), "Thiếu 2 kg", "Mì trứng shortfall shown (55 planned, 53 received)");
-    eq(await mgr.page.locator('[data-shortfall-product="Bún tươi"]').getByText("Đủ").count(), 1, "Bún tươi complete");
-
-    step("manager trims the walk-in order to absorb the shortfall");
+    step("manager confirms the whole day received");
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    const cardC = mgr.page.locator(`[data-order-code="${C}"]`);
-    await cardC.getByText("Sửa đơn").click();
-    await cardC.getByLabel("Sửa Mì trứng - Kg").fill("3");
-    await cardC.getByRole("button", { name: "Lưu" }).click();
-    await until(async () => (await order(C)).total, (t) => t === 13 * 31300, "C total recomputed at its retail snapshot (1 Thùng + 3 Kg = 13 kg)");
+    await mgr.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
+    const receiveDialog = mgr.page.getByRole("alertdialog");
+    assert((await receiveDialog.innerText()).includes(`Xác nhận đã nhận đủ hàng ngày ${D}?`), "receive asks for confirmation");
+    await receiveDialog.getByRole("button", { name: "Xác nhận" }).click();
+    await until(() => orderStatus(A), (s) => s === "ready", "A ready");
+    eq([await orderStatus(B), await orderStatus(C)], ["ready", "ready"], "all orders of the day -> ready");
+    const { data: receivedJobs } = await admin.from("production_jobs").select("status, qty_kg, received_kg").eq("date", D).neq("status", "rejected");
+    assert(receivedJobs!.every((j) => j.status === "received" && j.received_kg === j.qty_kg), "every live job received at its planned kg");
 
     step("dispatch filtered by district");
     await mgr.page.goto(`${BASE}/admin/dispatch`);

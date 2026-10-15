@@ -48,10 +48,6 @@ export default async function ProductionDayPage({ params }: PageProps<"/admin/pr
         <Link href={`/admin/orders?date=${date}`} className="text-primary underline underline-offset-4">
           Xem đơn
         </Link>
-        <span className="text-muted-foreground">·</span>
-        <Link href={`/admin/receiving?date=${date}`} className="text-primary underline underline-offset-4">
-          Nhận hàng
-        </Link>
       </p>
 
       {!closed && placedCount > 0 && (
@@ -59,7 +55,7 @@ export default async function ProductionDayPage({ params }: PageProps<"/admin/pr
           <AlertDescription className="text-amber-900">
             <p>
               Còn <b>{placedCount}</b> đơn chưa duyệt. Duyệt hoặc hủy hết trước khi chốt.{" "}
-              <Link href={`/admin/orders?date=${date}&status=placed`}>Duyệt đơn</Link>
+              <Link href={`/admin/orders?date=${date}`}>Duyệt đơn</Link>
             </p>
           </AlertDescription>
         </Alert>

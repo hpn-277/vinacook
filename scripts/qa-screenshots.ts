@@ -135,9 +135,9 @@ async function main() {
 
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     await shot(mgr.page, "admin-orders-placed");
-    const cardC0 = mgr.page.locator(`[data-order-code="${C}"]`);
-    await cardC0.getByText("Sửa đơn").click();
-    await shot(mgr.page, "admin-orders-edit-form-open");
+    await mgr.page.locator(`[data-order-code="${C}"]`).getByRole("link", { name: C }).click();
+    await mgr.page.waitForURL(`**/admin/orders/${C}`);
+    await shot(mgr.page, "admin-order-detail");
 
     await mgr.page.goto(`${BASE}/admin/production/${D}`);
     await shot(mgr.page, "admin-production-close-blocked");
@@ -216,19 +216,14 @@ async function main() {
     await factoryDo(f1.page, replacement!, "Đã xuất hàng");
     await until(() => jobStatus(replacement!), (s) => s === "shipped", "replacement shipped");
 
-    const receive = async (id: number, kg?: number, snap?: string) => {
-      await mgr.page.goto(`${BASE}/admin/receiving?date=${D}`);
-      const input = mgr.page.getByLabel(`Thực nhận lệnh ${id}`);
-      if (kg != null) await input.fill(String(kg));
-      if (snap) await shot(mgr.page, snap);
-      await input.locator("xpath=..").getByRole("button", { name: "Nhận" }).click();
-      await until(() => jobStatus(id), (s) => s === "received", `job ${id} received`);
-    };
-    await receive(f1Jobs[0], 28, "admin-receiving-received-kg-input");
-    await receive(f1Jobs[1]);
-    await receive(replacement!);
-    await mgr.page.goto(`${BASE}/admin/receiving?date=${D}`);
-    await shot(mgr.page, "admin-receiving-shortfall");
+    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+    await mgr.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
+    await mgr.page.getByRole("alertdialog").waitFor();
+    await shot(mgr.page, "admin-orders-receive-confirm");
+    await mgr.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
+    await until(() => jobStatus(replacement!), (s) => s === "received", "day received");
+    await mgr.page.reload();
+    await shot(mgr.page, "admin-orders-received");
 
     await mgr.page.goto(`${BASE}/admin/dispatch`);
     await shot(mgr.page, "admin-dispatch-all-ready");

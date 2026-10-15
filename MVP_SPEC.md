@@ -44,10 +44,10 @@ assigned ──> accepted ──> shipped ──> received (manager enters recei
 ## Flows
 1. **Customer order** – `/` product list → cart (pack + quantity per line, converted to kg; wholesale or retail for the whole order) → name, phone, address, note → submit. If `?ref=CODE` (stored in cookie) and customer phone has no sale → bind sale (sticky forever). Existing owner never overwritten. production_date = today if before cutoff else tomorrow.
 2. **Sale order** – sale picks/creates customer by phone. If phone owned by another sale → order saved, `sale_id` = existing owner, warning shown.
-3. **Review** (manager) – each `placed` order for the date → approve / edit / cancel. Close is blocked while any `placed` order remains for that date.
+3. **Review** (manager) – each `placed` order for the date → approve / cancel. Close is blocked while any `placed` order remains for that date.
 4. **Close day** (manager) – only `approved` orders; shows totals kg per product for date. Manager splits each product across factories (inputs per factory, capacity warning if sum per factory > capacity). Must allocate 100% before send. Send → jobs `assigned`, orders → `in_production`, day `closed`, orders locked.
 5. **Factory** – sees today's/tomorrow's jobs → accept/reject(reason) → mark shipped.
-6. **Receive** (manager) – per job tick received + actual kg (default = qty). Shortfall per product flagged; manager edits affected orders manually.
+6. **Receive** (manager) – on `/admin/orders` for the closed day, one "Xác nhận đã nhận hàng" button once every factory job is shipped: all jobs received at planned kg, orders → ready. Factories are expected to produce exactly what is required.
 7. **Dispatch** (manager) – list `ready` orders, filter by district, assign driver.
 8. **Driver** – list assigned, call/Maps buttons, Delivered or Failed(reason).
 9. **Mark paid** (manager) – toggle on order.
@@ -59,7 +59,7 @@ Per sale, per month: `sum(order.total where status=delivered and delivered_at in
 ## Screens
 - Public: `/`, `/checkout`, `/orders` (lookup), `/r/[code]` (sets ref cookie → `/`)
 - Sale: `/sale` (dashboard + ref link), `/sale/orders/new`, `/sale/customers`
-- Manager: `/admin/orders` (by date, filters), `/admin/production/[date]` (close + split), `/admin/receiving`, `/admin/dispatch`, `/admin/commission`, `/admin/settings` (products, factories, staff, cutoff)
+- Manager: `/admin/orders` (by date, filters), `/admin/production/[date]` (close + split), `/admin/dispatch`, `/admin/commission`, `/admin/settings` (products, factories, staff, cutoff)
 - Factory: `/factory`
 - Driver: `/driver`
 

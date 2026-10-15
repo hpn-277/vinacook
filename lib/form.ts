@@ -17,15 +17,15 @@ export const phone = z
 export const district = z.enum(DISTRICTS, { message: "Chọn quận/huyện" });
 export const kg = z.coerce.number().min(0, "Số kg không hợp lệ").max(100000);
 
-/** Collects inputs named `<prefix><id>` (e.g. qty_3=12.5) into [{id, qty}] with qty > 0 unless keepZero. */
-export function collectNumbers(fd: FormData, prefix: string, keepZero = false): { id: number; value: number }[] {
+/** Collects inputs named `<prefix><id>` (e.g. qty_3=12.5) into [{id, qty}] with qty > 0. */
+export function collectNumbers(fd: FormData, prefix: string): { id: number; value: number }[] {
   const out: { id: number; value: number }[] = [];
   for (const [key, raw] of fd.entries()) {
     if (!key.startsWith(prefix) || typeof raw !== "string" || raw.trim() === "") continue;
     const idPart = Number(key.slice(prefix.length));
     const value = Number(raw);
     if (!Number.isInteger(idPart) || !Number.isFinite(value) || value < 0) throw new DomainError("Số kg không hợp lệ");
-    if (value > 0 || keepZero) out.push({ id: idPart, value });
+    if (value > 0) out.push({ id: idPart, value });
   }
   return out;
 }

@@ -8,7 +8,7 @@ export type StaffRole = Enums<"staff_role">;
 export type Staff = Tables<"staff">;
 
 export const ROLE_HOME: Record<StaffRole, string> = {
-  manager: "/admin/orders",
+  manager: "/admin",
   sale: "/sale",
   factory: "/factory",
   driver: "/driver",
