@@ -35,17 +35,19 @@ Every staff password is `password123`.
 | factory2@local | Factory, Xưởng Hóc Môn | /factory |
 | driver1@local | Driver | /driver |
 | driver2@local | Driver | /driver |
+| cashier@local | Cashier (Thủ quỹ), confirms payment (so can the manager; the accountant cannot) | /finance |
+| accountant@local | Accountant (Kế toán), debt read-only | /finance |
 
 Customers do not log in. Open `/r/NVKD01` to order as a customer referred by sale1.
 
 ## Tests
 
 ```sh
-npm test        # vitest: state-machine tables, the 17:00 production-date cutoff, and wholesale/retail pricing
+npm test        # vitest: state-machine tables, the 17:00 production-date cutoff, wholesale/retail pricing, and debt aging
 npm run e2e     # full lifecycle in a real browser; needs `npm run dev` running
 ```
 
-`npm run e2e` resets the database first. Pass `-- --no-reset` to keep the current data. The script drives the whole flow through the UI: referral order picked by pack (Kg, Thùng, Bao), wholesale at exactly 50 kg and retail below it, a second sale entering an order for the same phone, cancelling a spam order, closing the day with a split across two factories, each factory's read-only job list, one-click receiving of the whole day (refused while the day is open), dispatch, each driver seeing only their own orders, confirming the load (all at once and one by one), the customer, sale and manager each seeing the order on the road, delivery with a proof photo stored in a private bucket, failure, payment, commission, and a one-tap reorder from `/orders` with a deactivated pack skipped. It checks every step against the database.
+`npm run e2e` resets the database first. Pass `-- --no-reset` to keep the current data. The script drives the whole flow through the UI: referral order picked by pack (Kg, Thùng, Bao), wholesale at exactly 50 kg and retail below it, a second sale entering an order for the same phone, cancelling a spam order, closing the day with a split across two factories, each factory's read-only job list, one-click receiving of the whole day (refused while the day is open), dispatch, each driver seeing only their own orders, confirming the load (all at once and one by one), the customer, sale and manager each seeing the order on the road, delivery with a proof photo stored in a private bucket, failure, the accountant unable to mark payment, the cashier confirming payment with an audit event, commission, and a one-tap reorder from `/orders` with a deactivated pack skipped. It checks every step against the database.
 
 After a schema change, run `npm run gen:types` to regenerate `lib/database.types.ts`.
 
@@ -57,4 +59,5 @@ After a schema change, run `npm run gen:types` to regenerate `lib/database.types
 - Customers order packs (`product_packs`, managed in `/admin/settings`). `order_items.qty_kg` is generated from pack quantity × kg per pack, so production and dispatch still work in kg.
 - Only the manager moves orders and jobs. Closing a day sends every `placed` order to production and creates `producing` jobs; receiving the day marks them `received` and the orders `ready` ("Đã nhận hàng"). Factories only read their jobs.
 - Drivers move orders themselves: `assigned` ("Chờ lên xe") to `out_for_delivery` when the goods are loaded (one UPDATE for the whole load, guarded by the trigger), then `delivered` or `failed`. Proof photos go to the private Storage bucket `delivery-photos` through a server action (`lib/delivery-photos.ts`); pages show them through one-hour signed URLs.
+- Payment (gạch nợ) goes only through `set_payment()` in `supabase/migrations`, called by the server action in `app/finance/actions.ts` (cashier or manager). It updates `payment_status`, `paid_at` and `paid_by` and writes one `payment_events` row per changed order. A trigger refuses any other change to those columns. Debt age and payment totals are pure helpers in `lib/domain/debt.ts`.
 - `close_production_day` and `receive_day` in `supabase/migrations` are atomic. Running close-day again on a closed day raises an error and creates no jobs.

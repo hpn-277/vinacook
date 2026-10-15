@@ -32,7 +32,9 @@ insert into seed_staff values
   ('factory1@local', 'factory', 'Xưởng Bình Tân', '0281000001', null, null, 'Xưởng Bình Tân'),
   ('factory2@local', 'factory', 'Xưởng Hóc Môn', '0281000002', null, null, 'Xưởng Hóc Môn'),
   ('driver1@local', 'driver', 'Tài xế 1', '0910000001', null, null, null),
-  ('driver2@local', 'driver', 'Tài xế 2', '0910000002', null, null, null);
+  ('driver2@local', 'driver', 'Tài xế 2', '0910000002', null, null, null),
+  ('cashier@local', 'cashier', 'Thủ quỹ', '0920000001', null, null, null),
+  ('accountant@local', 'accountant', 'Kế toán', '0920000002', null, null, null);
 
 -- Token columns must be '' not NULL or GoTrue fails to load the user on sign-in.
 insert into auth.users (

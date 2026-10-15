@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { check, DomainError, run, unwrap, type ActionResult } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
+import { Constants } from "@/lib/database.types";
 import { db } from "@/lib/db";
 import { IMAGE_REF_MAX, isImageRef } from "@/lib/domain/catalog";
 import { parseForm, phone } from "@/lib/form";
@@ -100,7 +101,7 @@ const newStaffSchema = z
   .object({
     email: z.email("Email không hợp lệ").or(z.string().regex(/^[^\s@]+@[^\s@]+$/, "Email không hợp lệ")),
     password: z.string().min(8, "Mật khẩu tối thiểu 8 ký tự"),
-    role: z.enum(["manager", "sale", "factory", "driver"]),
+    role: z.enum(Constants.public.Enums.staff_role),
     name: z.string().trim().min(1, "Nhập tên"),
     phone: phone.or(z.literal("")).transform((v) => v || null),
     ref_code: optionalText,

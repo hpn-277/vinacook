@@ -1,5 +1,8 @@
-import { moveOrder, setPaid } from "@/app/admin/orders/actions";
+import Link from "next/link";
+import { setPayment } from "@/app/finance/actions";
+import { moveOrder } from "@/app/admin/orders/actions";
 import { ActionForm } from "@/components/ActionForm";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { PriceTier } from "@/lib/domain/pricing";
 import { cn } from "@/lib/utils";
@@ -45,53 +48,36 @@ export function Departed({ order, className }: { order: AdminOrder; className?: 
   return <span className={cn("text-blue-800", className)}>Đã rời kho · {clock.format(new Date(order.departed_at))}</span>;
 }
 
-export function OrderActions({ order, size, withPaid = true }: { order: AdminOrder; size?: "sm"; withPaid?: boolean }) {
-  const moves = MANAGER_ORDER_MOVES[order.status] ?? [];
-  return (
-    <>
-      {moves.map((to) => (
-        <ActionForm key={to} action={moveOrder} confirm={to === "cancelled" ? `Hủy đơn ${order.code}?` : undefined}>
-          <input type="hidden" name="order_id" value={order.id} />
-          <input type="hidden" name="to" value={to} />
-          <Button size={size} variant={to === "cancelled" ? "destructive" : "default"}>
-            {MOVE_LABEL[to]}
-          </Button>
-        </ActionForm>
-      ))}
-      {withPaid && <PaidToggle order={order} size={size} />}
-    </>
-  );
-}
-
-export function PaidToggle({ order, size }: { order: AdminOrder; size?: "sm" }) {
-  if (order.status === "cancelled") return null;
-  return (
-    <ActionForm action={setPaid}>
+export function OrderActions({ order, size }: { order: AdminOrder; size?: "sm" }) {
+  return (MANAGER_ORDER_MOVES[order.status] ?? []).map((to) => (
+    <ActionForm key={to} action={moveOrder} confirm={to === "cancelled" ? `Hủy đơn ${order.code}?` : undefined}>
       <input type="hidden" name="order_id" value={order.id} />
-      <input type="hidden" name="paid" value={order.payment_status === "paid" ? "unpaid" : "paid"} />
-      <Button size={size} variant="outline">
-        {order.payment_status === "paid" ? "Bỏ đánh dấu đã trả" : "Đánh dấu đã trả"}
+      <input type="hidden" name="to" value={to} />
+      <Button size={size} variant={to === "cancelled" ? "destructive" : "default"}>
+        {MOVE_LABEL[to]}
       </Button>
     </ActionForm>
-  );
+  ));
 }
 
-/** One-click pill for tables: shows the payment state and toggles it. */
+/** Payment state for tables. Read-only: only the cashier settles debt, from /finance. */
+/** Unpaid: one click marks it paid (logged). Paid: links to the order, where undo asks for a reason. */
 export function PaidPill({ order }: { order: AdminOrder }) {
-  const paid = order.payment_status === "paid";
   if (order.status === "cancelled") return <span className="text-xs text-muted-foreground">—</span>;
+  if (order.payment_status === "paid")
+    return (
+      <Badge asChild variant="outline" className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100">
+        <Link href={`/admin/orders/${order.code}#thanh-toan`} title="Mở đơn để bỏ đánh dấu (cần lý do)">
+          ✓ Đã trả
+        </Link>
+      </Badge>
+    );
   return (
-    <ActionForm action={setPaid}>
+    <ActionForm action={setPayment}>
       <input type="hidden" name="order_id" value={order.id} />
-      <input type="hidden" name="paid" value={paid ? "unpaid" : "paid"} />
-      <Button
-        size="xs"
-        variant="outline"
-        aria-label={paid ? "Bỏ đánh dấu đã trả" : "Đánh dấu đã trả"}
-        title={paid ? "Bấm để bỏ đánh dấu đã trả" : "Bấm để đánh dấu đã trả"}
-        className={paid ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800" : "text-muted-foreground"}
-      >
-        {paid ? "✓ Đã trả" : "Chưa trả"}
+      <input type="hidden" name="paid" value="paid" />
+      <Button size="xs" variant="outline" aria-label="Đánh dấu đã trả" title="Bấm để đánh dấu đã trả" className="text-muted-foreground">
+        Chưa trả
       </Button>
     </ActionForm>
   );

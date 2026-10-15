@@ -7,6 +7,7 @@ import {
   PaymentLabel,
   type AdminOrder,
 } from "@/components/AdminOrderCard";
+import { PaymentPanel } from "@/components/PaymentPanel";
 import { JobBadge, OrderBadge, TierBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -22,6 +23,7 @@ import { unwrap } from "@/lib/action";
 import { db } from "@/lib/db";
 import { signDeliveryPhotos } from "@/lib/delivery-photos";
 import { lineLabel } from "@/lib/domain/catalog";
+import { MANAGER_ORDER_MOVES } from "@/lib/domain/status";
 import { formatKg, formatVnd } from "@/lib/domain/money";
 
 type Detail = AdminOrder & {
@@ -105,9 +107,14 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export type OrderViewer =
-  { role: "manager" } | { role: "sale"; saleId: number };
+  | { role: "manager" }
+  | { role: "sale"; saleId: number }
+  | { role: "cashier" | "accountant" };
 
-/** Full order page. Managers get actions and the factory jobs; a sale sees only orders credited to them, read-only. */
+/**
+ * Full order page. Managers get actions and the factory jobs; a sale sees only orders credited to them, read-only.
+ * Finance (cashier, accountant) sees every order read-only plus the payment section; the cashier and the manager can settle.
+ */
 export async function OrderDetail({
   code,
   viewer,
@@ -116,7 +123,8 @@ export async function OrderDetail({
   viewer: OrderViewer;
 }) {
   const manager = viewer.role === "manager";
-  const base = manager ? "/admin/orders" : "/sale/orders";
+  const finance = viewer.role === "cashier" || viewer.role === "accountant";
+  const base = manager ? "/admin/orders" : finance ? "/finance/orders" : "/sale/orders";
   let query = db().from("orders").select(DETAIL_SELECT).eq("code", code);
   if (viewer.role === "sale") query = query.eq("sale_id", viewer.saleId);
   const { data } = await query
@@ -236,10 +244,10 @@ export async function OrderDetail({
   return (
     <>
       <Link
-        href={manager ? `/admin/orders?date=${order.production_date}` : "/sale"}
+        href={manager ? `/admin/orders?date=${order.production_date}` : finance ? "/finance" : "/sale"}
         className="mb-3 inline-block text-sm text-muted-foreground hover:text-foreground"
       >
-        {manager ? `‹ Đơn hàng ngày ${order.production_date}` : "‹ Tổng quan"}
+        {manager ? `‹ Đơn hàng ngày ${order.production_date}` : finance ? "‹ Công nợ" : "‹ Tổng quan"}
       </Link>
       <div
         className="mb-4 flex flex-wrap items-center gap-2"
@@ -252,7 +260,7 @@ export async function OrderDetail({
         <span className="ml-auto text-xl font-bold tabular-nums">
           {formatVnd(order.total)}
         </span>
-        {manager && (
+        {manager && (MANAGER_ORDER_MOVES[order.status]?.length ?? 0) > 0 && (
           <div className="flex w-full flex-wrap gap-2">
             <OrderActions order={order} />
           </div>
@@ -353,6 +361,7 @@ export async function OrderDetail({
       </div>
 
       <div className="mt-4 grid gap-4">
+        {(finance || manager) && <PaymentPanel order={order} canSettle={viewer.role === "cashier" || manager} />}
         <Section title="Hàng hóa & giá">
           <Table>
             <TableHeader>

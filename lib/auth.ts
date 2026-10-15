@@ -12,6 +12,17 @@ export const ROLE_HOME: Record<StaffRole, string> = {
   sale: "/sale",
   factory: "/factory",
   driver: "/driver",
+  cashier: "/finance",
+  accountant: "/finance",
+};
+
+export const ROLE_LABEL: Record<StaffRole, string> = {
+  manager: "Quản lý",
+  sale: "NVKD",
+  factory: "Xưởng",
+  driver: "Tài xế",
+  cashier: "Thủ quỹ",
+  accountant: "Kế toán",
 };
 
 export const currentStaff = cache(async (): Promise<Staff | null> => {
@@ -27,9 +38,9 @@ export const currentStaff = cache(async (): Promise<Staff | null> => {
   return staff;
 });
 
-export async function requireRole(...roles: StaffRole[]): Promise<Staff> {
+export async function requireRole<R extends StaffRole>(...roles: R[]): Promise<Staff & { role: R }> {
   const staff = await currentStaff();
   if (!staff) redirect("/login");
-  if (!roles.includes(staff.role)) redirect(ROLE_HOME[staff.role]);
-  return staff;
+  if (!(roles as StaffRole[]).includes(staff.role)) redirect(ROLE_HOME[staff.role]);
+  return staff as Staff & { role: R };
 }

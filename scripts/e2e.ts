@@ -122,6 +122,8 @@ async function structuralChecks() {
   eq(read.data, [], "anon reads no orders (RLS)");
   const rpc = await anon.rpc("close_production_day", { p_date: "2030-01-01", p_alloc: [] });
   assert(rpc.error?.code === "42501", `anon cannot call close_production_day (${rpc.error?.message})`);
+  const pay = await anon.rpc("set_payment", { p_order_ids: [1], p_paid: true, p_staff_id: 1, p_note: "" });
+  assert(pay.error?.code === "42501", `anon cannot call set_payment (${pay.error?.message})`);
 }
 
 async function main() {
@@ -405,14 +407,44 @@ async function main() {
     eq(await proof.evaluate((img: HTMLImageElement) => (img.complete ? [img.naturalWidth, img.naturalHeight] : null)), [1600, 1200], "manager detail renders the photo, downscaled to 1600px");
     assert((await mgr.page.locator("main").innerText()).includes("Hàng đã lên xe ·"), "timeline shows when the goods left");
 
-    step("manager sends failed B back to ready and marks A paid");
+    step("manager sends failed B back to ready; payment is read-only for the manager");
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     await mgr.page.locator(`[data-order-code="${B}"]`).getByRole("button", { name: "Giao lại" }).click();
     await until(() => orderStatus(B), (s) => s === "ready", "B back to ready");
     eq([(await order(B)).driver_id, (await order(B)).departed_at], [null, null], "B driver and departure cleared for re-dispatch");
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    await mgr.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Đánh dấu đã trả" }).click();
+    const mgrRowA = mgr.page.locator(`[data-order-code="${A}"]`);
+    assert((await mgrRowA.innerText()).includes("Chưa trả"), "manager sees A unpaid");
+    eq(await mgrRowA.getByRole("button", { name: "Đánh dấu đã trả", exact: true }).count(), 1, "manager may also mark paid (one click in the table)");
+
+    step("accountant tracks debt but cannot settle it");
+    const acc = await login(browser, "accountant@local");
+    eq(new URL(acc.page.url()).pathname, "/finance", "accountant lands on Công nợ");
+    const accRowA = acc.page.locator(`[data-order-code="${A}"]`);
+    assert(await accRowA.getByRole("checkbox").isDisabled(), "accountant cannot tick A");
+    assert(await acc.page.getByRole("button", { name: /Xác nhận đã thu/ }).isDisabled(), "accountant settle button disabled");
+    await acc.page.goto(`${BASE}/finance/orders/${A}`);
+    await acc.page.evaluate(() => document.querySelectorAll("[data-testid=payment-panel] [disabled]").forEach((el) => el.removeAttribute("disabled")));
+    await acc.page.getByRole("button", { name: "Xác nhận đã thu" }).click();
+    await acc.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
+    await acc.page.waitForURL((u) => u.pathname === "/finance");
+    eq((await order(A)).payment_status, "unpaid", "accountant forcing the form is refused by the server");
+
+    step("cashier confirms A paid");
+    const cashier = await staffId("cashier@local");
+    const cas = await login(browser, "cashier@local");
+    eq(new URL(cas.page.url()).pathname, "/finance", "cashier lands on Công nợ");
+    await cas.page.locator(`[data-order-code="${A}"]`).getByRole("checkbox").click();
+    await cas.page.getByTestId("settle-bar").getByLabel("Ghi chú thu tiền").fill("Tiền mặt");
+    await cas.page.getByRole("button", { name: /Xác nhận đã thu \(1 đơn/ }).click();
+    assert((await cas.page.getByRole("alertdialog").innerText()).includes(formatVnd(a0.total)), "confirm dialog shows the total");
+    await cas.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
     await until(async () => (await order(A)).payment_status, (s) => s === "paid", "A paid");
+    eq((await order(A)).paid_by, cashier, "A paid_by the cashier");
+    const { data: payEvents } = await admin.from("payment_events").select("action, amount, staff_id, note").eq("order_id", a0.id);
+    eq(payEvents, [{ action: "paid", amount: a0.total, staff_id: cashier, note: "Tiền mặt" }], "one payment event logged");
+    await cas.page.goto(`${BASE}/finance/payments`);
+    assert((await cas.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Thủ quỹ"), "Lịch sử thu shows A collected by Thủ quỹ");
 
     step("commission");
     const expected = Math.round((a0.total * 5) / 100);

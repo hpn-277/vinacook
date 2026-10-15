@@ -252,11 +252,20 @@ async function main() {
     await mgr.page.reload();
     await shot(mgr.page, "admin-orders-failed-sent-back-ready");
 
-    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    await mgr.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Đánh dấu đã trả" }).click();
+    const acc = await login(browser, "accountant@local", false);
+    await shot(acc.page, "accountant-debt-read-only");
+    if (!(await acc.page.locator(`[data-order-code="${A}"]`).getByRole("checkbox").isDisabled())) throw new Error("accountant can tick A");
+
+    const cas = await login(browser, "cashier@local", false);
+    await cas.page.locator(`[data-order-code="${A}"]`).getByRole("checkbox").click();
+    await shot(cas.page, "cashier-debt-a-selected");
+    await cas.page.getByRole("button", { name: /Xác nhận đã thu \(1 đơn/ }).click();
+    await cas.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
     await until(async () => (await order(A)).payment_status, (s) => s === "paid", "A paid");
-    await mgr.page.reload();
-    await shot(mgr.page, "admin-orders-marked-paid");
+    await cas.page.goto(`${BASE}/finance/payments`);
+    await shot(cas.page, "cashier-payment-history");
+    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+    await shot(mgr.page, "admin-orders-paid-read-only");
 
     await mgr.page.goto(`${BASE}/admin/commission`);
     await shot(mgr.page, "admin-commission");

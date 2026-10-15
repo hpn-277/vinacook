@@ -10,14 +10,12 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { unwrap } from "@/lib/action";
-import { requireRole } from "@/lib/auth";
+import { requireRole, ROLE_LABEL } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatVnd } from "@/lib/domain/money";
 import { packPrice, retailPerKg } from "@/lib/domain/pricing";
 import { getSettings } from "@/lib/orders";
 import { createStaff, saveCutoff, saveFactory, savePack, savePricing, saveProduct, updateStaff } from "./actions";
-
-const ROLE_LABEL = { manager: "Quản lý", sale: "NVKD", factory: "Xưởng", driver: "Tài xế" } as const;
 
 export default async function SettingsPage() {
   await requireRole("manager");

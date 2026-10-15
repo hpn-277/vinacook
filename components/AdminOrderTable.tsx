@@ -84,7 +84,7 @@ export function AdminOrderTable({ orders }: { orders: AdminOrder[] }) {
             {hasActions && (
               <TableCell>
                 <div className="relative z-10 flex flex-wrap items-center gap-1.5">
-                  <OrderActions order={o} size="sm" withPaid={false} />
+                  <OrderActions order={o} size="sm" />
                 </div>
               </TableCell>
             )}
