@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { OrderActions, PaidPill, type AdminOrder } from "@/components/AdminOrderCard";
+import { NO_DRIVER } from "@/components/row-filters";
+import { Departed, OrderActions, PaidPill, type AdminOrder } from "@/components/AdminOrderCard";
 import { MANAGER_ORDER_MOVES } from "@/lib/domain/status";
 import { OrderBadge, TierBadge } from "@/components/status-badge";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,8 +35,18 @@ export function AdminOrderTable({ orders }: { orders: AdminOrder[] }) {
       </TableHeader>
       <TableBody>
         {orders.map((o) => (
-          <TableRow key={o.id} data-order-code={o.code} className={`relative cursor-pointer ${o.status === "cancelled" ? "opacity-60" : ""}`}>
+          <TableRow key={o.id} data-order-code={o.code} data-district={o.district} data-driver={o.driver ? String(o.driver.id) : NO_DRIVER} className={`relative cursor-pointer ${o.status === "cancelled" ? "opacity-60" : ""}`}>
             <TableCell className="font-semibold">
+              {o.status === "ready" && (
+                <input
+                  type="checkbox"
+                  form="dispatch-form"
+                  name="order_id"
+                  value={o.id}
+                  aria-label={`Chọn ${o.code}`}
+                  className="relative z-10 mr-2 size-4 cursor-pointer align-middle accent-primary"
+                />
+              )}
               <Link href={`/admin/orders/${o.code}`} className="text-primary after:absolute after:inset-0 hover:underline">
                 {o.code}
               </Link>
@@ -63,6 +74,7 @@ export function AdminOrderTable({ orders }: { orders: AdminOrder[] }) {
                 Đặt {bookedAt(o.created_at)}
               </div>
               {o.driver && <div className="mt-0.5 text-xs text-muted-foreground">{o.driver.name}</div>}
+              <Departed order={o} className="mt-0.5 block text-xs" />
             </TableCell>
             <TableCell>
               <div className="relative z-10 w-fit">

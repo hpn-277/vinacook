@@ -40,9 +40,9 @@ join customers c using (phone)
 cross join lateral generate_series((select d from today) - 42 + (c.id % h.cycle)::int, (select d from today) - 1, make_interval(days => h.cycle)) g
 order by g, c.id;
 
--- ~5% cancelled; older than a week all paid, recent ones ~60% paid; deliveries happen the morning after production.
+-- ~5% cancelled; older than a week all paid, recent ones ~60% paid; the truck leaves 07:00-07:45 the morning after production, deliveries follow.
 insert into orders (customer_id, sale_id, created_by, created_by_staff_id, production_date, address, district, phone,
-                    status, payment_status, total, driver_id, delivered_at, created_at,
+                    status, payment_status, total, driver_id, departed_at, delivered_at, created_at,
                     price_tier, retail_markup_pct, wholesale_min_kg, wholesale_min_total)
 select p.customer_id, p.sale_id,
        case when p.sale_id is not null and p.r1 < 0.4 then 'sale' else 'customer' end::order_creator,
@@ -52,6 +52,7 @@ select p.customer_id, p.sale_id,
        case when p.r2 >= 0.05 and (p.pdate < (select d from today) - 7 or p.r3 < 0.6) then 'paid' else 'unpaid' end::payment_status,
        0,
        case when p.r2 >= 0.05 then (select id from staff where name = case when p.r3 < 0.5 then 'Tài xế 1' else 'Tài xế 2' end) end,
+       case when p.r2 >= 0.05 then ((p.pdate + 1) + time '07:00' + p.r3 * interval '45 minutes') at time zone 'Asia/Ho_Chi_Minh' end,
        case when p.r2 >= 0.05 then ((p.pdate + 1) + time '08:00' + p.r1 * interval '6 hours') at time zone 'Asia/Ho_Chi_Minh' end,
        (p.pdate + time '07:00' + p.r3 * interval '9 hours') at time zone 'Asia/Ho_Chi_Minh',
        'le', s.retail_markup_pct, s.wholesale_min_kg, s.wholesale_min_total

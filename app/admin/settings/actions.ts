@@ -4,17 +4,26 @@ import { z } from "zod";
 import { check, DomainError, run, unwrap, type ActionResult } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { IMAGE_REF_MAX, isImageRef } from "@/lib/domain/catalog";
 import { parseForm, phone } from "@/lib/form";
 
 const checkbox = z.preprocess((v) => v === "on", z.boolean());
 const optionalId = z.preprocess((v) => (v === "" || v == null ? undefined : v), z.coerce.number().int().positive().optional());
 const optionalText = z.preprocess((v) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null), z.string().nullable());
+const imageRef = z.preprocess(
+  (v) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null),
+  z.string().max(IMAGE_REF_MAX, `Link ảnh tối đa ${IMAGE_REF_MAX} ký tự`).refine(isImageRef, "Link ảnh phải là https://... hoặc /duong-dan").nullable(),
+);
 
 const productSchema = z.object({
   id: optionalId,
   name: z.string().trim().min(1, "Nhập tên sản phẩm"),
   price_per_kg: z.coerce.number().int("Giá phải là số nguyên").positive("Giá phải > 0"),
-  image_url: optionalText,
+  description: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null),
+    z.string().max(1000, "Mô tả tối đa 1000 ký tự").nullable(),
+  ),
+  image_url: imageRef,
   active: checkbox,
 });
 
@@ -37,6 +46,7 @@ const packSchema = z.object({
   product_id: z.coerce.number({ message: "Chọn sản phẩm" }).int().positive("Chọn sản phẩm"),
   name: z.string().trim().min(1, "Nhập tên quy cách"),
   kg_per_unit: z.coerce.number().positive("Số kg mỗi đơn vị phải > 0").max(10000),
+  image_url: imageRef,
   active: checkbox,
 });
 

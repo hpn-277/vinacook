@@ -292,39 +292,124 @@ async function main() {
     await f1.page.reload();
     assert((await f1.page.locator(`[data-job-id="${f1Jobs[0]}"]`).innerText()).includes("Đã nhận hàng"), "factory1 sees its job received");
 
-    step("dispatch filtered by district");
-    await mgr.page.goto(`${BASE}/admin/dispatch`);
-    await mgr.page.getByLabel("Lọc quận").selectOption("Quận 5");
-    await mgr.page.getByRole("button", { name: "Lọc" }).click();
-    await mgr.page.waitForURL("**district=*");
-    eq(await mgr.page.getByLabel(`Chọn ${C}`).count(), 0, "Tân Bình order hidden by Quận 5 filter");
+    step("manager assigns received orders to a driver from the orders page");
+    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+    assert((await mgr.page.getByTestId("dispatch-bar").innerText()).includes("3 đơn đã nhận hàng"), "dispatch bar counts the day's received orders");
+    eq(await mgr.page.getByLabel(`Chọn ${C}`).count(), 1, "every received order has a dispatch checkbox");
     await mgr.page.getByLabel(`Chọn ${A}`).check();
     await mgr.page.getByLabel(`Chọn ${B}`).check();
     await mgr.page.getByLabel("Tài xế").selectOption({ label: "Tài xế 1" });
     await mgr.page.getByRole("button", { name: "Giao cho tài xế" }).click();
     await until(() => orderStatus(B), (s) => s === "assigned", "B assigned");
-    eq([(await order(A)).status, (await order(A)).driver_id], ["assigned", driver1], "A assigned to driver1");
+    eq([(await order(A)).status, (await order(A)).driver_id, (await order(A)).departed_at], ["assigned", driver1, null], "A assigned to driver1, not yet departed");
+    const skip = await admin.from("orders").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("code", A);
+    assert(skip.error?.message.includes("Không thể chuyển"), `DB refuses assigned -> delivered without departure: ${skip.error?.message}`);
 
-    step("driver delivers A, fails B");
+    step("drivers see only their own orders, waiting to be loaded");
+    const section = (page: Page, title: string) => page.locator("section", { has: page.getByRole("heading", { name: new RegExp(`^${title} \\(`) }) });
     const d2 = await login(browser, "driver2@local", true);
-    eq(await d2.page.locator(`[data-order-code="${A}"]`).count(), 0, "driver2 does not see driver1's orders");
+    eq(await d2.page.locator(`[data-order-code="${A}"], [data-order-code="${B}"]`).count(), 0, "driver2 does not see driver1's orders");
+    eq(await d2.page.getByRole("button", { name: /XÁC NHẬN HÀNG ĐÃ LÊN XE/ }).count(), 0, "driver2 has nothing to load");
     const d1 = await login(browser, "driver1@local", true);
     await d1.page.goto(`${BASE}/admin/orders`);
     assert(d1.page.url().endsWith("/driver"), "driver bounced from admin pages");
-    await d1.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Đã giao" }).click();
+    const waiting = section(d1.page, "Chờ lên xe");
+    eq([await waiting.locator(`[data-order-code="${A}"]`).count(), await waiting.locator(`[data-order-code="${B}"]`).count()], [1, 1], "driver1 sees A and B under Chờ lên xe");
+    const driverCardA = await waiting.locator(`[data-order-code="${A}"]`).innerText();
+    assert(driverCardA.includes("Chị Mai") && driverCardA.includes("100 Nguyễn Trãi, Quận 5") && driverCardA.includes("Tổng 50 kg") && driverCardA.includes(`Thu hộ ${formatVnd(a0.total)}`), "driver card shows customer, address, kg and COD");
+    eq(
+      await waiting.locator(`[data-order-code="${A}"]`).getByRole("link", { name: /Chỉ đường/ }).getAttribute("href"),
+      `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("100 Nguyễn Trãi, Quận 5, TP. Hồ Chí Minh")}`,
+      "Maps button opens directions to the full address",
+    );
+    eq(await waiting.locator(`[data-order-code="${A}"]`).getByRole("link", { name: /Gọi/ }).getAttribute("href"), "tel:0909111222", "call button dials the customer");
+
+    await customer.page.goto(`${BASE}/orders?phone=0909111222`);
+    eq(await customer.page.getByTestId("on-the-way").count(), 0, "customer sees no on-the-way notice before departure");
+    assert((await customer.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Chờ lên xe"), "customer sees Chờ lên xe before departure");
+
+    step("driver confirms all orders loaded");
+    await d1.page.getByRole("button", { name: "XÁC NHẬN HÀNG ĐÃ LÊN XE (2 đơn)" }).click();
+    const departDialog = d1.page.getByRole("alertdialog");
+    assert((await departDialog.innerText()).includes("Xác nhận 2 đơn đã lên xe"), "departure asks for confirmation");
+    await departDialog.getByRole("button", { name: "Xác nhận" }).click();
+    await until(() => orderStatus(B), (s) => s === "out_for_delivery", "B out for delivery");
+    const [aOut, bOut] = [await order(A), await order(B)];
+    eq([aOut.status, bOut.status], ["out_for_delivery", "out_for_delivery"], "both orders out_for_delivery in one go");
+    assert(aOut.departed_at && aOut.departed_at === bOut.departed_at, "departed_at set once for the whole load");
+    const onTheRoad = section(d1.page, "Đang giao");
+    await onTheRoad.locator(`[data-order-code="${A}"]`).waitFor();
+    eq(await d1.page.getByRole("button", { name: /XÁC NHẬN HÀNG ĐÃ LÊN XE/ }).count(), 0, "departure button gone once loaded");
+
+    step("every party sees the order on the road");
+    await customer.page.reload();
+    const onTheWay = await customer.page.locator(`[data-order-code="${A}"]`).getByTestId("on-the-way").innerText();
+    assert(onTheWay.includes("Đơn hàng đang trên đường giao đến bạn") && onTheWay.includes("Tài xế 1") && onTheWay.includes("0910000001"), `customer sees on-the-way notice with driver phone: "${onTheWay}"`);
+    const s1 = await login(browser, "sale1@local", true);
+    assert((await s1.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Đang giao"), "sale1 dashboard shows A Đang giao");
+    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+    assert((await mgr.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Đã rời kho ·"), "manager orders page shows A Đã rời kho");
+
+    step("a single late order is loaded on its own");
+    await mgr.page.getByLabel(`Chọn ${C}`).check();
+    await mgr.page.getByLabel("Tài xế").selectOption({ label: "Tài xế 1" });
+    await mgr.page.getByRole("button", { name: "Giao cho tài xế" }).click();
+    await until(() => orderStatus(C), (s) => s === "assigned", "C assigned");
+    await d1.page.reload();
+    await d1.page.getByRole("button", { name: "XÁC NHẬN HÀNG ĐÃ LÊN XE (1 đơn)" }).waitFor();
+    await section(d1.page, "Chờ lên xe").locator(`[data-order-code="${C}"]`).getByRole("button", { name: "Lên xe" }).click();
+    await until(() => orderStatus(C), (s) => s === "out_for_delivery", "C out for delivery");
+    eq([(await order(A)).departed_at, (await order(C)).departed_at !== aOut.departed_at], [aOut.departed_at, true], "Lên xe moves only C; A keeps its departure time");
+
+    step("driver completes A with a proof photo, fails B");
+    await onTheRoad.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "HOÀN THÀNH GIAO HÀNG" }).click();
+    const doneDialog = d1.page.getByRole("dialog");
+    const bigPhoto = await d1.page.evaluate(() => {
+      const c = document.createElement("canvas");
+      c.width = 2400;
+      c.height = 1800;
+      const g = c.getContext("2d")!;
+      g.fillStyle = "#b91c1c";
+      g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = "#fff";
+      g.font = "200px sans-serif";
+      g.fillText("Đã ký nhận", 300, 950);
+      return c.toDataURL("image/png").split(",")[1];
+    });
+    await doneDialog.getByLabel("Ảnh bằng chứng giao hàng").setInputFiles({ name: "proof.png", mimeType: "image/png", buffer: Buffer.from(bigPhoto, "base64") });
+    await doneDialog.getByRole("img", { name: "Ảnh bằng chứng giao hàng" }).waitFor();
+    await doneDialog.getByRole("button", { name: "Xác nhận đã giao" }).click();
     await until(() => orderStatus(A), (s) => s === "delivered", "A delivered");
-    assert((await order(A)).delivered_at, "delivered_at set");
-    const cardB = d1.page.locator(`[data-order-code="${B}"]`);
+    const aDone = await order(A);
+    assert(aDone.delivered_at && aDone.delivery_photo_path?.startsWith(`${aDone.id}/`), `delivered_at and photo path set (${aDone.delivery_photo_path})`);
+    const stored = await admin.storage.from("delivery-photos").download(aDone.delivery_photo_path!);
+    eq(stored.data?.type, "image/jpeg", "photo stored in the bucket as a client-downscaled JPEG");
+    const leaked = await anon.storage.from("delivery-photos").download(aDone.delivery_photo_path!);
+    assert(leaked.error, "public key cannot read delivery photos (private bucket)");
+    const deliveredToday = section(d1.page, "Đã giao hôm nay");
+    await deliveredToday.getByRole("img", { name: `Ảnh giao ${A}` }).waitFor();
+    eq(await onTheRoad.locator(`[data-order-code="${A}"]`).count(), 0, "A moved from Đang giao to Đã giao hôm nay with its photo");
+
+    const cardB = onTheRoad.locator(`[data-order-code="${B}"]`);
+    await cardB.getByRole("button", { name: "Thất bại" }).click();
+    eq(await orderStatus(B), "out_for_delivery", "fail without a reason is blocked");
     await cardB.getByPlaceholder("Lý do thất bại").fill("Khách vắng nhà");
     await cardB.getByRole("button", { name: "Thất bại" }).click();
     await until(() => orderStatus(B), (s) => s === "failed", "B failed");
     eq((await order(B)).fail_reason, "Khách vắng nhà", "fail reason stored");
 
+    step("manager sees the proof photo and the departure in the timeline");
+    await mgr.page.goto(`${BASE}/admin/orders/${A}`);
+    const proof = mgr.page.getByTestId("delivery-photo").getByRole("img");
+    await proof.waitFor();
+    eq(await proof.evaluate((img: HTMLImageElement) => (img.complete ? [img.naturalWidth, img.naturalHeight] : null)), [1600, 1200], "manager detail renders the photo, downscaled to 1600px");
+    assert((await mgr.page.locator("main").innerText()).includes("Hàng đã lên xe ·"), "timeline shows when the goods left");
+
     step("manager sends failed B back to ready and marks A paid");
-    await mgr.page.goto(`${BASE}/admin/dispatch`);
+    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     await mgr.page.locator(`[data-order-code="${B}"]`).getByRole("button", { name: "Giao lại" }).click();
     await until(() => orderStatus(B), (s) => s === "ready", "B back to ready");
-    eq((await order(B)).driver_id, null, "B driver cleared for re-dispatch");
+    eq([(await order(B)).driver_id, (await order(B)).departed_at], [null, null], "B driver and departure cleared for re-dispatch");
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     await mgr.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Đánh dấu đã trả" }).click();
     await until(async () => (await order(A)).payment_status, (s) => s === "paid", "A paid");
@@ -334,7 +419,7 @@ async function main() {
     await mgr.page.goto(`${BASE}/admin/commission`);
     eq(await mgr.page.getByTestId("commission-NVKD01").innerText(), formatVnd(expected), "sale1 commission = 5% of delivered A only");
     eq(await mgr.page.getByTestId("commission-NVKD02").innerText(), formatVnd(0), "sale2 earns nothing for B");
-    const s1 = await login(browser, "sale1@local", true);
+    await s1.page.reload();
     eq(await s1.page.getByTestId("sale-commission").innerText(), formatVnd(expected), "sale1 dashboard shows same estimate");
     assert((await s1.page.getByTestId("ref-link").innerText()).endsWith("/r/NVKD01"), "sale1 sees own ref link");
 

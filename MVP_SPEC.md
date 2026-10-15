@@ -10,7 +10,7 @@ Next.js (App Router) + Supabase (Postgres + Auth for staff) + Vercel. UI Vietnam
 | Sale | yes | share ref link, enter orders for own customers, see own customers/orders/commission |
 | Manager (admin) | yes | everything: products, factories, sales, drivers, commission %, cutoff, orders, production, receiving, dispatch, mark paid. The only role that moves orders and production jobs |
 | Factory | yes | read-only: own jobs for today and tomorrow (date, product, kg, status) |
-| Driver | yes | see assigned deliveries, mark delivered/failed |
+| Driver | yes | see own assigned deliveries, confirm the goods are loaded, mark delivered (optional proof photo) or failed |
 
 ## Data model
 - `products` (id, name, image_url, price_per_kg = wholesale price, active)
@@ -18,7 +18,7 @@ Next.js (App Router) + Supabase (Postgres + Auth for staff) + Vercel. UI Vietnam
 - `customers` (id, phone UNIQUE, name, default_address, default_district, sale_id NULL, created_at)
 - `staff` (id, auth_user_id, role[manager|sale|factory|driver], name, phone, ref_code UNIQUE NULL, commission_pct NULL, factory_id NULL, active)
 - `factories` (id, name, address, phone, capacity_kg_per_day, active)
-- `orders` (id, code, customer_id, sale_id NULL — snapshot at creation, created_by[customer|sale|manager], created_by_staff_id NULL, production_date, address, district, phone, note, status, payment_status[unpaid|paid], total, driver_id NULL, fail_reason NULL, delivered_at NULL, created_at)
+- `orders` (id, code, customer_id, sale_id NULL — snapshot at creation, created_by[customer|sale|manager], created_by_staff_id NULL, production_date, address, district, phone, note, status, payment_status[unpaid|paid], total, driver_id NULL, fail_reason NULL, departed_at NULL, delivered_at NULL, delivery_photo_path NULL, created_at)
 - `order_items` (id, order_id, product_id, pack_id, pack_name, kg_per_unit, pack_qty, qty_kg = pack_qty × kg_per_unit, wholesale_price_per_kg, price_per_kg, line_total — snapshots); `orders` also snapshot price_tier (si|le) and the pricing terms
 - `production_days` (date PK, status[open|closed])
 - `production_jobs` (id, date, product_id, factory_id, qty_kg, status, received_kg NULL, timestamps)
@@ -29,9 +29,13 @@ Next.js (App Router) + Supabase (Postgres + Auth for staff) + Vercel. UI Vietnam
 ```
 placed ──(manager closes day)──> in_production ──(manager receives day)──> ready ──(dispatch)──> assigned
    │                                                                                               │
-cancelled (manager, from placed)                                          delivered  |  failed ──> back to ready / cancelled
+cancelled (manager, from placed)                                              (driver confirms loaded)
+                                                                                                   │
+                                                                                          out_for_delivery
+                                                                                                   │
+                                                                          delivered  |  failed ──> back to ready / cancelled
 ```
-Labels: placed "Chờ xử lý", in_production "Đang sản xuất", ready "Đã nhận hàng", assigned "Đang giao", delivered "Đã giao", failed "Giao thất bại", cancelled "Đã hủy". There is no approval step.
+Labels: placed "Chờ xử lý", in_production "Đang sản xuất", ready "Đã nhận hàng", assigned "Chờ lên xe", out_for_delivery "Đang giao", delivered "Đã giao", failed "Giao thất bại", cancelled "Đã hủy". There is no approval step.
 `payment_status` independent; manager toggles `paid`.
 
 ## Production job lifecycle
@@ -47,8 +51,9 @@ Close day creates jobs as `producing` ("Đang sản xuất"); receive day marks 
 4. **Close day** (manager) – every `placed` order of the date; shows totals kg per product for date. Manager splits each product across factories (inputs per factory, capacity warning if sum per factory > capacity). Must allocate 100% before send. Send → jobs `producing`, orders → `in_production`, day `closed`, orders locked.
 5. **Factory** – read-only list of its own jobs for today and tomorrow. No buttons; never shows customers or prices.
 6. **Receive** (manager) – on `/admin/orders` for a closed day with orders in production, one "Xác nhận đã nhận hàng" button (with confirmation): all jobs received at planned kg, orders → ready ("Đã nhận hàng"). Refused on an open day. Factories are expected to produce exactly what is required.
-7. **Dispatch** (manager) – list `ready` orders, filter by district, assign driver.
-8. **Driver** – list assigned, call/Maps buttons, Delivered or Failed(reason).
+7. **Dispatch** (manager) – on `/admin/orders?date=`, tick received orders (or "Chọn tất cả") and pick a driver → "Giao cho tài xế".
+8. **Driver** – `/driver` lists only the driver's own orders in three sections: "Chờ lên xe", "Đang giao", "Đã giao hôm nay". Each card shows customer, phone (call button), address (Google Maps directions), note, packs and kg, and the COD amount ("Thu hộ") or "Đã thanh toán". "XÁC NHẬN HÀNG ĐÃ LÊN XE" moves every listed waiting order to `out_for_delivery` in one atomic update and stamps `departed_at`; each card also has "Lên xe" for one order. "HOÀN THÀNH GIAO HÀNG" opens a dialog with an optional proof photo (downscaled on the phone to 1600 px JPEG, stored in the private `delivery-photos` bucket) and marks the order delivered. "Thất bại" needs a reason.
+   Every party sees the departure at once: the customer lookup shows "Đơn hàng đang trên đường giao đến bạn" with the driver's name and phone, sales see "Đang giao", and the manager's dispatch page shows "Đã rời kho · HH:mm". The order detail page shows the departure in the timeline and the proof photo.
 9. **Mark paid** (manager) – toggle on order.
 10. **Customer lookup** – `/orders` enter phone → list orders + status; "Đặt lại" refills the cart with the same packs (inactive ones skipped) and opens checkout prefilled, at current prices. The shop shows the last order of the phone this browser remembered.
 
@@ -58,7 +63,7 @@ Per sale, per month: `sum(order.total where status=delivered and delivered_at in
 ## Screens
 - Public: `/`, `/checkout`, `/orders` (lookup), `/r/[code]` (sets ref cookie → `/`)
 - Sale: `/sale` (dashboard + ref link), `/sale/orders/new`, `/sale/customers`
-- Manager: `/admin/orders` (by date, filters), `/admin/production/[date]` (close + split), `/admin/dispatch`, `/admin/commission`, `/admin/settings` (products, factories, staff, cutoff)
+- Manager: `/admin` (month overview), `/admin/orders?date=` (day table: cancel, receive day, assign driver, paid), `/admin/orders/[code]` (detail), `/admin/production/[date]` (close + split), `/admin/commission` (+ per sale), `/admin/settings` (products, factories, staff, cutoff)
 - Factory: `/factory`
 - Driver: `/driver`
 

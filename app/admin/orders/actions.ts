@@ -16,7 +16,7 @@ export async function moveOrder(_prev: ActionResult, fd: FormData): Promise<Acti
     const { order_id, to } = parseForm(moveSchema, fd);
     const order = unwrap(await db().from("orders").select("status").eq("id", order_id).single());
     if (!MANAGER_ORDER_MOVES[order.status]?.includes(to)) throw new DomainError("Thao tác không hợp lệ cho đơn này");
-    await transition("orders", order_id, to, to === "ready" ? { patch: { driver_id: null } } : {});
+    await transition("orders", order_id, to, to === "ready" ? { patch: { driver_id: null, departed_at: null } } : {});
   });
 }
 
@@ -34,5 +34,18 @@ export async function setPaid(_prev: ActionResult, fd: FormData): Promise<Action
     await requireRole("manager");
     const { order_id, paid } = parseForm(z.object({ order_id: id, paid: z.enum(["paid", "unpaid"]) }), fd);
     check(await db().from("orders").update({ payment_status: paid }).eq("id", order_id).neq("status", "cancelled"));
+  });
+}
+
+export async function assignDriver(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
+  return run(async () => {
+    await requireRole("manager");
+    const driverId = id.parse(fd.get("driver_id"));
+    const { data: driver } = await db().from("staff").select("id").eq("id", driverId).eq("role", "driver").eq("active", true).maybeSingle();
+    if (!driver) throw new DomainError("Tài xế không hợp lệ");
+    const orderIds = fd.getAll("order_id").map((v) => id.parse(v));
+    if (orderIds.length === 0) throw new DomainError("Chọn ít nhất 1 đơn");
+    for (const orderId of orderIds) await transition("orders", orderId, "assigned", { patch: { driver_id: driver.id } });
+    return `Đã giao ${orderIds.length} đơn cho tài xế`;
   });
 }

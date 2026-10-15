@@ -1,89 +1,122 @@
 import { headers } from "next/headers";
 import Link from "next/link";
+import { AutoSubmitForm } from "@/components/AutoSubmitForm";
 import { PageTitle } from "@/components/page-title";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SaleMonthReport } from "@/components/SaleMonthReport";
 import { OrderBadge, TierBadge } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { itemLabel } from "@/lib/domain/catalog";
 import { formatVnd } from "@/lib/domain/money";
-import { dayRange, monthRange, today } from "@/lib/period";
+import { parseIsoDate } from "@/lib/domain/time";
+import { today } from "@/lib/period";
 
-export default async function SaleDashboard() {
+const departedAt = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+
+export default async function SaleDashboard({ searchParams }: PageProps<"/sale">) {
   const me = await requireRole("sale");
-  const date = today();
-  const day = dayRange(date);
-  const month = monthRange(date);
+  const raw = (await searchParams).month;
+  const month = (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
   const host = (await headers()).get("host");
   const refLink = `http://${host}/r/${me.ref_code}`;
 
-  const [todayOrders, monthOrders, commission, recent] = await Promise.all([
-    db().from("orders").select("total").eq("sale_id", me.id).neq("status", "cancelled").gte("created_at", day.from).lt("created_at", day.to),
-    db().from("orders").select("total").eq("sale_id", me.id).neq("status", "cancelled").gte("created_at", month.from).lt("created_at", month.to),
-    db().rpc("commission_report", { p_month: date }),
-    db().from("orders").select("id, code, production_date, status, total, price_tier, customers(name, phone), order_items(id, pack_name, pack_qty, qty_kg, products(name))").eq("sale_id", me.id).order("created_at", { ascending: false }).order("id", { referencedTable: "order_items" }).limit(20),
-  ]);
-  const sum = (rows: { total: number }[]) => rows.reduce((s, r) => s + r.total, 0);
-  const mine = unwrap(commission).find((r) => r.sale_id === me.id);
+  const active = unwrap(
+    await db()
+      .from("orders")
+      .select("id, code, production_date, status, total, price_tier, departed_at, customers(name, phone), driver:staff!orders_driver_id_fkey(name, phone), order_items(id, pack_name, pack_qty, qty_kg, products(name))")
+      .eq("sale_id", me.id)
+      .not("status", "in", "(delivered,cancelled)")
+      .order("created_at", { ascending: false })
+      .order("id", { referencedTable: "order_items" }),
+  );
 
   return (
     <>
       <PageTitle>Xin chào {me.name}</PageTitle>
       <Card size="sm" className="mb-4">
-        <CardContent>
-          <div className="text-muted-foreground">Link giới thiệu (khách đặt qua link sẽ thuộc về bạn)</div>
-          <div className="mt-1 font-mono break-all" data-testid="ref-link">
-            {refLink}
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm text-muted-foreground">Link giới thiệu (khách đặt qua link sẽ thuộc về bạn)</div>
+            <div className="mt-1 font-mono break-all" data-testid="ref-link">
+              {refLink}
+            </div>
           </div>
+          <Button asChild>
+            <Link href="/sale/orders/new">Tạo đơn</Link>
+          </Button>
         </CardContent>
       </Card>
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Doanh số hôm nay" value={formatVnd(sum(unwrap(todayOrders)))} />
-        <Stat label="Doanh số tháng" value={formatVnd(sum(unwrap(monthOrders)))} />
-        <Stat label="Đã giao trong tháng" value={formatVnd(mine?.delivered_total ?? 0)} />
-        <Stat label={`Hoa hồng tạm tính (${me.commission_pct ?? 0}%)`} value={formatVnd(mine?.commission ?? 0)} testId="sale-commission" />
-      </div>
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="font-semibold">Đơn gần đây</h2>
-        <Button asChild>
-          <Link href="/sale/orders/new">Tạo đơn</Link>
-        </Button>
-      </div>
-      <ul className="space-y-2">
-        {unwrap(recent).map((o) => (
-          <li key={o.id}>
-            <Card size="sm">
-              <CardContent className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <b>{o.code}</b> · {o.customers?.name} · {o.customers?.phone}
-                  <div className="text-muted-foreground">Ngày SX {o.production_date}</div>
-                  <div className="text-muted-foreground">{o.order_items.map(itemLabel).join(", ")}</div>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <OrderBadge status={o.status} />
-                  <TierBadge tier={o.price_tier} />
-                  <div className="font-medium">{formatVnd(o.total)}</div>
-                </div>
-              </CardContent>
-            </Card>
-          </li>
-        ))}
-      </ul>
-    </>
-  );
-}
 
-function Stat({ label, value, testId }: { label: string; value: string; testId?: string }) {
-  return (
-    <Card size="sm">
-      <CardHeader>
-        <CardDescription className="text-xs">{label}</CardDescription>
-        <CardTitle className="text-lg font-bold" data-testid={testId}>
-          {value}
-        </CardTitle>
-      </CardHeader>
-    </Card>
+      <Card size="sm" className="mb-4">
+        <CardHeader>
+          <CardTitle>
+            <h2>Đơn đang xử lý ({active.length})</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {active.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Không có đơn đang xử lý.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Mã</TableHead>
+                  <TableHead>Khách hàng</TableHead>
+                  <TableHead>Hàng</TableHead>
+                  <TableHead className="text-right">Tổng</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {active.map((o) => (
+                  <TableRow key={o.id} data-order-code={o.code} className="relative cursor-pointer">
+                    <TableCell className="font-medium">
+                      <Link href={`/sale/orders/${o.code}`} className="text-primary after:absolute after:inset-0 hover:underline">
+                        {o.code}
+                      </Link>
+                      <div className="text-xs font-normal text-muted-foreground">Ngày SX {o.production_date}</div>
+                    </TableCell>
+                    <TableCell>
+                      {o.customers?.name}
+                      <div className="text-xs text-muted-foreground">{o.customers?.phone}</div>
+                    </TableCell>
+                    <TableCell className="max-w-64 min-w-40 text-xs whitespace-normal">{o.order_items.map(itemLabel).join(", ")}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="tabular-nums">{formatVnd(o.total)}</div>
+                      <TierBadge tier={o.price_tier} />
+                    </TableCell>
+                    <TableCell>
+                      <OrderBadge status={o.status} />
+                      {o.driver ? (
+                        <div className="mt-0.5 text-xs text-muted-foreground">
+                          {o.driver.name}
+                          {o.driver.phone && ` · ${o.driver.phone}`}
+                          {o.departed_at && <div>Đã rời kho · {departedAt.format(new Date(o.departed_at))}</div>}
+                        </div>
+                      ) : (
+                        <div className="mt-0.5 text-xs text-muted-foreground">Chưa có tài xế</div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <h2 className="text-lg font-bold">Hoa hồng tháng {month}</h2>
+        <AutoSubmitForm action="/sale">
+          <Input type="month" name="month" defaultValue={month} aria-label="Chọn tháng" className="w-auto" />
+        </AutoSubmitForm>
+      </div>
+      <SaleMonthReport sale={me} month={month} orderLinks={false} />
+    </>
   );
 }

@@ -1,11 +1,8 @@
 import { moveOrder, setPaid } from "@/app/admin/orders/actions";
 import { ActionForm } from "@/components/ActionForm";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { OrderBadge, TierBadge } from "@/components/status-badge";
-import { itemLabel } from "@/lib/domain/catalog";
-import { formatVnd } from "@/lib/domain/money";
 import type { PriceTier } from "@/lib/domain/pricing";
+import { cn } from "@/lib/utils";
 import { MANAGER_ORDER_MOVES, MOVE_LABEL, type OrderStatus } from "@/lib/domain/status";
 
 export type AdminOrder = {
@@ -20,11 +17,12 @@ export type AdminOrder = {
   district: string;
   note: string | null;
   fail_reason: string | null;
+  departed_at: string | null;
   production_date: string;
   created_at: string;
   customers: { name: string } | null;
   sale: { name: string } | null;
-  driver: { name: string } | null;
+  driver: { id: number; name: string } | null;
   order_items: {
     id: number;
     pack_name: string;
@@ -37,29 +35,14 @@ export type AdminOrder = {
 };
 
 export const ADMIN_ORDER_SELECT =
-  "id, code, status, payment_status, total, price_tier, phone, address, district, note, fail_reason, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name))";
+  "id, code, status, payment_status, total, price_tier, phone, address, district, note, fail_reason, departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name))";
 
-export function OrderInfo({ order }: { order: AdminOrder }) {
-  return (
-    <>
-      <div>
-        {order.customers?.name} · <a href={`tel:${order.phone}`}>{order.phone}</a> · {order.address}, {order.district}
-      </div>
-      <div className="text-muted-foreground">
-        NVKD: {order.sale?.name ?? "—"} · Ngày SX {order.production_date}
-        {order.driver && ` · Tài xế: ${order.driver.name}`}
-      </div>
-      {order.note && <div className="text-muted-foreground">Ghi chú: {order.note}</div>}
-      {order.fail_reason && <div className="text-destructive">Lý do thất bại: {order.fail_reason}</div>}
-      <ul>
-        {order.order_items.map((i) => (
-          <li key={i.id}>
-            {itemLabel(i)} <span className="text-muted-foreground">@ {formatVnd(i.price_per_kg)}/kg = {formatVnd(i.line_total)}</span>
-          </li>
-        ))}
-      </ul>
-    </>
-  );
+const clock = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit" });
+
+/** "Đã rời kho · HH:mm" while the driver is on the road. */
+export function Departed({ order, className }: { order: AdminOrder; className?: string }) {
+  if (order.status !== "out_for_delivery" || !order.departed_at) return null;
+  return <span className={cn("text-blue-800", className)}>Đã rời kho · {clock.format(new Date(order.departed_at))}</span>;
 }
 
 export function OrderActions({ order, size, withPaid = true }: { order: AdminOrder; size?: "sm"; withPaid?: boolean }) {
@@ -119,25 +102,5 @@ export function PaymentLabel({ order }: { order: AdminOrder }) {
     <span className={order.payment_status === "paid" ? "text-green-700" : "text-muted-foreground"}>
       {order.payment_status === "paid" ? "Đã thanh toán" : "Chưa thanh toán"}
     </span>
-  );
-}
-
-export function AdminOrderCard({ order }: { order: AdminOrder }) {
-  return (
-    <Card size="sm" data-order-code={order.code}>
-      <CardContent className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <b className="text-base">{order.code}</b>
-          <OrderBadge status={order.status} />
-          <TierBadge tier={order.price_tier} />
-          <PaymentLabel order={order} />
-          <span className="ml-auto text-base font-semibold">{formatVnd(order.total)}</span>
-        </div>
-        <OrderInfo order={order} />
-        <div className="flex flex-wrap gap-2 pt-1">
-          <OrderActions order={order} />
-        </div>
-      </CardContent>
-    </Card>
   );
 }

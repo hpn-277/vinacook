@@ -27,6 +27,7 @@ async function shot(page: Page, slug: string) {
   await page.waitForLoadState("networkidle");
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
   await page.evaluate(() => window.scrollTo(0, 0));
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   const file = `${OUT}/${String(++n).padStart(2, "0")}-${slug}.jpg`;
   await page.screenshot({ path: file, type: "jpeg", quality: 70, fullPage: true });
   console.log(`  shot ${file}`);
@@ -172,24 +173,60 @@ async function main() {
     await f1.page.reload();
     await shot(f1.page, "factory1-jobs-received");
 
-    await mgr.page.goto(`${BASE}/admin/dispatch`);
-    await shot(mgr.page, "admin-dispatch-all-ready");
-    await mgr.page.getByLabel("Lọc quận").selectOption("Quận 5");
-    await mgr.page.getByRole("button", { name: "Lọc" }).click();
-    await mgr.page.waitForURL("**district=*");
+    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+    await shot(mgr.page, "admin-orders-ready-to-dispatch");
     await mgr.page.getByLabel(`Chọn ${A}`).check();
     await mgr.page.getByLabel(`Chọn ${B}`).check();
     await mgr.page.getByLabel("Tài xế").selectOption({ label: "Tài xế 1" });
-    await shot(mgr.page, "admin-dispatch-district-filter-driver-select");
+    await shot(mgr.page, "admin-orders-dispatch-selected");
     await mgr.page.getByRole("button", { name: "Giao cho tài xế" }).click();
     await until(() => orderStatus(B), (s) => s === "assigned", "B assigned");
     await mgr.page.reload();
-    await shot(mgr.page, "admin-dispatch-assigned");
+    await shot(mgr.page, "admin-orders-assigned");
 
     const d1 = await login(browser, "driver1@local", true);
     await d1.page.goto(`${BASE}/driver`);
-    await shot(d1.page, "driver1-list");
-    await d1.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Đã giao" }).click();
+    await shot(d1.page, "driver1-waiting-to-load");
+    await customer.page.goto(`${BASE}/orders?phone=0909111222`);
+    await shot(customer.page, "customer-lookup-waiting-to-load");
+    await d1.page.getByRole("button", { name: /XÁC NHẬN HÀNG ĐÃ LÊN XE/ }).click();
+    await d1.page.getByRole("alertdialog").waitFor();
+    await shot(d1.page, "driver1-departure-confirm");
+    await d1.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
+    await until(() => orderStatus(B), (s) => s === "out_for_delivery", "B out for delivery");
+    await d1.page.reload();
+    await shot(d1.page, "driver1-out-for-delivery");
+
+    await customer.page.reload();
+    await shot(customer.page, "customer-lookup-on-the-way");
+    await s1.page.goto(`${BASE}/sale`);
+    await shot(s1.page, "sale1-dashboard-out-for-delivery");
+    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+    await shot(mgr.page, "admin-orders-departed");
+
+    await d1.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "HOÀN THÀNH GIAO HÀNG" }).click();
+    const done = d1.page.getByRole("dialog");
+    await done.waitFor();
+    await shot(d1.page, "driver1-complete-dialog-empty");
+    const photo = await d1.page.evaluate(() => {
+      const c = document.createElement("canvas");
+      c.width = 1200;
+      c.height = 1600;
+      const g = c.getContext("2d")!;
+      g.fillStyle = "#fef3c7";
+      g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = "#92400e";
+      g.font = "bold 90px sans-serif";
+      g.fillText("PHIẾU GIAO HÀNG", 160, 300);
+      g.font = "60px sans-serif";
+      g.fillText("Đã nhận đủ hàng", 260, 900);
+      g.fillText("Ký tên: Mai", 360, 1200);
+      return c.toDataURL("image/png").split(",")[1];
+    });
+    await done.getByLabel("Ảnh bằng chứng giao hàng").setInputFiles({ name: "phieu.png", mimeType: "image/png", buffer: Buffer.from(photo, "base64") });
+    await done.getByRole("img", { name: "Ảnh bằng chứng giao hàng" }).waitFor();
+    await shot(d1.page, "driver1-complete-dialog-photo");
+    await done.getByRole("button", { name: "Xác nhận đã giao" }).click();
     await until(() => orderStatus(A), (s) => s === "delivered", "A delivered");
     const cardB = d1.page.locator(`[data-order-code="${B}"]`);
     await cardB.getByPlaceholder("Lý do thất bại").fill("Khách vắng nhà");
@@ -197,19 +234,23 @@ async function main() {
     await cardB.getByRole("button", { name: "Thất bại" }).click();
     await until(() => orderStatus(B), (s) => s === "failed", "B failed");
     await d1.page.goto(`${BASE}/driver`);
-    await shot(d1.page, "driver1-after-delivered-and-failed");
+    await d1.page.getByRole("img", { name: `Ảnh giao ${A}` }).waitFor();
+    await shot(d1.page, "driver1-delivered-today");
+    await mgr.page.goto(`${BASE}/admin/orders/${A}`);
+    await mgr.page.getByTestId("delivery-photo").getByRole("img").waitFor();
+    await shot(mgr.page, "admin-order-detail-delivery-photo");
 
     await d1.page.goto(`${BASE}/admin/orders`);
     await shot(d1.page, "driver1-forbidden-admin-orders-redirect");
     await d1.page.goto(`${BASE}/admin`);
     await shot(d1.page, "driver1-forbidden-admin-root");
 
-    await mgr.page.goto(`${BASE}/admin/dispatch`);
-    await shot(mgr.page, "admin-dispatch-failed-order");
+    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
+    await shot(mgr.page, "admin-orders-failed-order");
     await mgr.page.locator(`[data-order-code="${B}"]`).getByRole("button", { name: "Giao lại" }).click();
     await until(() => orderStatus(B), (s) => s === "ready", "B back to ready");
     await mgr.page.reload();
-    await shot(mgr.page, "admin-dispatch-failed-sent-back-ready");
+    await shot(mgr.page, "admin-orders-failed-sent-back-ready");
 
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     await mgr.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: "Đánh dấu đã trả" }).click();

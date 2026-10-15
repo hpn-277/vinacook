@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-label="Thùng carton đựng mì tươi">
+  <rect width="320" height="240" fill="#FFF7ED"/>
+  <ellipse cx="160" cy="212" rx="112" ry="10" fill="#0F172A" opacity=".08"/>
+  <path d="M60 92l100-30 100 30v110l-100 14-100-14z" fill="#C2884D"/>
+  <path d="M60 92l100 18v106L60 202z" fill="#D9A066"/>
+  <path d="M160 110l100-18v110l-100 14z" fill="#B97A3F"/>
+  <path d="M60 92l100-30 100 30-100 18z" fill="#E8B983"/>
+  <path d="M60 92l-22 26 100 20 22-28z" fill="#E3AE73" stroke="#A86B33" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M260 92l22 26-100 20-22-28z" fill="#CF9558" stroke="#A86B33" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M110 77l100 18" stroke="#F5DEB3" stroke-width="10" opacity=".9"/>
+  <rect x="78" y="140" width="66" height="40" rx="4" fill="#FFFFFF" transform="skewY(10)" transform-origin="111 160"/>
+  <g transform="skewY(10)" transform-origin="111 160" fill="#94A3B8">
+    <rect x="86" y="148" width="40" height="5" rx="2.5"/>
+    <rect x="86" y="158" width="50" height="5" rx="2.5"/>
+    <rect x="86" y="168" width="30" height="5" rx="2.5"/>
+  </g>
+  <g transform="skewY(-10)" transform-origin="210 160" stroke="#7C4A1E" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M196 150v-14m-6 6 6-6 6 6"/>
+    <path d="M216 150v-14m-6 6 6-6 6 6"/>
+    <path d="M190 156h32"/>
+  </g>
+</svg>

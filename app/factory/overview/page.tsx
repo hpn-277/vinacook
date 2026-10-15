@@ -3,32 +3,17 @@ import { PageTitle } from "@/components/page-title";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { formatKg } from "@/lib/domain/money";
 import { parseIsoDate } from "@/lib/domain/time";
+import { jobsInMonth } from "@/lib/factory-stats";
 import { today } from "@/lib/period";
-
-function nextMonth(month: string) {
-  const [y, m] = month.split("-").map(Number);
-  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
-}
 
 export default async function FactoryOverviewPage({ searchParams }: PageProps<"/factory/overview">) {
   const me = await requireRole("factory");
   const raw = (await searchParams).month;
   const month = (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
-  const jobs = unwrap(
-    await db()
-      .from("production_jobs")
-      .select("id, date, qty_kg, received_kg, status, product_id, products(name)")
-      .eq("factory_id", me.factory_id!)
-      .gte("date", `${month}-01`)
-      .lt("date", `${nextMonth(month)}-01`)
-      .order("date", { ascending: false })
-      .order("product_id"),
-  );
+  const jobs = await jobsInMonth(month, me.factory_id!);
 
   const produced = jobs.filter((j) => j.status === "received");
   const producedKg = produced.reduce((s, j) => s + (j.received_kg ?? j.qty_kg), 0);

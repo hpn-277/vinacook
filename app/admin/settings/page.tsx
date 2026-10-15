@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -89,6 +90,7 @@ export default async function SettingsPage() {
                 <TableHead>Giá sỉ/kg</TableHead>
                 <TableHead>Giá lẻ/kg</TableHead>
                 <TableHead>Ảnh</TableHead>
+                <TableHead>Mô tả</TableHead>
                 <TableHead>Đang bán</TableHead>
                 <TableHead />
               </TableRow>
@@ -109,6 +111,18 @@ export default async function SettingsPage() {
                     </TableCell>
                     <TableCell>
                       <Input form={form} name="image_url" defaultValue={p?.image_url ?? ""} placeholder="Link ảnh" className="min-w-40" />
+                    </TableCell>
+                    <TableCell>
+                      <Textarea
+                        form={form}
+                        name="description"
+                        defaultValue={p?.description ?? ""}
+                        placeholder="Nguyên liệu, cách dùng, hạn dùng"
+                        aria-label={`Mô tả ${p?.name ?? "sản phẩm mới"}`}
+                        maxLength={1000}
+                        rows={2}
+                        className="min-h-9 min-w-56 text-sm"
+                      />
                     </TableCell>
                     <TableCell className="align-middle">
                       <Checkbox form={form} name="active" defaultChecked={p?.active ?? true} aria-label="Đang bán" />
@@ -142,6 +156,7 @@ export default async function SettingsPage() {
                 <TableHead>Quy cách</TableHead>
                 <TableHead>Kg/đơn vị</TableHead>
                 <TableHead>Giá sỉ / lẻ</TableHead>
+                <TableHead>Ảnh quy cách</TableHead>
                 <TableHead>Đang bán</TableHead>
                 <TableHead />
               </TableRow>
@@ -190,6 +205,25 @@ export default async function SettingsPage() {
                     <TableCell className="align-middle whitespace-nowrap text-muted-foreground">
                       {pk &&
                         `${formatVnd(packPrice(pk.kg_per_unit, wholesale))} / ${formatVnd(packPrice(pk.kg_per_unit, retailPerKg(wholesale, settings.retail_markup_pct)))}`}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {pk?.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={pk.image_url} alt="" className="size-9 shrink-0 rounded-md border bg-muted object-cover" />
+                        ) : (
+                          <div className="size-9 shrink-0 rounded-md border border-dashed" />
+                        )}
+                        <Input
+                          form={form}
+                          name="image_url"
+                          defaultValue={pk?.image_url ?? ""}
+                          placeholder="/packs/thung.svg"
+                          aria-label={`Ảnh ${label}`}
+                          maxLength={500}
+                          className="min-w-40"
+                        />
+                      </div>
                     </TableCell>
                     <TableCell className="align-middle">
                       <Checkbox form={form} name="active" defaultChecked={pk?.active ?? true} aria-label={`Đang bán ${label}`} />

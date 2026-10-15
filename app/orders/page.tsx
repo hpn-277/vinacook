@@ -1,3 +1,4 @@
+import { TruckIcon } from "lucide-react";
 import { PageTitle } from "@/components/page-title";
 import { PublicShell } from "@/components/PublicShell";
 import { ReorderButton } from "@/components/Reorder";
@@ -17,7 +18,7 @@ export default async function OrderLookupPage({ searchParams }: PageProps<"/orde
     ? unwrap(
         await db()
           .from("orders")
-          .select(`id, status, payment_status, total, price_tier, ${REORDER_FIELDS}`)
+          .select(`id, status, payment_status, total, price_tier, driver:staff!orders_driver_id_fkey(name, phone), ${REORDER_FIELDS}`)
           .eq("phone", phone)
           .order("created_at", { ascending: false })
           .order("id", { referencedTable: "order_items" })
@@ -46,6 +47,26 @@ export default async function OrderLookupPage({ searchParams }: PageProps<"/orde
                     <TierBadge tier={o.price_tier} />
                     <OrderBadge status={o.status} />
                   </div>
+                  {o.status === "out_for_delivery" && (
+                    <div data-testid="on-the-way" className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-900">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <TruckIcon className="size-4 shrink-0" /> Đơn hàng đang trên đường giao đến bạn
+                      </div>
+                      {o.driver && (
+                        <div className="mt-0.5">
+                          Tài xế: {o.driver.name}
+                          {o.driver.phone && (
+                            <>
+                              {" · "}
+                              <a href={`tel:${o.driver.phone}`} className="font-medium underline">
+                                {o.driver.phone}
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="text-muted-foreground">Ngày sản xuất {o.production_date}</div>
                   <ul>
                     {source.lines.map((l) => (

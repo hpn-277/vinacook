@@ -1,14 +1,14 @@
 -- price_per_kg is the wholesale price; retail adds settings.retail_markup_pct (25%).
-insert into products (name, price_per_kg, image_url) values
-  ('Mì trứng', 25000, '/products/mi-trung.svg'),
-  ('Mì vàng sợi nhỏ', 24000, '/products/mi-vang-soi-nho.svg'),
-  ('Hủ tiếu dai', 22000, '/products/hu-tieu-dai.svg'),
-  ('Bánh phở tươi', 18000, '/products/banh-pho-tuoi.svg'),
-  ('Bún tươi', 15000, '/products/bun-tuoi.svg'),
-  ('Mì quảng', 26000, '/products/mi-quang.svg');
+insert into products (name, price_per_kg, image_url, description) values
+  ('Mì trứng', 25000, '/products/mi-trung.svg', 'Mì trứng tươi làm từ bột mì và trứng gà, sợi vàng dai. Hợp xào, trụng nước lèo. Dùng trong 2 ngày, bảo quản mát.'),
+  ('Mì vàng sợi nhỏ', 24000, '/products/mi-vang-soi-nho.svg', 'Sợi mì vàng nhỏ, mềm, chín nhanh. Hợp mì nước, mì hoành thánh. Dùng trong 2 ngày, bảo quản mát.'),
+  ('Hủ tiếu dai', 22000, '/products/hu-tieu-dai.svg', 'Hủ tiếu bột gạo sợi dai, không bở khi trụng. Hợp hủ tiếu Nam Vang, hủ tiếu xào. Dùng trong 2 ngày, bảo quản mát.'),
+  ('Bánh phở tươi', 18000, '/products/banh-pho-tuoi.svg', 'Bánh phở gạo tươi tráng mỗi sáng, sợi mềm. Hợp phở bò, phở gà, phở xào. Dùng trong 2 ngày, bảo quản mát.'),
+  ('Bún tươi', 15000, '/products/bun-tuoi.svg', 'Bún gạo tươi sợi vừa, trắng mềm. Hợp bún chả, bún thịt nướng, bún riêu. Dùng trong 2 ngày, bảo quản mát.'),
+  ('Mì quảng', 26000, '/products/mi-quang.svg', 'Sợi mì quảng bản to, màu vàng nghệ. Hợp mì quảng gà, tôm thịt. Dùng trong 2 ngày, bảo quản mát.');
 
-insert into product_packs (product_id, name, kg_per_unit)
-select p.id, pk.name, pk.kg
+insert into product_packs (product_id, name, kg_per_unit, image_url)
+select p.id, pk.name, pk.kg, '/packs/' || case pk.name when 'Thùng' then 'thung' when 'Túi' then 'tui' else lower(pk.name) end || '.svg'
 from (values
   ('Mì trứng', 'Kg', 1), ('Mì trứng', 'Thùng', 10), ('Mì trứng', 'Bao', 25),
   ('Mì vàng sợi nhỏ', 'Kg', 1), ('Mì vàng sợi nhỏ', 'Thùng', 10), ('Mì vàng sợi nhỏ', 'Bao', 25),
@@ -65,10 +65,10 @@ insert into customers (phone, name, default_address, default_district, sale_id) 
 
 -- History lives in the previous month so it never mixes into the current month's commission.
 -- 1 Thùng Mì trứng + 10 Kg Bún tươi = 20 kg, under both wholesale thresholds, so retail: 10 × 31.300 + 10 × 18.800.
-insert into orders (customer_id, sale_id, created_by, production_date, address, district, phone, status, payment_status, total, driver_id, delivered_at, created_at,
+insert into orders (customer_id, sale_id, created_by, production_date, address, district, phone, status, payment_status, total, driver_id, departed_at, delivered_at, created_at,
                     price_tier, retail_markup_pct, wholesale_min_kg, wholesale_min_total)
 select c.id, c.sale_id, 'customer', (now() - interval '40 days')::date, c.default_address, c.default_district, c.phone,
-  'delivered', 'paid', 0, (select id from staff where name = 'Tài xế 1'), now() - interval '40 days', now() - interval '40 days',
+  'delivered', 'paid', 0, (select id from staff where name = 'Tài xế 1'), now() - interval '40 days' - interval '1 hour', now() - interval '40 days', now() - interval '40 days',
   'le', 25, 50, 2000000
 from customers c where c.phone in ('0901000001', '0901000002');
 

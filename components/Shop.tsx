@@ -1,12 +1,14 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { setCart, useCart } from "@/components/cart";
 import { TierHint } from "@/components/PricingSummary";
+import { ProductDetail, type DetailTarget } from "@/components/ProductDetail";
+import { QtyStepper } from "@/components/QtyStepper";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { cartLines, type CatalogProduct } from "@/lib/domain/catalog";
 import { formatKg, formatVnd } from "@/lib/domain/money";
 import { packPrice, priceLines, retailPerKg, type PriceTier, type PricingTerms } from "@/lib/domain/pricing";
@@ -15,13 +17,21 @@ export function Shop({ catalog, terms }: { catalog: CatalogProduct[]; terms: Pri
   const cart = useCart();
   const order = priceLines(cartLines(catalog, cart), terms);
   const setQty = (packId: number, qty: number) => setCart({ ...cart, [packId]: Math.max(0, Math.floor(qty) || 0) });
+  const tier = order.lines.length ? order.tier : null;
+  const tone = (t: PriceTier) => (tier === t ? "font-semibold text-foreground" : "text-muted-foreground");
+  const [detail, setDetail] = useState<DetailTarget | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const showDetail = (product: CatalogProduct, slide: number) => {
+    setDetail({ product, slide });
+    setDetailOpen(true);
+  };
 
   return (
     <>
       <ul className="grid gap-3 sm:grid-cols-2">
         {catalog.map((p) => (
           <li key={p.id}>
-            <ProductCard product={p} terms={terms} tier={order.lines.length ? order.tier : null} cart={cart} setQty={setQty} />
+            <ProductCard product={p} terms={terms} tone={tone} cart={cart} setQty={setQty} showDetail={(slide) => showDetail(p, slide)} />
           </li>
         ))}
       </ul>
@@ -43,6 +53,17 @@ export function Shop({ catalog, terms }: { catalog: CatalogProduct[]; terms: Pri
           <TierHint order={order} terms={terms} />
         </div>
       </Card>
+      <ProductDetail
+        target={detail}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        retailMarkupPct={terms.retailMarkupPct}
+        tone={tone}
+        cart={cart}
+        setQty={setQty}
+        total={order.total}
+        totalKg={order.totalKg}
+      />
     </>
   );
 }
@@ -50,21 +71,27 @@ export function Shop({ catalog, terms }: { catalog: CatalogProduct[]; terms: Pri
 function ProductCard({
   product: p,
   terms,
-  tier,
+  tone,
   cart,
   setQty,
+  showDetail,
 }: {
   product: CatalogProduct;
   terms: PricingTerms;
-  tier: PriceTier | null;
+  tone: (t: PriceTier) => string;
   cart: Record<string, number>;
   setQty: (packId: number, qty: number) => void;
+  showDetail: (slide: number) => void;
 }) {
   const retail = retailPerKg(p.price_per_kg, terms.retailMarkupPct);
-  const tone = (t: PriceTier) => (tier === t ? "font-semibold text-foreground" : "text-muted-foreground");
   return (
     <Card size="sm" className="h-full gap-2 px-3" data-product={p.name}>
-      <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={() => showDetail(0)}
+        aria-label={`Xem chi tiết ${p.name}`}
+        className="group -m-1 flex items-center gap-3 rounded-lg p-1 text-left outline-none hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
         {p.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={p.image_url} alt="" className="size-16 shrink-0 rounded-lg object-cover" />
@@ -74,21 +101,27 @@ function ProductCard({
           </div>
         )}
         <div className="min-w-0">
-          <div className="text-base font-semibold">{p.name}</div>
+          <div className="text-base font-semibold underline-offset-4 group-hover:underline">{p.name}</div>
           <div className="text-sm">
             <span className={tone("si")}>Sỉ {formatVnd(p.price_per_kg)}/kg</span>
             <span className="text-muted-foreground"> · </span>
             <span className={tone("le")}>Lẻ {formatVnd(retail)}/kg</span>
           </div>
         </div>
-      </div>
+        <ChevronRight className="ml-auto size-5 shrink-0 text-muted-foreground" />
+      </button>
       <ul className="divide-y rounded-lg border">
-        {p.packs.map((pack) => (
+        {p.packs.map((pack, i) => (
           <li key={pack.id} className="flex items-center gap-2 px-2 py-1.5">
             <div className="min-w-0 flex-1 leading-tight">
-              <div className="font-medium">
+              <button
+                type="button"
+                onClick={() => showDetail(i + 1)}
+                aria-label={`Xem ${pack.name} ${p.name}`}
+                className="rounded-sm text-left font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
                 {pack.name} <span className="font-normal text-muted-foreground">{formatKg(pack.kg_per_unit)}</span>
-              </div>
+              </button>
               <div className="text-xs">
                 <span className={tone("si")}>Sỉ {formatVnd(packPrice(pack.kg_per_unit, p.price_per_kg))}</span>
                 <span className="text-muted-foreground"> · </span>
@@ -100,29 +133,5 @@ function ProductCard({
         ))}
       </ul>
     </Card>
-  );
-}
-
-function QtyStepper({ label, value, onChange }: { label: string; value: number; onChange: (qty: number) => void }) {
-  return (
-    <div className="flex shrink-0 items-center gap-1">
-      <Button type="button" variant="outline" size="icon" aria-label={`Bớt ${label}`} disabled={value === 0} onClick={() => onChange(value - 1)}>
-        <Minus />
-      </Button>
-      <Input
-        aria-label={`Số lượng ${label}`}
-        type="number"
-        inputMode="numeric"
-        min={0}
-        step={1}
-        value={value || ""}
-        placeholder="0"
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="h-9 w-12 px-1 text-center"
-      />
-      <Button type="button" variant="outline" size="icon" aria-label={`Thêm ${label}`} onClick={() => onChange(value + 1)}>
-        <Plus />
-      </Button>
-    </div>
   );
 }

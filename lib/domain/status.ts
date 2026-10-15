@@ -1,4 +1,4 @@
-export const ORDER_STATUSES = ["placed", "in_production", "ready", "assigned", "delivered", "failed", "cancelled"] as const;
+export const ORDER_STATUSES = ["placed", "in_production", "ready", "assigned", "out_for_delivery", "delivered", "failed", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 export const JOB_STATUSES = ["producing", "received"] as const;
@@ -8,7 +8,8 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   placed: ["in_production", "cancelled"],
   in_production: ["ready"],
   ready: ["assigned"],
-  assigned: ["delivered", "failed"],
+  assigned: ["out_for_delivery"],
+  out_for_delivery: ["delivered", "failed"],
   delivered: [],
   failed: ["ready", "cancelled"],
   cancelled: [],
@@ -35,7 +36,8 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   placed: "Chờ xử lý",
   in_production: "Đang sản xuất",
   ready: "Đã nhận hàng",
-  assigned: "Đang giao",
+  assigned: "Chờ lên xe",
+  out_for_delivery: "Đang giao",
   delivered: "Đã giao",
   failed: "Giao thất bại",
   cancelled: "Đã hủy",
@@ -46,7 +48,7 @@ export const JOB_STATUS_LABEL: Record<JobStatus, string> = {
   received: "Đã nhận hàng",
 };
 
-/** Order edges a manager clicks directly; the others happen via close-day, receive-day, dispatch, or the driver. */
+/** Order edges a manager clicks directly; the others happen via close-day, receive-day, assigning a driver, or the driver. */
 export const MANAGER_ORDER_MOVES: Partial<Record<OrderStatus, readonly OrderStatus[]>> = {
   placed: ["cancelled"],
   failed: ["ready", "cancelled"],

@@ -7,6 +7,7 @@ const ORDER_TONE: Record<OrderStatus, string> = {
   in_production: "bg-indigo-100 text-indigo-900",
   ready: "bg-teal-100 text-teal-900",
   assigned: "bg-purple-100 text-purple-900",
+  out_for_delivery: "bg-blue-100 text-blue-900",
   delivered: "bg-green-100 text-green-900",
   failed: "bg-red-100 text-red-900",
   cancelled: "bg-muted text-muted-foreground",

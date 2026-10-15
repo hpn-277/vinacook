@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-label="Bao dệt lớn đựng mì tươi">
+  <defs>
+    <pattern id="weave" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#F1F5F9"/>
+      <path d="M0 2h8M0 6h8" stroke="#E2E8F0" stroke-width="2"/>
+      <path d="M2 0v8M6 0v8" stroke="#E2E8F0" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="320" height="240" fill="#F7FEE7"/>
+  <ellipse cx="160" cy="216" rx="104" ry="10" fill="#0F172A" opacity=".08"/>
+  <path d="M100 58c20 6 100 6 120 0 22 40 30 90 26 136-2 16-14 22-30 22H104c-16 0-28-6-30-22-4-46 4-96 26-136z" fill="url(#weave)" stroke="#94A3B8" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M100 58c-4-12 0-22 8-26 18 8 86 8 104 0 8 4 12 14 8 26-20 6-100 6-120 0z" fill="#E2E8F0" stroke="#94A3B8" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M112 50c16 6 80 6 96 0" stroke="#16A34A" stroke-width="4" stroke-dasharray="7 5" fill="none"/>
+  <path d="M84 140c-2 24 0 44 4 56" stroke="#CBD5E1" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M236 140c2 24 0 44-4 56" stroke="#CBD5E1" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M86 92h148" stroke="#16A34A" stroke-width="8"/>
+  <path d="M84 188h152" stroke="#16A34A" stroke-width="8"/>
+  <circle cx="160" cy="140" r="32" fill="#FFFFFF" stroke="#16A34A" stroke-width="4"/>
+  <g fill="none" stroke="#F59E0B" stroke-width="4" stroke-linecap="round">
+    <path d="M140 132c6-6 12-2 20 2s14 6 20-2"/>
+    <path d="M140 142c6-6 12-2 20 2s14 6 20-2"/>
+    <path d="M140 152c6-6 12-2 20 2s14 6 20-2"/>
+  </g>
+</svg>

@@ -36,7 +36,7 @@ export async function loadCatalog(): Promise<CatalogProduct[]> {
   const rows = unwrap(
     await db()
       .from("products")
-      .select("id, name, image_url, price_per_kg, product_packs(id, name, kg_per_unit, active)")
+      .select("id, name, description, image_url, price_per_kg, product_packs(id, name, kg_per_unit, image_url, active)")
       .eq("active", true)
       .order("id"),
   );
@@ -45,7 +45,7 @@ export async function loadCatalog(): Promise<CatalogProduct[]> {
       ...p,
       packs: product_packs
         .filter((pk) => pk.active)
-        .map(({ id, name, kg_per_unit }) => ({ id, name, kg_per_unit }))
+        .map(({ id, name, kg_per_unit, image_url }) => ({ id, name, kg_per_unit, image_url }))
         .sort((a, b) => a.kg_per_unit - b.kg_per_unit),
     }))
     .filter((p) => p.packs.length > 0);

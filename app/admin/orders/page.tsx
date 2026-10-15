@@ -4,7 +4,10 @@ import { ADMIN_ORDER_SELECT, type AdminOrder } from "@/components/AdminOrderCard
 import { AdminOrderTable } from "@/components/AdminOrderTable";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageTitle } from "@/components/page-title";
+import { DispatchSelect } from "@/components/DispatchSelect";
+import { DriverFilter } from "@/components/DriverFilter";
 import { Badge } from "@/components/ui/badge";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
@@ -13,17 +16,21 @@ import { formatKg } from "@/lib/domain/money";
 import { ORDER_STATUS_LABEL, ORDER_STATUSES, type OrderStatus } from "@/lib/domain/status";
 import { parseIsoDate } from "@/lib/domain/time";
 import { today } from "@/lib/period";
-import { receiveDay } from "./actions";
+import { assignDriver, receiveDay } from "./actions";
 
 export default async function AdminOrdersPage({ searchParams }: PageProps<"/admin/orders">) {
   await requireRole("manager");
   const sp = await searchParams;
   const date = parseIsoDate(typeof sp.date === "string" ? sp.date : null) ?? today();
 
-  const [orders, day] = await Promise.all([
+  const [orders, day, drivers] = await Promise.all([
     db().from("orders").select(ADMIN_ORDER_SELECT).eq("production_date", date).order("created_at", { ascending: false }).order("id", { ascending: false }).order("id", { referencedTable: "order_items" }).then(unwrap) as Promise<AdminOrder[]>,
     db().from("production_days").select("status").eq("date", date).maybeSingle(),
+    db().from("staff").select("id, name").eq("role", "driver").eq("active", true).order("name").then(unwrap),
   ]);
+  const ready = orders.filter((o) => o.status === "ready");
+  const readyCount = ready.length;
+  const readyDistricts = [...Map.groupBy(ready, (o) => o.district)].map(([name, os]) => ({ name, count: os.length })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "vi"));
   const counts = new Map<OrderStatus, number>();
   for (const o of orders) counts.set(o.status, (counts.get(o.status) ?? 0) + 1);
 
@@ -62,6 +69,36 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
           Tổng kg (không tính đơn hủy):{" "}
           {[...kgByProduct].map(([name, kg]) => `${name} ${formatKg(kg)}`).join(" · ")}
         </p>
+      )}
+      {readyCount > 0 && (
+        <Card size="sm" className="mb-3 border-primary/30 bg-primary/5" data-testid="dispatch-bar">
+          <CardContent>
+            <ActionForm id="dispatch-form" action={assignDriver} className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium">Giao hàng · {readyCount} đơn đã nhận hàng</span>
+              <DispatchSelect key={ready.map((o) => o.id).join(",")} form="dispatch-form" districts={readyDistricts} />
+              <span className="text-xs text-muted-foreground">hoặc tick từng đơn, rồi chọn tài xế</span>
+              <div className="ml-auto flex gap-2">
+                <NativeSelect name="driver_id" required aria-label="Tài xế">
+                  {drivers.map((d) => (
+                    <NativeSelectOption key={d.id} value={d.id}>
+                      {d.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+                <Button>Giao cho tài xế</Button>
+              </div>
+            </ActionForm>
+          </CardContent>
+        </Card>
+      )}
+      {orders.some((o) => o.driver) && (
+        <div className="mb-3 flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Lọc:</span>
+          <DriverFilter
+            drivers={[...Map.groupBy(orders.filter((o) => o.driver), (o) => o.driver!.id)].map(([id, os]) => ({ id, name: os[0].driver!.name, count: os.length })).sort((a, b) => a.name.localeCompare(b.name, "vi"))}
+            unassigned={orders.filter((o) => !o.driver).length}
+          />
+        </div>
       )}
       {orders.length === 0 ? (
         <p className="text-muted-foreground">Không có đơn.</p>

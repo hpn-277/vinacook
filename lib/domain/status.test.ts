@@ -7,8 +7,9 @@ describe("order transitions", () => {
     ["placed", "cancelled"],
     ["in_production", "ready"],
     ["ready", "assigned"],
-    ["assigned", "delivered"],
-    ["assigned", "failed"],
+    ["assigned", "out_for_delivery"],
+    ["out_for_delivery", "delivered"],
+    ["out_for_delivery", "failed"],
     ["failed", "ready"],
     ["failed", "cancelled"],
   ] as const)("allows %s -> %s", (from, to) => {
@@ -23,10 +24,21 @@ describe("order transitions", () => {
     ["ready", "delivered"],
     ["ready", "cancelled"],
     ["assigned", "cancelled"],
+    ["assigned", "delivered"],
+    ["assigned", "failed"],
+    ["ready", "out_for_delivery"],
+    ["out_for_delivery", "cancelled"],
+    ["out_for_delivery", "ready"],
+    ["failed", "out_for_delivery"],
     ["delivered", "failed"],
     ["cancelled", "placed"],
   ] as const)("rejects %s -> %s", (from, to) => {
     expect(canTransition("orders", from, to)).toBe(false);
+  });
+
+  it("failed is only reachable from out_for_delivery", () => {
+    const sources = ORDER_STATUSES.filter((from) => canTransition("orders", from, "failed"));
+    expect(sources).toEqual(["out_for_delivery"]);
   });
 
   it("delivered and cancelled are terminal", () => {
@@ -60,5 +72,6 @@ describe("manager order moves", () => {
     expect(targets).not.toContain("in_production");
     expect(targets).not.toContain("delivered");
     expect(targets).not.toContain("assigned");
+    expect(targets).not.toContain("out_for_delivery");
   });
 });
