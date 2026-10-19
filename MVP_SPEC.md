@@ -60,6 +60,11 @@ Close day creates jobs as `producing` ("Đang sản xuất"); receive day marks 
 9. **Gạch nợ** (cashier) – `/finance` (Công nợ) lists unpaid, non-cancelled orders grouped by customer with debt age (days since delivery, else since production date; amber > 7 days, red > 14). The cashier ticks orders (or a whole customer), adds an optional note, and confirms "Xác nhận đã thu (n đơn · tổng)" in a dialog. `set_payment()` marks them paid atomically, stamps `paid_at`/`paid_by`, and logs one `payment_events` row per order that actually changed, so a retry logs nothing. The order page `/finance/orders/[code]` shows the payment log; the cashier can undo there with a required reason. The accountant sees the same pages with every control disabled ("Kế toán không có quyền gạch nợ"). `/finance/payments` (Lịch sử thu) lists a month's events with money in, money reversed and the net.
 10. **Customer lookup** – `/orders` enter phone → list orders + status; "Đặt lại" refills the cart with the same packs (inactive ones skipped) and opens checkout prefilled, at current prices. The shop shows the last order of the phone this browser remembered.
 
+### Undo (manager)
+- **Hủy phân công** – an order in "Chờ lên xe" (assigned, not yet loaded) goes back to "Đã nhận hàng" with its driver cleared: per row, or "Hủy phân công tất cả (n)" for the day. Not possible once the driver confirmed loading.
+- **Mở lại ngày** – on a closed day with no order assigned to a driver yet: deletes the day's factory jobs and sends its "Đang sản xuất"/"Đã nhận hàng" orders back to "Chờ xử lý" (`reopen_production_day()`, atomic). Payment status is kept.
+- Both are logged in `admin_events` (who, when, which orders/day).
+
 ## Commission
 Per sale, per month: `sum(order.total where status=delivered and delivered_at in month) × commission_pct`. Sale dashboard shows today / month sales + estimated commission. Manager sees table for all sales.
 

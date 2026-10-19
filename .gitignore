@@ -5,3 +5,8 @@ supabase/.temp
 *.tsbuildinfo
 next-env.d.ts
 supabase/.branches
+.open-next
+.wrangler
+.dev.vars*
+.env
+.playwright-mcp

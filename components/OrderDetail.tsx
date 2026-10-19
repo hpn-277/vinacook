@@ -5,8 +5,10 @@ import {
   ADMIN_ORDER_SELECT,
   OrderActions,
   PaymentLabel,
+  Returned,
   type AdminOrder,
 } from "@/components/AdminOrderCard";
+import { EditContact } from "@/components/EditContact";
 import { PaymentPanel } from "@/components/PaymentPanel";
 import { JobBadge, OrderBadge, TierBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,9 +23,9 @@ import {
 } from "@/components/ui/table";
 import { unwrap } from "@/lib/action";
 import { db } from "@/lib/db";
-import { signDeliveryPhotos } from "@/lib/delivery-photos";
+import { deliveryPhotoUrl } from "@/lib/delivery-photos";
 import { lineLabel } from "@/lib/domain/catalog";
-import { MANAGER_ORDER_MOVES } from "@/lib/domain/status";
+import { CONTACT_EDITABLE, MANAGER_ORDER_MOVES } from "@/lib/domain/status";
 import { formatKg, formatVnd } from "@/lib/domain/money";
 
 type Detail = AdminOrder & {
@@ -134,7 +136,7 @@ export async function OrderDetail({
   const order = data as unknown as Detail;
 
   const productIds = [...new Set(order.items.map((i) => i.product_id))];
-  const [day, jobs, history, photos] = await Promise.all([
+  const [day, jobs, history] = await Promise.all([
     db()
       .from("production_days")
       .select("status, closed_at")
@@ -165,12 +167,9 @@ export async function OrderDetail({
           .limit(10)
           .then(unwrap)
       : Promise.resolve([]),
-    signDeliveryPhotos(
-      order.delivery_photo_path ? [order.delivery_photo_path] : [],
-    ),
   ]);
   const photo = order.delivery_photo_path
-    ? photos.get(order.delivery_photo_path)
+    ? deliveryPhotoUrl(order.delivery_photo_path)
     : undefined;
 
   const kg = order.items.reduce((s, i) => s + i.qty_kg, 0);
@@ -278,6 +277,11 @@ export async function OrderDetail({
             </Row>
             <Row label="Địa chỉ giao">
               {order.address}, {order.district}
+              {manager && CONTACT_EDITABLE(order.status) && (
+                <div className="mt-1">
+                  <EditContact order={order} />
+                </div>
+              )}
             </Row>
             {order.note && <Row label="Ghi chú">{order.note}</Row>}
             <Row label="Khách từ">
@@ -327,6 +331,11 @@ export async function OrderDetail({
             {order.fail_reason && (
               <Row label="Lý do thất bại">
                 <span className="text-destructive">{order.fail_reason}</span>
+              </Row>
+            )}
+            {order.status === "ready" && order.return_reason && (
+              <Row label="Tài xế trả đơn">
+                <Returned order={order} />
               </Row>
             )}
           </dl>

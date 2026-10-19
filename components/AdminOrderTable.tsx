@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { NO_DRIVER } from "@/components/row-filters";
-import { Departed, OrderActions, PaidPill, type AdminOrder } from "@/components/AdminOrderCard";
+import { Departed, OrderActions, Returned, PaidPill, type AdminOrder } from "@/components/AdminOrderCard";
 import { MANAGER_ORDER_MOVES } from "@/lib/domain/status";
 import { OrderBadge, TierBadge } from "@/components/status-badge";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -61,6 +61,7 @@ export function AdminOrderTable({ orders }: { orders: AdminOrder[] }) {
               {o.order_items.map((i) => itemLabel(i)).join(", ")}
               {o.note && <div className="mt-0.5 text-muted-foreground">Ghi chú: {o.note}</div>}
               {o.fail_reason && <div className="mt-0.5 text-destructive">Thất bại: {o.fail_reason}</div>}
+              <Returned order={o} className="mt-0.5" />
             </TableCell>
             <TableCell className="text-right tabular-nums">{formatKg(orderKg(o))}</TableCell>
             <TableCell className="text-right">

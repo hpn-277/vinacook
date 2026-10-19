@@ -5,20 +5,10 @@ import { startTransition, useActionState, useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { downscale } from "@/lib/downscale";
 import { completeDelivery } from "./actions";
 
 const MAX_SIDE = 1600;
-
-async function downscale(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/jpeg", 0.8));
-}
 
 export function CompleteDelivery({ orderId, code, collect }: { orderId: number; code: string; collect: string }) {
   const [state, formAction, pending] = useActionState(completeDelivery, null);
@@ -32,7 +22,7 @@ export function CompleteDelivery({ orderId, code, collect }: { orderId: number; 
     setPhotoError(null);
     if (!file) return;
     try {
-      const blob = await downscale(file);
+      const blob = await downscale(file, MAX_SIDE);
       setPhoto(blob);
       setPreview(URL.createObjectURL(blob));
     } catch {

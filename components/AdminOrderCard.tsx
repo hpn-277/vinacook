@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { PriceTier } from "@/lib/domain/pricing";
 import { cn } from "@/lib/utils";
-import { MANAGER_ORDER_MOVES, MOVE_LABEL, type OrderStatus } from "@/lib/domain/status";
+import { MANAGER_ORDER_MOVES, moveLabel, type OrderStatus } from "@/lib/domain/status";
 
 export type AdminOrder = {
   id: number;
@@ -20,6 +20,8 @@ export type AdminOrder = {
   district: string;
   note: string | null;
   fail_reason: string | null;
+  return_reason: string | null;
+  returner: { name: string } | null;
   departed_at: string | null;
   production_date: string;
   created_at: string;
@@ -38,7 +40,7 @@ export type AdminOrder = {
 };
 
 export const ADMIN_ORDER_SELECT =
-  "id, code, status, payment_status, total, price_tier, phone, address, district, note, fail_reason, departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name))";
+  "id, code, status, payment_status, total, price_tier, phone, address, district, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name))";
 
 const clock = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit" });
 
@@ -53,11 +55,21 @@ export function OrderActions({ order, size }: { order: AdminOrder; size?: "sm" }
     <ActionForm key={to} action={moveOrder} confirm={to === "cancelled" ? `Hủy đơn ${order.code}?` : undefined}>
       <input type="hidden" name="order_id" value={order.id} />
       <input type="hidden" name="to" value={to} />
-      <Button size={size} variant={to === "cancelled" ? "destructive" : "default"}>
-        {MOVE_LABEL[to]}
+      <Button size={size} variant={to === "cancelled" ? "destructive" : order.status === "assigned" ? "outline" : "default"}>
+        {moveLabel(order.status, to)}
       </Button>
     </ActionForm>
   ));
+}
+
+/** "Tài xế X trả: lý do" until the order is assigned again. */
+export function Returned({ order, className }: { order: AdminOrder; className?: string }) {
+  if (order.status !== "ready" || !order.return_reason) return null;
+  return (
+    <div className={cn("text-amber-700", className)}>
+      {order.returner?.name ?? "Tài xế"} trả: {order.return_reason}
+    </div>
+  );
 }
 
 /** Payment state for tables. Read-only: only the cashier settles debt, from /finance. */

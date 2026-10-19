@@ -1,4 +1,5 @@
 import { ActionForm } from "@/components/ActionForm";
+import { ImageFileInput } from "@/components/ImageFileInput";
 import { PageTitle } from "@/components/page-title";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { unwrap } from "@/lib/action";
 import { requireRole, ROLE_LABEL } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { packSize } from "@/lib/domain/catalog";
 import { formatVnd } from "@/lib/domain/money";
 import { packPrice, retailPerKg } from "@/lib/domain/pricing";
 import { getSettings } from "@/lib/orders";
@@ -108,7 +110,10 @@ export default async function SettingsPage() {
                       {p && formatVnd(retailPerKg(p.price_per_kg, settings.retail_markup_pct))}
                     </TableCell>
                     <TableCell>
-                      <Input form={form} name="image_url" defaultValue={p?.image_url ?? ""} placeholder="Link ảnh" className="min-w-40" />
+                      <div className="space-y-1">
+                        <Input form={form} name="image_url" defaultValue={p?.image_url ?? ""} placeholder="Link ảnh" className="min-w-40" />
+                        <ImageFileInput form={form} label={`Tải ảnh ${p?.name ?? "sản phẩm mới"}`} />
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Textarea
@@ -162,7 +167,7 @@ export default async function SettingsPage() {
             <TableBody>
               {[...packs, null].map((pk, idx) => {
                 const form = `pack-${pk?.id ?? "new"}`;
-                const label = pk ? `${pk.products?.name} - ${pk.name}` : "mới";
+                const label = pk ? `${pk.products?.name} - ${packSize(pk)}` : "mới";
                 const wholesale = pk?.products?.price_per_kg ?? 0;
                 const firstOfProduct = pk && packs[idx - 1]?.product_id !== pk.product_id;
                 return (
@@ -221,6 +226,7 @@ export default async function SettingsPage() {
                           maxLength={500}
                           className="min-w-40"
                         />
+                        <ImageFileInput form={form} label={`Tải ảnh ${label}`} />
                       </div>
                     </TableCell>
                     <TableCell className="align-middle">

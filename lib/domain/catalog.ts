@@ -25,6 +25,15 @@ export function cartLines(catalog: CatalogProduct[], cart: Cart): CartLine[] {
   );
 }
 
+/** Packs every new product starts with. */
+export const STANDARD_PACKS = [
+  { name: "Cây", kg_per_unit: 5, image_url: "/packs/cay.svg" },
+  { name: "Thùng", kg_per_unit: 5, image_url: "/packs/thung.svg" },
+  { name: "Thùng", kg_per_unit: 10, image_url: "/packs/thung.svg" },
+  { name: "Thùng", kg_per_unit: 15, image_url: "/packs/thung.svg" },
+  { name: "Bao", kg_per_unit: 30, image_url: "/packs/bao.svg" },
+];
+
 export function packSize(pack: { name: string; kg_per_unit: number }): string {
   return `${pack.name} ${formatKg(pack.kg_per_unit)}`;
 }
@@ -57,3 +66,30 @@ export function lineLabel(productName: string, packName: string, packQty: number
 export type OrderItemView = { pack_name: string; pack_qty: number; qty_kg: number; products: { name: string } | null };
 
 export const itemLabel = (i: OrderItemView) => lineLabel(i.products?.name ?? "?", i.pack_name, i.pack_qty, i.qty_kg);
+
+export type LoadLine = { product: string; kg: number; packs: string[] };
+
+/** What goes on the truck: per product, pack counts ("2 Thùng 15 kg") and kg, biggest product first. */
+export function loadList(items: OrderItemView[]): LoadLine[] {
+  const products = new Map<string, { kg: number; packs: Map<string, { name: string; unitKg: number; qty: number }> }>();
+  for (const i of items) {
+    const name = i.products?.name ?? "?";
+    const product = products.get(name) ?? { kg: 0, packs: new Map() };
+    const unitKg = i.qty_kg / i.pack_qty;
+    const key = `${i.pack_name}|${unitKg}`;
+    const pack = product.packs.get(key) ?? { name: i.pack_name, unitKg, qty: 0 };
+    pack.qty += i.pack_qty;
+    product.kg += i.qty_kg;
+    product.packs.set(key, pack);
+    products.set(name, product);
+  }
+  return [...products]
+    .map(([product, { kg, packs }]) => ({
+      product,
+      kg,
+      packs: [...packs.values()]
+        .sort((a, b) => b.unitKg - a.unitKg)
+        .map((p) => (p.name.toLowerCase() === "kg" ? formatKg(p.qty) : `${p.qty} ${packSize({ name: p.name, kg_per_unit: p.unitKg })}`)),
+    }))
+    .sort((a, b) => b.kg - a.kg || a.product.localeCompare(b.product, "vi"));
+}

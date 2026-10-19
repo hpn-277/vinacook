@@ -6,9 +6,9 @@ export type JobStatus = (typeof JOB_STATUSES)[number];
 
 export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   placed: ["in_production", "cancelled"],
-  in_production: ["ready"],
-  ready: ["assigned"],
-  assigned: ["out_for_delivery"],
+  in_production: ["ready", "placed"],
+  ready: ["assigned", "placed"],
+  assigned: ["out_for_delivery", "ready"],
   out_for_delivery: ["delivered", "failed"],
   delivered: [],
   failed: ["ready", "cancelled"],
@@ -48,13 +48,21 @@ export const JOB_STATUS_LABEL: Record<JobStatus, string> = {
   received: "Đã nhận hàng",
 };
 
-/** Order edges a manager clicks directly; the others happen via close-day, receive-day, assigning a driver, or the driver. */
+/**
+ * Order edges a manager clicks directly; the others happen via close-day, receive-day, assigning a driver, the driver,
+ * or reopen-day (in_production/ready -> placed, whole day only).
+ */
 export const MANAGER_ORDER_MOVES: Partial<Record<OrderStatus, readonly OrderStatus[]>> = {
   placed: ["cancelled"],
+  assigned: ["ready"],
   failed: ["ready", "cancelled"],
 };
 
-export const MOVE_LABEL: Partial<Record<OrderStatus, string>> = {
-  cancelled: "Hủy",
-  ready: "Giao lại",
-};
+/** Phone and address can be corrected until the order is delivered or cancelled. */
+export const CONTACT_EDITABLE = (status: OrderStatus) => status !== "delivered" && status !== "cancelled";
+
+/** Button text depends on where the order is: assigned -> ready takes it back from the driver, failed -> ready re-dispatches. */
+export function moveLabel(from: OrderStatus, to: OrderStatus): string {
+  if (to === "cancelled") return "Hủy";
+  return from === "assigned" ? "Hủy phân công" : "Giao lại";
+}

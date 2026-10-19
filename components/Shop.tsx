@@ -9,7 +9,8 @@ import { ProductDetail, type DetailTarget } from "@/components/ProductDetail";
 import { QtyStepper } from "@/components/QtyStepper";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { cartLines, type CatalogProduct } from "@/lib/domain/catalog";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cartLines, packSize, type CatalogPack, type CatalogProduct } from "@/lib/domain/catalog";
 import { formatKg, formatVnd } from "@/lib/domain/money";
 import { packPrice, priceLines, retailPerKg, type PriceTier, type PricingTerms } from "@/lib/domain/pricing";
 
@@ -111,27 +112,80 @@ function ProductCard({
         <ChevronRight className="ml-auto size-5 shrink-0 text-muted-foreground" />
       </button>
       <ul className="divide-y rounded-lg border">
-        {p.packs.map((pack, i) => (
-          <li key={pack.id} className="flex items-center gap-2 px-2 py-1.5">
-            <div className="min-w-0 flex-1 leading-tight">
-              <button
-                type="button"
-                onClick={() => showDetail(i + 1)}
-                aria-label={`Xem ${pack.name} ${p.name}`}
-                className="rounded-sm text-left font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {pack.name} <span className="font-normal text-muted-foreground">{formatKg(pack.kg_per_unit)}</span>
-              </button>
-              <div className="text-xs">
-                <span className={tone("si")}>Sỉ {formatVnd(packPrice(pack.kg_per_unit, p.price_per_kg))}</span>
-                <span className="text-muted-foreground"> · </span>
-                <span className={tone("le")}>Lẻ {formatVnd(packPrice(pack.kg_per_unit, retail))}</span>
-              </div>
-            </div>
-            <QtyStepper label={`${p.name} - ${pack.name}`} value={cart[pack.id] ?? 0} onChange={(q) => setQty(pack.id, q)} />
-          </li>
+        {packGroups(p.packs).map((sizes) => (
+          <PackRow key={sizes[0].name} product={p} sizes={sizes} retail={retail} tone={tone} cart={cart} setQty={setQty} showDetail={showDetail} />
         ))}
       </ul>
     </Card>
+  );
+}
+
+/** Packs sharing a name (Thùng 5/10/15 kg) become one row with a size picker, so the card stays short. */
+function packGroups(packs: CatalogPack[]): CatalogPack[][] {
+  return [...Map.groupBy(packs, (pack) => pack.name).values()];
+}
+
+function PackRow({
+  product: p,
+  sizes,
+  retail,
+  tone,
+  cart,
+  setQty,
+  showDetail,
+}: {
+  product: CatalogProduct;
+  sizes: CatalogPack[];
+  retail: number;
+  tone: (t: PriceTier) => string;
+  cart: Record<string, number>;
+  setQty: (packId: number, qty: number) => void;
+  showDetail: (slide: number) => void;
+}) {
+  const [picked, setPicked] = useState(() => (sizes.find((s) => (cart[s.id] ?? 0) > 0) ?? sizes[0]).id);
+  const pack = sizes.find((s) => s.id === picked) ?? sizes[0];
+  return (
+    <li className="flex items-center gap-2 px-2 py-1.5">
+      <div className="min-w-0 flex-1 leading-tight">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <button
+            type="button"
+            onClick={() => showDetail(p.packs.indexOf(pack) + 1)}
+            aria-label={`Xem ${packSize(pack)} ${p.name}`}
+            className="rounded-sm text-left font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            {pack.name}
+            {sizes.length === 1 && <span className="font-normal text-muted-foreground"> {formatKg(pack.kg_per_unit)}</span>}
+          </button>
+          {sizes.length > 1 && (
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              spacing={0}
+              value={String(pack.id)}
+              onValueChange={(v) => v && setPicked(Number(v))}
+              aria-label={`Cỡ ${pack.name} ${p.name}`}
+            >
+              {sizes.map((s) => {
+                const qty = cart[s.id] ?? 0;
+                return (
+                  <ToggleGroupItem key={s.id} value={String(s.id)} aria-label={packSize(s)} className="h-6 px-1.5 text-xs">
+                    {formatKg(s.kg_per_unit)}
+                    {qty > 0 && <span className="rounded-full bg-primary px-1 text-[10px] leading-4 text-primary-foreground">{qty}</span>}
+                  </ToggleGroupItem>
+                );
+              })}
+            </ToggleGroup>
+          )}
+        </div>
+        <div className="mt-0.5 text-xs">
+          <span className={tone("si")}>Sỉ {formatVnd(packPrice(pack.kg_per_unit, p.price_per_kg))}</span>
+          <span className="text-muted-foreground"> · </span>
+          <span className={tone("le")}>Lẻ {formatVnd(packPrice(pack.kg_per_unit, retail))}</span>
+        </div>
+      </div>
+      <QtyStepper label={`${p.name} - ${packSize(pack)}`} value={cart[pack.id] ?? 0} onChange={(q) => setQty(pack.id, q)} />
+    </li>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canTransition, JOB_STATUSES, MANAGER_ORDER_MOVES, ORDER_STATUSES, type OrderStatus } from "./status";
+import { canTransition, JOB_STATUSES, MANAGER_ORDER_MOVES, moveLabel, ORDER_STATUSES, type OrderStatus } from "./status";
 
 describe("order transitions", () => {
   it.each([
@@ -73,5 +73,23 @@ describe("manager order moves", () => {
     expect(targets).not.toContain("delivered");
     expect(targets).not.toContain("assigned");
     expect(targets).not.toContain("out_for_delivery");
+  });
+
+  it("only take an order back from a driver before loading", () => {
+    expect(MANAGER_ORDER_MOVES.assigned).toEqual(["ready"]);
+    expect(MANAGER_ORDER_MOVES.out_for_delivery).toBeUndefined();
+    expect(canTransition("orders", "out_for_delivery", "ready")).toBe(false);
+  });
+
+  it("send orders back to pending only from before dispatch (reopen day)", () => {
+    expect(canTransition("orders", "in_production", "placed")).toBe(true);
+    expect(canTransition("orders", "ready", "placed")).toBe(true);
+    for (const from of ["assigned", "out_for_delivery", "delivered", "failed", "cancelled"] as const) expect(canTransition("orders", from, "placed")).toBe(false);
+  });
+
+  it("label the two ways back to ready differently", () => {
+    expect(moveLabel("assigned", "ready")).toBe("Hủy phân công");
+    expect(moveLabel("failed", "ready")).toBe("Giao lại");
+    expect(moveLabel("placed", "cancelled")).toBe("Hủy");
   });
 });

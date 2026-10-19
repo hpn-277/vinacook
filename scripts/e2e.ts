@@ -384,10 +384,10 @@ async function main() {
     await until(() => orderStatus(A), (s) => s === "delivered", "A delivered");
     const aDone = await order(A);
     assert(aDone.delivered_at && aDone.delivery_photo_path?.startsWith(`${aDone.id}/`), `delivered_at and photo path set (${aDone.delivery_photo_path})`);
-    const stored = await admin.storage.from("delivery-photos").download(aDone.delivery_photo_path!);
-    eq(stored.data?.type, "image/jpeg", "photo stored in the bucket as a client-downscaled JPEG");
-    const leaked = await anon.storage.from("delivery-photos").download(aDone.delivery_photo_path!);
-    assert(leaked.error, "public key cannot read delivery photos (private bucket)");
+    const photoUrl = `${BASE}/files/delivery/${aDone.delivery_photo_path}`;
+    const stored = await d1.page.request.get(photoUrl);
+    eq(stored.headers()["content-type"], "image/jpeg", "photo stored in R2 as a client-downscaled JPEG");
+    eq((await fetch(photoUrl)).status, 404, "logged-out request cannot read delivery photos");
     const deliveredToday = section(d1.page, "Đã giao hôm nay");
     await deliveredToday.getByRole("img", { name: `Ảnh giao ${A}` }).waitFor();
     eq(await onTheRoad.locator(`[data-order-code="${A}"]`).count(), 0, "A moved from Đang giao to Đã giao hôm nay with its photo");
@@ -464,9 +464,13 @@ async function main() {
     step("one-tap reorder");
     await mgr.page.goto(`${BASE}/admin/settings`);
     await mgr.page.getByLabel("Đang bán Bún tươi - Thùng").click();
+    await mgr.page.getByLabel("Tải ảnh Bún tươi - Thùng").setInputFiles({ name: "thung.png", mimeType: "image/png", buffer: Buffer.from(bigPhoto, "base64") });
     await mgr.page.getByRole("button", { name: "Lưu Bún tươi - Thùng" }).click();
     const thungId = (await items(A)).find((i) => i.pack_name === "Thùng")!.pack_id;
-    await until(async () => (await admin.from("product_packs").select("active").eq("id", thungId).single()).data!.active, (a) => !a, "pack deactivated in settings");
+    const thung = await until(async () => (await admin.from("product_packs").select("active, image_url").eq("id", thungId).single()).data!, (pk) => !pk.active, "pack deactivated in settings");
+    assert(thung.image_url?.startsWith("/files/products/"), `uploaded pack image stored in R2 (${thung.image_url})`);
+    const image = await fetch(`${BASE}${thung.image_url}`);
+    eq([image.status, image.headers.get("content-type")], [200, "image/jpeg"], "product image is public and downscaled to JPEG");
 
     await customer.page.goto(`${BASE}/`);
     const lastCard = customer.page.getByTestId("last-order");

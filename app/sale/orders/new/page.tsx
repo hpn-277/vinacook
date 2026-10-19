@@ -94,7 +94,7 @@ export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sa
                           {packSize(pack)}
                           <Input
                             name={`qty_${pack.id}`}
-                            aria-label={`Số lượng ${p.name} - ${pack.name}`}
+                            aria-label={`Số lượng ${p.name} - ${packSize(pack)}`}
                             type="number"
                             inputMode="numeric"
                             min={0}

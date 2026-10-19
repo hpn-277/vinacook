@@ -7,17 +7,14 @@ insert into products (name, price_per_kg, image_url, description) values
   ('Bún tươi', 15000, '/products/bun-tuoi.svg', 'Bún gạo tươi sợi vừa, trắng mềm. Hợp bún chả, bún thịt nướng, bún riêu. Dùng trong 2 ngày, bảo quản mát.'),
   ('Mì quảng', 26000, '/products/mi-quang.svg', 'Sợi mì quảng bản to, màu vàng nghệ. Hợp mì quảng gà, tôm thịt. Dùng trong 2 ngày, bảo quản mát.');
 
-insert into product_packs (product_id, name, kg_per_unit, image_url)
-select p.id, pk.name, pk.kg, '/packs/' || case pk.name when 'Thùng' then 'thung' when 'Túi' then 'tui' else lower(pk.name) end || '.svg'
-from (values
-  ('Mì trứng', 'Kg', 1), ('Mì trứng', 'Thùng', 10), ('Mì trứng', 'Bao', 25),
-  ('Mì vàng sợi nhỏ', 'Kg', 1), ('Mì vàng sợi nhỏ', 'Thùng', 10), ('Mì vàng sợi nhỏ', 'Bao', 25),
-  ('Hủ tiếu dai', 'Kg', 1), ('Hủ tiếu dai', 'Thùng', 10), ('Hủ tiếu dai', 'Bao', 20),
-  ('Bánh phở tươi', 'Kg', 1), ('Bánh phở tươi', 'Túi', 5), ('Bánh phở tươi', 'Thùng', 10),
-  ('Bún tươi', 'Kg', 1), ('Bún tươi', 'Túi', 5), ('Bún tươi', 'Thùng', 10),
-  ('Mì quảng', 'Kg', 1), ('Mì quảng', 'Thùng', 10), ('Mì quảng', 'Bao', 20)
-) as pk(product, name, kg)
-join products p on p.name = pk.product
+-- Kg and Túi are no longer sold; they stay (inactive) for history orders.
+insert into product_packs (product_id, name, kg_per_unit, image_url, active)
+select p.id, pk.name, pk.kg, '/packs/' || pk.image || '.svg', pk.active
+from products p
+cross join (values
+  ('Kg', 1, 'kg', false), ('Cây', 5, 'cay', true), ('Thùng', 5, 'thung', true),
+  ('Thùng', 10, 'thung', true), ('Thùng', 15, 'thung', true), ('Bao', 30, 'bao', true)
+) as pk(name, kg, image, active)
 order by p.id, pk.kg;
 
 insert into factories (name, address, phone, capacity_kg_per_day) values
@@ -83,8 +80,8 @@ from customers c where c.phone = '0901000003';
 insert into order_items (order_id, product_id, pack_id, pack_name, kg_per_unit, pack_qty, wholesale_price_per_kg, price_per_kg, line_total)
 select o.id, p.id, pk.id, pk.name, pk.kg_per_unit, l.qty, p.price_per_kg, l.retail, l.qty * pk.kg_per_unit * l.retail
 from orders o
-cross join (values ('Mì trứng', 'Thùng', 1, 31300), ('Bún tươi', 'Kg', 10, 18800)) as l(product, pack, qty, retail)
+cross join (values ('Mì trứng', 'Thùng', 10, 1, 31300), ('Bún tươi', 'Kg', 1, 10, 18800)) as l(product, pack, kg, qty, retail)
 join products p on p.name = l.product
-join product_packs pk on pk.product_id = p.id and pk.name = l.pack;
+join product_packs pk on pk.product_id = p.id and pk.name = l.pack and pk.kg_per_unit = l.kg;
 
 update orders o set total = (select sum(line_total) from order_items where order_id = o.id);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isImageRef, packCaption } from "./catalog";
+import { isImageRef, loadList, packCaption } from "./catalog";
 
 describe("packCaption", () => {
   it.each([
@@ -23,4 +23,26 @@ describe("isImageRef", () => {
       expect(isImageRef(ref)).toBe(false);
     },
   );
+});
+
+describe("loadList", () => {
+  const item = (product: string, pack_name: string, pack_qty: number, unitKg: number) => ({ pack_name, pack_qty, qty_kg: pack_qty * unitKg, products: { name: product } });
+
+  it("sums packs of the same name and size across orders, keeps sizes apart, biggest product first", () => {
+    const lines = loadList([
+      item("Bún tươi", "Cây", 1, 5),
+      item("Mì trứng", "Thùng", 1, 15),
+      item("Mì trứng", "Thùng", 2, 5),
+      item("Mì trứng", "Thùng", 1, 15),
+      item("Mì trứng", "Bao", 1, 30),
+    ]);
+    expect(lines).toEqual([
+      { product: "Mì trứng", kg: 70, packs: ["1 Bao 30 kg", "2 Thùng 15 kg", "2 Thùng 5 kg"] },
+      { product: "Bún tươi", kg: 5, packs: ["1 Cây 5 kg"] },
+    ]);
+  });
+
+  it("reads old loose-kg lines as kg", () => {
+    expect(loadList([item("Mì quảng", "Kg", 3, 1)])[0].packs).toEqual(["3 kg"]);
+  });
 });

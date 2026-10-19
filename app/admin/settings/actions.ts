@@ -5,8 +5,9 @@ import { check, DomainError, run, unwrap, type ActionResult } from "@/lib/action
 import { requireRole } from "@/lib/auth";
 import { Constants } from "@/lib/database.types";
 import { db } from "@/lib/db";
-import { IMAGE_REF_MAX, isImageRef } from "@/lib/domain/catalog";
+import { IMAGE_REF_MAX, isImageRef, packSize, STANDARD_PACKS } from "@/lib/domain/catalog";
 import { parseForm, phone } from "@/lib/form";
+import { uploadProductImage } from "@/lib/product-images";
 
 const checkbox = z.preprocess((v) => v === "on", z.boolean());
 const optionalId = z.preprocess((v) => (v === "" || v == null ? undefined : v), z.coerce.number().int().positive().optional());
@@ -32,13 +33,14 @@ export async function saveProduct(_prev: ActionResult, fd: FormData): Promise<Ac
   return run(async () => {
     await requireRole("manager");
     const { id, ...row } = parseForm(productSchema, fd);
+    row.image_url = (await uploadProductImage(fd.get("image_file"))) ?? row.image_url;
     if (id) {
       check(await db().from("products").update(row).eq("id", id));
       return "Đã lưu";
     }
     const created = unwrap(await db().from("products").insert(row).select("id").single());
-    check(await db().from("product_packs").insert({ product_id: created.id, name: "Kg", kg_per_unit: 1 }));
-    return "Đã thêm sản phẩm với quy cách Kg";
+    check(await db().from("product_packs").insert(STANDARD_PACKS.map((pk) => ({ ...pk, product_id: created.id }))));
+    return "Đã thêm sản phẩm với quy cách chuẩn";
   });
 }
 
@@ -56,10 +58,11 @@ export async function savePack(_prev: ActionResult, fd: FormData): Promise<Actio
   return run(async () => {
     await requireRole("manager");
     const { id, product_id, ...row } = parseForm(packSchema, fd);
+    row.image_url = (await uploadProductImage(fd.get("image_file"))) ?? row.image_url;
     const res = id
       ? await db().from("product_packs").update(row).eq("id", id)
       : await db().from("product_packs").insert({ ...row, product_id });
-    if (res.error?.code === "23505") throw new DomainError(`Sản phẩm đã có quy cách "${row.name}"`);
+    if (res.error?.code === "23505") throw new DomainError(`Sản phẩm đã có quy cách "${packSize(row)}"`);
     check(res);
     return "Đã lưu";
   });

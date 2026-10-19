@@ -11,9 +11,10 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "VinaCook - Đặt hàng",
   description: "Đặt mì, bún, phở tươi giao tận nơi",
+  appleWebApp: { title: "VinaCook", statusBarStyle: "default" },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#f54a00" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

@@ -16,7 +16,7 @@ import { formatKg } from "@/lib/domain/money";
 import { ORDER_STATUS_LABEL, ORDER_STATUSES, type OrderStatus } from "@/lib/domain/status";
 import { parseIsoDate } from "@/lib/domain/time";
 import { today } from "@/lib/period";
-import { assignDriver, receiveDay } from "./actions";
+import { assignDriver, receiveDay, reopenDay, unassignDay } from "./actions";
 
 export default async function AdminOrdersPage({ searchParams }: PageProps<"/admin/orders">) {
   await requireRole("manager");
@@ -33,6 +33,9 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   const readyDistricts = [...Map.groupBy(ready, (o) => o.district)].map(([name, os]) => ({ name, count: os.length })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "vi"));
   const counts = new Map<OrderStatus, number>();
   for (const o of orders) counts.set(o.status, (counts.get(o.status) ?? 0) + 1);
+  const dispatched = orders.filter((o) => ["assigned", "out_for_delivery", "delivered", "failed"].includes(o.status)).length;
+  const reopenable = (counts.get("in_production") ?? 0) + readyCount;
+  const waitingToLoad = counts.get("assigned") ?? 0;
 
   const kgByProduct = new Map<string, number>();
   for (const o of orders) {
@@ -57,6 +60,20 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
         <Button asChild>
           <Link href={`/admin/production/${date}`}>{day.data?.status === "closed" ? "Xem lệnh sản xuất" : "Chốt sản xuất ngày này"}</Link>
         </Button>
+        {day.data?.status === "closed" &&
+          (dispatched === 0 ? (
+            <ActionForm
+              action={reopenDay}
+              confirm={`Mở lại ngày ${date}? Xoá lệnh sản xuất của ngày và đưa ${reopenable} đơn về "Chờ xử lý".`}
+            >
+              <input type="hidden" name="date" value={date} />
+              <Button variant="outline">Mở lại ngày</Button>
+            </ActionForm>
+          ) : (
+            <Button variant="outline" disabled title="Hủy phân công các đơn đã giao cho tài xế trước khi mở lại ngày">
+              Mở lại ngày
+            </Button>
+          ))}
         {(counts.get("in_production") ?? 0) > 0 && (
           <ActionForm action={receiveDay} confirm={`Xác nhận đã nhận đủ hàng ngày ${date}?`}>
             <input type="hidden" name="date" value={date} />
@@ -92,12 +109,20 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
         </Card>
       )}
       {orders.some((o) => o.driver) && (
-        <div className="mb-3 flex items-center gap-2 text-sm">
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
           <span className="text-muted-foreground">Lọc:</span>
           <DriverFilter
             drivers={[...Map.groupBy(orders.filter((o) => o.driver), (o) => o.driver!.id)].map(([id, os]) => ({ id, name: os[0].driver!.name, count: os.length })).sort((a, b) => a.name.localeCompare(b.name, "vi"))}
             unassigned={orders.filter((o) => !o.driver).length}
           />
+          {waitingToLoad > 0 && (
+            <ActionForm action={unassignDay} confirm={`Hủy phân công ${waitingToLoad} đơn đang chờ lên xe? Các đơn quay về "Đã nhận hàng".`} className="ml-auto">
+              <input type="hidden" name="date" value={date} />
+              <Button variant="outline" size="sm">
+                Hủy phân công tất cả ({waitingToLoad})
+              </Button>
+            </ActionForm>
+          )}
         </div>
       )}
       {orders.length === 0 ? (

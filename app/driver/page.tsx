@@ -9,13 +9,14 @@ import { Input } from "@/components/ui/input";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { signDeliveryPhotos } from "@/lib/delivery-photos";
-import { itemLabel } from "@/lib/domain/catalog";
+import { deliveryPhotoUrl } from "@/lib/delivery-photos";
+import { itemLabel, loadList } from "@/lib/domain/catalog";
 import { formatKg, formatVnd } from "@/lib/domain/money";
 import { ORDER_STATUS_LABEL } from "@/lib/domain/status";
+import { orderKg } from "@/lib/driver-stats";
 import { dayRange, today } from "@/lib/period";
 import { CompleteDelivery } from "./CompleteDelivery";
-import { departOrders, failDelivery } from "./actions";
+import { departOrders, failDelivery, returnOrder } from "./actions";
 
 const SELECT =
   "id, code, status, phone, address, district, note, total, payment_status, price_tier, delivered_at, delivery_photo_path, customers(name), order_items(id, pack_name, pack_qty, qty_kg, products(name))";
@@ -35,7 +36,8 @@ export default async function DriverPage() {
   ]);
   const waiting = open.filter((o) => o.status === "assigned");
   const onTheRoad = open.filter((o) => o.status === "out_for_delivery");
-  const photos = await signDeliveryPhotos(delivered.flatMap((o) => (o.delivery_photo_path ? [o.delivery_photo_path] : [])));
+  const toLoad = loadList(waiting.flatMap((o) => o.order_items));
+  const sumKg = (orders: DriverOrder[]) => orders.reduce((s, o) => s + orderKg(o), 0);
 
   return (
     <StaffShell links={[{ href: "/driver", label: "Đơn cần giao" }]}>
@@ -43,11 +45,33 @@ export default async function DriverPage() {
         <h1 className="text-xl font-bold tracking-tight">Đơn giao của tôi</h1>
         <p className="text-sm text-muted-foreground first-letter:uppercase">{longDate.format(new Date())}</p>
         <dl className="mt-3 grid grid-cols-3 gap-2 text-center" data-testid="driver-counts">
-          <Count label={ORDER_STATUS_LABEL.assigned} value={waiting.length} />
-          <Count label={ORDER_STATUS_LABEL.out_for_delivery} value={onTheRoad.length} />
+          <Count label={ORDER_STATUS_LABEL.assigned} value={waiting.length} kg={sumKg(waiting)} />
+          <Count label={ORDER_STATUS_LABEL.out_for_delivery} value={onTheRoad.length} kg={sumKg(onTheRoad)} />
           <Count label="Đã giao hôm nay" value={delivered.length} />
         </dl>
       </header>
+
+      {toLoad.length > 0 && (
+        <Card size="sm" className="mb-3" data-testid="load-list">
+          <CardContent>
+            <div className="mb-1 flex items-baseline justify-between gap-2">
+              <h2 className="font-semibold">Hàng cần lên xe</h2>
+              <b className="text-lg tabular-nums">Tổng {formatKg(sumKg(waiting))}</b>
+            </div>
+            <ul className="divide-y text-sm">
+              {toLoad.map((l) => (
+                <li key={l.product} className="flex justify-between gap-3 py-1.5">
+                  <div className="min-w-0">
+                    <div className="font-medium">{l.product}</div>
+                    <div className="text-muted-foreground">{l.packs.join(" · ")}</div>
+                  </div>
+                  <span className="shrink-0 font-medium tabular-nums">{formatKg(l.kg)}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {waiting.length > 0 && (
         <ActionForm action={departOrders} confirm={`Xác nhận ${waiting.length} đơn đã lên xe và rời kho?`} className="mb-6">
@@ -65,6 +89,13 @@ export default async function DriverPage() {
               <input type="hidden" name="order_id" value={o.id} />
               <Button variant="outline" className="h-11 w-full">
                 Lên xe
+              </Button>
+            </ActionForm>
+            <ActionForm action={returnOrder} confirm={`Trả đơn ${o.code} cho quản lý?`} className="flex gap-2">
+              <input type="hidden" name="order_id" value={o.id} />
+              <Input name="reason" required placeholder="Lý do trả đơn" aria-label={`Lý do trả đơn ${o.code}`} className="h-11" />
+              <Button variant="outline" className="h-11 text-destructive">
+                Trả đơn
               </Button>
             </ActionForm>
           </OrderCard>
@@ -88,7 +119,7 @@ export default async function DriverPage() {
 
       <Section title="Đã giao hôm nay" count={delivered.length} empty="Chưa giao đơn nào hôm nay.">
         {delivered.map((o) => {
-          const photo = o.delivery_photo_path ? photos.get(o.delivery_photo_path) : undefined;
+          const photo = o.delivery_photo_path ? deliveryPhotoUrl(o.delivery_photo_path) : undefined;
           return (
             <li key={o.id}>
               <Card size="sm" data-order-code={o.code}>
@@ -121,11 +152,12 @@ export default async function DriverPage() {
 
 const collectLabel = (o: Pick<DriverOrder, "payment_status" | "total">) => (o.payment_status === "paid" ? "Đã thanh toán" : `Thu hộ ${formatVnd(o.total)}`);
 
-function Count({ label, value }: { label: string; value: number }) {
+function Count({ label, value, kg }: { label: string; value: number; kg?: number }) {
   return (
     <div className="rounded-lg border bg-card px-1 py-2">
       <dd className="text-2xl font-bold tabular-nums">{value}</dd>
       <dt className="text-xs text-muted-foreground">{label}</dt>
+      {kg !== undefined && <dd className="text-xs font-medium tabular-nums">{formatKg(kg)}</dd>}
     </div>
   );
 }
@@ -143,7 +175,7 @@ function Section({ title, count, empty, children }: { title: string; count: numb
 
 function OrderCard({ order: o, children }: { order: DriverOrder; children: ReactNode }) {
   const destination = `${o.address}, ${o.district}, TP. Hồ Chí Minh`;
-  const kg = o.order_items.reduce((s, i) => s + i.qty_kg, 0);
+  const kg = orderKg(o);
   return (
     <li>
       <Card data-order-code={o.code}>

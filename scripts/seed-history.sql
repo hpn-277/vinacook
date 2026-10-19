@@ -82,7 +82,7 @@ join (
 
 update orders o set price_tier = t.tier from (select distinct order_id, tier from priced) t where t.order_id = o.id;
 
--- Each product's kg is ordered as the largest pack that fits plus loose kg, e.g. 43 kg = 1 Bao 25 kg + 18 Kg.
+-- Each product's kg is ordered as the largest pack that fits plus loose kg, e.g. 43 kg = 1 Bao 30 kg + 13 Kg.
 insert into order_items (order_id, product_id, pack_id, pack_name, kg_per_unit, pack_qty, wholesale_price_per_kg, price_per_kg, line_total)
 select p.order_id, p.product_id, pk.id, pk.name, pk.kg_per_unit, l.qty, p.wholesale, p.price, round(l.qty * pk.kg_per_unit * p.price)
 from priced p

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { packCaption, type Cart, type CatalogProduct } from "@/lib/domain/catalog";
+import { packCaption, packSize, type Cart, type CatalogProduct } from "@/lib/domain/catalog";
 import { formatKg, formatVnd } from "@/lib/domain/money";
 import { packPrice, retailPerKg, type PriceTier } from "@/lib/domain/pricing";
 
@@ -88,7 +88,7 @@ function Slides({
       api.off("select", onSelect);
     };
   }, [api]);
-  const tabs = ["Giới thiệu", ...p.packs.map((pack) => pack.name)];
+  const tabs = ["Giới thiệu", ...p.packs.map(packSize)];
 
   return (
     <>
@@ -125,7 +125,7 @@ function Slides({
             <p className="mt-2 text-xs text-muted-foreground">Vuốt hoặc chọn quy cách để xem hàng giao tới: {p.packs.map(packCaption).join(", ")}.</p>
           </CarouselItem>
           {p.packs.map((pack, i) => (
-            <CarouselItem key={pack.id} aria-label={`${i + 2} / ${tabs.length}: ${pack.name}`} data-pack-slide={pack.name}>
+            <CarouselItem key={pack.id} aria-label={`${i + 2} / ${tabs.length}: ${packSize(pack)}`} data-pack-slide={packSize(pack)}>
               <div className="relative">
                 <Picture
                   src={pack.image_url ?? p.image_url}
@@ -143,7 +143,7 @@ function Slides({
                   <div className={tone("le")}>Lẻ {formatVnd(packPrice(pack.kg_per_unit, retail))}</div>
                 </div>
                 <QtyStepper
-                  label={`${p.name} - ${pack.name}`}
+                  label={`${p.name} - ${packSize(pack)}`}
                   scope="trong chi tiết"
                   value={cart[pack.id] ?? 0}
                   onChange={(q) => setQty(pack.id, q)}

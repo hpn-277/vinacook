@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-label="Cây mì tươi bọc màng">
+  <rect width="320" height="240" fill="#FEFCE8"/>
+  <ellipse cx="160" cy="200" rx="120" ry="10" fill="#0F172A" opacity=".08"/>
+  <path d="M70 110h180a24 44 0 0 1 0 88H70z" fill="#FDE68A" stroke="#D97706" stroke-width="3" stroke-linejoin="round"/>
+  <g fill="none" stroke="#F59E0B" stroke-width="3" stroke-linecap="round" opacity=".7">
+    <path d="M84 124h160"/>
+    <path d="M84 140h168"/>
+    <path d="M84 156h170"/>
+    <path d="M84 172h168"/>
+    <path d="M84 188h160"/>
+  </g>
+  <ellipse cx="70" cy="154" rx="24" ry="44" fill="#FEF3C7" stroke="#D97706" stroke-width="3"/>
+  <g fill="none" stroke="#F59E0B" stroke-width="3" stroke-linecap="round">
+    <path d="M60 130c8 4 12 12 8 20s4 16 12 18"/>
+    <path d="M58 150c6 6 4 14 10 20"/>
+    <path d="M66 120c6 6 10 10 8 16"/>
+  </g>
+  <path d="M110 108v92M210 108v92" stroke="#16A34A" stroke-width="8"/>
+  <rect x="134" y="138" width="52" height="32" rx="4" fill="#FFFFFF" stroke="#16A34A" stroke-width="3"/>
+  <g fill="#94A3B8">
+    <rect x="142" y="146" width="30" height="5" rx="2.5"/>
+    <rect x="142" y="156" width="36" height="5" rx="2.5"/>
+  </g>
+</svg>
