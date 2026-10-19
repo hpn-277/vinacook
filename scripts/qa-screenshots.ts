@@ -269,7 +269,7 @@ async function main() {
 
     await mgr.page.goto(`${BASE}/admin/commission`);
     await shot(mgr.page, "admin-commission");
-    await mgr.page.goto(`${BASE}/admin/settings`);
+    await mgr.page.goto(`${BASE}/admin/products`);
     await shot(mgr.page, "admin-settings");
 
     await s1.page.goto(`${BASE}/sale`);

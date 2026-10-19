@@ -66,3 +66,11 @@ export function moveLabel(from: OrderStatus, to: OrderStatus): string {
   if (to === "cancelled") return "Hủy";
   return from === "assigned" ? "Hủy phân công" : "Giao lại";
 }
+
+export type ProductStatus = "pending" | "approved" | "rejected";
+
+export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
+  pending: "Chờ duyệt",
+  approved: "Đã duyệt",
+  rejected: "Không duyệt",
+};

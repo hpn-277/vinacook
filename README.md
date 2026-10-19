@@ -33,7 +33,15 @@ npx wrangler secret put SUPABASE_URL              # repeat for SUPABASE_PUBLISHA
 npm run deploy
 ```
 
-Production gets migrations only (`npx supabase db push`, never `--include-seed`), so it starts with no staff. Create the first manager with `scripts/create-manager.sql` (steps in the file), then add other staff from `/admin/settings`.
+Production gets migrations only (`npx supabase db push`, never `--include-seed`), so it starts with no staff. Create the first manager with `scripts/create-manager.sql` (steps in the file), then add other staff from `/admin/staff`.
+
+New staff get an email with a link to choose their password, and `/forgot-password` sends a reset link. Before going live, set these in the Supabase Dashboard:
+
+- **Authentication → URL Configuration → Site URL**: the app's domain. Email links point there.
+- **Authentication → Email Templates**: paste `supabase/templates/invite.html` into "Invite user" and `supabase/templates/recovery.html` into "Reset password", with the subjects from `supabase/config.toml`.
+- **Authentication → SMTP**: a real SMTP provider. Supabase's built-in sender only delivers to your own team's addresses, a few emails per hour.
+
+Locally the emails land in Mailpit at http://127.0.0.1:54324.
 
 `npm run preview` runs the production build on the local Workers runtime with `.dev.vars` (copy of `.env.local`). After changing `wrangler.jsonc`, run `npm run cf-typegen`.
 
@@ -46,8 +54,8 @@ Every staff password is `password123`.
 | manager@local | Manager | /admin/orders |
 | sale1@local | Sale, ref `NVKD01`, 5% | /sale |
 | sale2@local | Sale, ref `NVKD02`, 7% | /sale |
-| factory1@local | Factory, Xưởng Bình Tân | /factory |
-| factory2@local | Factory, Xưởng Hóc Môn | /factory |
+| factory1@local | Factory, Chu Hải | /factory |
+| factory2@local | Factory, Minh Anh | /factory |
 | driver1@local | Driver | /driver |
 | driver2@local | Driver | /driver |
 | cashier@local | Cashier (Thủ quỹ), confirms payment (so can the manager; the accountant cannot) | /finance |
@@ -71,7 +79,7 @@ After a schema change, run `npm run gen:types` to regenerate `lib/database.types
 - `lib/domain/status.ts` holds the order and production-job state machines. Every single-row status change goes through `transition()` in `lib/transition.ts`.
 - `status_transitions` and a trigger in `supabase/migrations` hold the same tables in the database, so bulk moves inside SQL functions are checked too. The e2e script asserts that the two copies match.
 - `lib/domain/pricing.ts` is the only pricing rule. `products.price_per_kg` is the wholesale price; retail adds `settings.retail_markup_pct` rounded to 100đ. An order gets wholesale when it reaches `wholesale_min_kg` or a retail total of `wholesale_min_total`. Server actions price every order with it and pass the snapshots to `place_order`, which refuses a snapshot whose pack size or wholesale price no longer matches the catalog. Each order stores its tier and the terms it was priced with. Orders can be cancelled but not edited.
-- Customers order packs (`product_packs`, managed in `/admin/settings`). `order_items.qty_kg` is generated from pack quantity × kg per pack, so production and dispatch still work in kg.
+- Customers order packs (`product_packs`, managed in `/admin/products`). `order_items.qty_kg` is generated from pack quantity × kg per pack, so production and dispatch still work in kg.
 - Only the manager moves orders and jobs. Closing a day sends every `placed` order to production and creates `producing` jobs; receiving the day marks them `received` and the orders `ready` ("Đã nhận hàng"). Factories only read their jobs.
 - Drivers move orders themselves: `assigned` ("Chờ lên xe") to `out_for_delivery` when the goods are loaded (one UPDATE for the whole load, guarded by the trigger), then `delivered` or `failed`. Proof photos go to R2 under `delivery/` through a server action (`lib/delivery-photos.ts`).
 - Payment (gạch nợ) goes only through `set_payment()` in `supabase/migrations`, called by the server action in `app/finance/actions.ts` (cashier or manager). It updates `payment_status`, `paid_at` and `paid_by` and writes one `payment_events` row per changed order. A trigger refuses any other change to those columns. Debt age and payment totals are pure helpers in `lib/domain/debt.ts`.

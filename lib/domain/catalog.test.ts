@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isImageRef, loadList, packCaption } from "./catalog";
+import { isImageRef, loadList, packCaption, packGroupLabels } from "./catalog";
 
 describe("packCaption", () => {
   it.each([
@@ -44,5 +44,21 @@ describe("loadList", () => {
 
   it("reads old loose-kg lines as kg", () => {
     expect(loadList([item("Mì quảng", "Kg", 3, 1)])[0].packs).toEqual(["3 kg"]);
+  });
+});
+
+describe("packGroupLabels", () => {
+  it("merges sizes of one pack name, in size order", () => {
+    const packs = [
+      { name: "Bao", kg_per_unit: 30 },
+      { name: "Thùng", kg_per_unit: 15 },
+      { name: "Cây", kg_per_unit: 5 },
+      { name: "Thùng", kg_per_unit: 5 },
+      { name: "Thùng", kg_per_unit: 10 },
+    ];
+    expect(packGroupLabels(packs)).toEqual(["Cây 5 kg", "Thùng 5/10/15 kg", "Bao 30 kg"]);
+  });
+  it("is empty for a product with no packs", () => {
+    expect(packGroupLabels([])).toEqual([]);
   });
 });

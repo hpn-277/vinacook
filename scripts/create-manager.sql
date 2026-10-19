@@ -3,7 +3,7 @@
 -- 1. Supabase Dashboard -> Authentication -> Users -> Add user -> Create new user:
 --    the manager's email and a strong password, "Auto Confirm User" ticked.
 -- 2. Edit the three values below, then run this file in the Dashboard SQL Editor.
--- 3. Log in at /login. Add every other staff member from /admin/settings.
+-- 3. Log in at /login. Add every other staff member from /admin/staff.
 --
 -- Safe to re-run: an existing staff row for the same login is updated, not duplicated.
 do $$

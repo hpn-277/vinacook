@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import type { PriceTier } from "@/lib/domain/pricing";
-import { JOB_STATUS_LABEL, ORDER_STATUS_LABEL, type JobStatus, type OrderStatus } from "@/lib/domain/status";
+import { JOB_STATUS_LABEL, ORDER_STATUS_LABEL, PRODUCT_STATUS_LABEL, type JobStatus, type OrderStatus, type ProductStatus } from "@/lib/domain/status";
 
 const ORDER_TONE: Record<OrderStatus, string> = {
   placed: "bg-yellow-100 text-yellow-900",
@@ -24,6 +24,16 @@ export function OrderBadge({ status }: { status: OrderStatus }) {
 
 export function JobBadge({ status }: { status: JobStatus }) {
   return <Badge className={JOB_TONE[status]}>{JOB_STATUS_LABEL[status]}</Badge>;
+}
+
+const PRODUCT_TONE: Record<ProductStatus, string> = {
+  pending: "bg-yellow-100 text-yellow-900",
+  approved: "bg-green-100 text-green-900",
+  rejected: "bg-red-100 text-red-900",
+};
+
+export function ProductStatusBadge({ status }: { status: ProductStatus }) {
+  return <Badge className={PRODUCT_TONE[status]}>{PRODUCT_STATUS_LABEL[status]}</Badge>;
 }
 
 const TIER: Record<PriceTier, { label: string; tone: string }> = {

@@ -124,7 +124,7 @@ function FactoryTable({ groups }: { groups: FactoryGroup[] }) {
                     {f.name}
                   </Link>
                   <div className="text-xs font-normal text-muted-foreground">Tổng {formatKg(kg)}</div>
-                  {!f.active && <div className="text-xs font-normal text-destructive">Ngừng hoạt động: đổi xưởng trong Cài đặt</div>}
+                  {!f.active && <div className="text-xs font-normal text-destructive">Ngừng hoạt động: đổi xưởng ở trang Sản phẩm</div>}
                 </TableCell>
               )}
               <TableCell>{l.product}</TableCell>

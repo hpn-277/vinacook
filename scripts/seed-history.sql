@@ -13,18 +13,18 @@ select setseed(0.42);
 
 create temp table hist (phone text, name text, address text, district text, ref text, cycle int, items jsonb) on commit drop;
 insert into hist values
-  ('0912000001', 'Quán phở Bà Tư',            '21 Hùng Vương',        'Quận 5',     'NVKD01',  5, '{"Bánh phở tươi": 40, "Bún tươi": 15}'),
-  ('0912000002', 'Bếp cơm Hạnh Phúc',         '102 Ba Tháng Hai',     'Quận 10',    'NVKD01', 10, '{"Mì trứng": 20, "Hủ tiếu dai": 15}'),
-  ('0912000003', 'Nhà hàng Sen Vàng',         '7 Lê Thánh Tôn',       'Quận 1',     'NVKD02', 10, '{"Mì quảng": 25, "Mì vàng sợi nhỏ": 15}'),
-  ('0912000004', 'Đại lý Hưng Thịnh',         '250 Xô Viết Nghệ Tĩnh','Bình Thạnh', 'NVKD01',  5, '{"Mì trứng": 80, "Mì vàng sợi nhỏ": 60, "Hủ tiếu dai": 40}'),
-  ('0912000005', 'Tạp hóa Kim Ngân',          '15 Huỳnh Tấn Phát',    'Quận 7',     'NVKD02', 15, '{"Mì trứng": 15, "Bún tươi": 10}'),
-  ('0912000006', 'Hủ tiếu Nam Vang Út',       '88 Cộng Hòa',          'Tân Bình',   'NVKD02',  5, '{"Hủ tiếu dai": 35}'),
-  ('0912000007', 'Bún bò Cô Ba',              '3 Quang Trung',        'Gò Vấp',     null,      5, '{"Bún tươi": 45}'),
-  ('0912000008', 'Căn tin trường Bình Thọ',   '1 Võ Văn Ngân',        'Thủ Đức',    'NVKD01', 15, '{"Mì trứng": 30, "Bún tươi": 30}'),
-  ('0912000009', 'Chị Hằng',                  '40 Nguyễn Đình Chiểu', 'Quận 3',     null,     15, '{"Mì trứng": 5}'),
-  ('0912000010', 'Mì Quảng Bà Mua',           '19 Phan Xích Long',    'Phú Nhuận',  'NVKD02', 10, '{"Mì quảng": 40}'),
-  ('0912000011', 'Đại lý Phát Đạt',           '560 Phạm Thế Hiển',    'Quận 8',     'NVKD01', 10, '{"Mì vàng sợi nhỏ": 50, "Bánh phở tươi": 40}'),
-  ('0912000012', 'Bún riêu Thảo',             '12 Tên Lửa',           'Bình Tân',   null,     10, '{"Bún tươi": 25, "Bánh phở tươi": 10}');
+  ('0912000001', 'Quán phở Bà Tư',            '21 Hùng Vương',        'Quận 5',     'NVKD01',  5, '{"Phở tươi Chu Hải": 40, "Bún bò Minh Anh": 15}'),
+  ('0912000002', 'Bếp cơm Hạnh Phúc',         '102 Ba Tháng Hai',     'Quận 10',    'NVKD01', 10, '{"Mì Tàu trứng": 20, "Hủ tiếu dai vắt Chu Hải": 15}'),
+  ('0912000003', 'Nhà hàng Sen Vàng',         '7 Lê Thánh Tôn',       'Quận 1',     'NVKD02', 10, '{"Mì quảng vàng": 25, "Hủ tiếu gõ Mai Khánh": 15}'),
+  ('0912000004', 'Đại lý Hưng Thịnh',         '250 Xô Viết Nghệ Tĩnh','Bình Thạnh', 'NVKD01',  5, '{"Mì Tàu trứng": 80, "Hủ tiếu gõ Mai Khánh": 60, "Hủ tiếu dai vắt Chu Hải": 40}'),
+  ('0912000005', 'Tạp hóa Kim Ngân',          '15 Huỳnh Tấn Phát',    'Quận 7',     'NVKD02', 15, '{"Mì Tàu trứng": 15, "Bún bò Minh Anh": 10}'),
+  ('0912000006', 'Hủ tiếu Nam Vang Út',       '88 Cộng Hòa',          'Tân Bình',   'NVKD02',  5, '{"Hủ tiếu dai vắt Chu Hải": 35}'),
+  ('0912000007', 'Bún bò Cô Ba',              '3 Quang Trung',        'Gò Vấp',     null,      5, '{"Bún bò Minh Anh": 45}'),
+  ('0912000008', 'Căn tin trường Bình Thọ',   '1 Võ Văn Ngân',        'Thủ Đức',    'NVKD01', 15, '{"Mì Tàu trứng": 30, "Bún bò Minh Anh": 30}'),
+  ('0912000009', 'Chị Hằng',                  '40 Nguyễn Đình Chiểu', 'Quận 3',     null,     15, '{"Mì Tàu trứng": 5}'),
+  ('0912000010', 'Mì Quảng Bà Mua',           '19 Phan Xích Long',    'Phú Nhuận',  'NVKD02', 10, '{"Mì quảng vàng": 40}'),
+  ('0912000011', 'Đại lý Phát Đạt',           '560 Phạm Thế Hiển',    'Quận 8',     'NVKD01', 10, '{"Hủ tiếu gõ Mai Khánh": 50, "Phở tươi Chu Hải": 40}'),
+  ('0912000012', 'Bún riêu Thảo',             '12 Tên Lửa',           'Bình Tân',   null,     10, '{"Bún bò Minh Anh": 25, "Phở tươi Chu Hải": 10}');
 
 create temp table today on commit drop as select (now() at time zone 'Asia/Ho_Chi_Minh')::date as d;
 
@@ -61,7 +61,7 @@ order by p.pdate, p.customer_id;
 
 create temp table want on commit drop as
 select o.id as order_id, pr.id as product_id, pr.price_per_kg as wholesale,
-       greatest(1, round(i.value::numeric * (0.8 + random() * 0.4))) as kg
+       greatest(5, round(i.value::numeric * (0.8 + random() * 0.4) / 5) * 5) as kg
 from plan p
 join orders o on o.customer_id = p.customer_id and o.production_date = p.pdate
 cross join lateral jsonb_each_text(p.items) i
@@ -82,16 +82,16 @@ join (
 
 update orders o set price_tier = t.tier from (select distinct order_id, tier from priced) t where t.order_id = o.id;
 
--- Each product's kg is ordered as the largest pack that fits plus loose kg, e.g. 43 kg = 1 Bao 30 kg + 13 Kg.
+-- Kg are whole sticks (multiples of 5); each line is the largest sack that fits plus Cây 5 kg, e.g. 45 kg = 1 Bao 30 kg + 3 Cây.
 insert into order_items (order_id, product_id, pack_id, pack_name, kg_per_unit, pack_qty, wholesale_price_per_kg, price_per_kg, line_total)
 select p.order_id, p.product_id, pk.id, pk.name, pk.kg_per_unit, l.qty, p.wholesale, p.price, round(l.qty * pk.kg_per_unit * p.price)
 from priced p
 left join lateral (
   select id, kg_per_unit, floor(p.kg / kg_per_unit) as n from product_packs
-  where product_id = p.product_id and kg_per_unit > 1 and kg_per_unit <= p.kg order by kg_per_unit desc limit 1
+  where product_id = p.product_id and active and name = 'Bao' and kg_per_unit <= p.kg order by kg_per_unit desc limit 1
 ) big on true
-cross join lateral (select id from product_packs where product_id = p.product_id and name = 'Kg') loose
-cross join lateral (values (big.id, big.n), (loose.id, p.kg - coalesce(big.n * big.kg_per_unit, 0))) l(pack_id, qty)
+cross join lateral (select id from product_packs where product_id = p.product_id and active and name = 'Cây' and kg_per_unit = 5) stick
+cross join lateral (values (big.id, big.n), (stick.id, (p.kg - coalesce(big.n * big.kg_per_unit, 0)) / 5)) l(pack_id, qty)
 join product_packs pk on pk.id = l.pack_id
 where l.qty > 0;
 
@@ -104,25 +104,15 @@ select distinct pdate, 'closed'::day_status, (pdate + time '17:00') at time zone
 from plan
 on conflict (date) do nothing;
 
--- Big days are split 60/40 across the two factories, like a manager would.
+-- Each product's kg goes to the factory that makes it, as closing a day does.
 insert into production_jobs (date, product_id, factory_id, qty_kg, status, received_kg, created_at, updated_at)
-select j.date, j.product_id, f.id, j.qty, 'received', j.qty,
-       (j.date + time '17:00') at time zone 'Asia/Ho_Chi_Minh', ((j.date + 1) + time '06:00') at time zone 'Asia/Ho_Chi_Minh'
-from (
-  select d.date, d.product_id, s.factory, s.qty
-  from (
-    select o.production_date as date, i.product_id, sum(i.qty_kg) as total
-    from orders o join order_items i on i.order_id = o.id
-    where o.status = 'delivered' and o.customer_id in (select customer_id from plan)
-    group by 1, 2
-  ) d
-  cross join lateral (values
-    ('Xưởng Bình Tân', case when d.total > 50 then round(d.total * 0.6) else d.total end),
-    ('Xưởng Hóc Môn',  case when d.total > 50 then d.total - round(d.total * 0.6) else 0 end)
-  ) s(factory, qty)
-  where s.qty > 0
-) j
-join factories f on f.name = j.factory;
+select o.production_date, i.product_id, pr.factory_id, sum(i.qty_kg), 'received', sum(i.qty_kg),
+       (o.production_date + time '17:00') at time zone 'Asia/Ho_Chi_Minh', ((o.production_date + 1) + time '06:00') at time zone 'Asia/Ho_Chi_Minh'
+from orders o
+join order_items i on i.order_id = o.id
+join products pr on pr.id = i.product_id
+where o.status = 'delivered' and o.customer_id in (select customer_id from plan)
+group by o.production_date, i.product_id, pr.factory_id;
 
 commit;
 

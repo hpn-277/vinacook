@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-/** Each product's kg goes to the factory it belongs to (Cài đặt → Sản phẩm). */
+/** Each product's kg goes to the factory it belongs to (trang Sản phẩm). */
 export async function closeDay(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
   return run(async () => {
     await requireRole("manager");

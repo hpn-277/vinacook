@@ -8,10 +8,10 @@ Next.js (App Router) + Supabase (Postgres + Auth for staff) + Vercel. UI Vietnam
 |---|---|---|
 | Customer | none (guest, phone = ID) | browse, order, lookup orders by phone |
 | Sale | yes | share ref link, enter orders for own customers, see own customers/orders/commission |
-| Manager (admin) | yes | products, factories, staff, commission %, cutoff, orders, production, receiving, dispatch. The only role that moves orders and production jobs. Sees payment state read-only |
+| Manager (admin) | yes | products, factories, staff, commission %, orders, production, receiving, dispatch. The only role that moves orders and production jobs. Sees payment state read-only |
 | Cashier (Thủ quỹ) | yes | `/finance`: confirms payment (gạch nợ), one order or many at once, and undoes it with a reason. The manager may also do this (one click in the orders table, undo on the order page); the accountant may not. |
 | Accountant (Kế toán) | yes | `/finance`: tracks debt and payment history, read-only; cannot confirm payment |
-| Factory | yes | read-only: own jobs for today and tomorrow (date, product, kg, status) |
+| Factory | yes | read-only: own jobs for today and tomorrow (date, product, kg, status); proposes its own products for approval |
 | Driver | yes | see own assigned deliveries, confirm the goods are loaded, mark delivered (optional proof photo) or failed |
 
 ## Data model
@@ -25,7 +25,7 @@ Next.js (App Router) + Supabase (Postgres + Auth for staff) + Vercel. UI Vietnam
 - `payment_events` (id, order_id, staff_id, action[paid|unpaid], amount = order total at the time, note NULL, created_at): audit log, one row per real payment change
 - `production_days` (date PK, status[open|closed])
 - `production_jobs` (id, date, product_id, factory_id, qty_kg, status, received_kg NULL, timestamps)
-- `settings` (cutoff_time = 17:00, Asia/Ho_Chi_Minh, retail_markup_pct = 25, wholesale_min_kg = 50, wholesale_min_total = 2.000.000đ)
+- `settings` (cutoff_time = 17:00 fixed, not editable in the app, Asia/Ho_Chi_Minh, retail_markup_pct = 25, wholesale_min_kg = 50, wholesale_min_total = 2.000.000đ)
 - `district` = fixed list of HCMC districts (dropdown; used to filter dispatch)
 
 ## Order lifecycle
@@ -52,7 +52,7 @@ Close day creates jobs as `producing` ("Đang sản xuất"); receive day marks 
 2. **Sale order** – sale picks/creates customer by phone. If phone owned by another sale → order saved, `sale_id` = existing owner, warning shown.
 3. **Review** (manager) – `placed` orders need no approval; the manager cancels unwanted ones before closing the day.
 4. **Close day** (manager) – every `placed` order of the date; shows kg per product grouped under the factory that makes it (`products.factory_id`). Manager only checks and cancels invalid orders; no manual split. Send → jobs `producing`, orders → `in_production`, day `closed`, orders locked.
-5. **Factory** – read-only list of its own jobs for today and tomorrow. No buttons; never shows customers or prices.
+5. **Factory** – read-only list of its own jobs for today and tomorrow; never shows customers. `/factory/products`: proposes products it makes (name, suggested wholesale price/kg, description, image) with the standard packs; can edit only while `pending` or `rejected` (resubmit → `pending`). Manager approves (goes on sale at the shown price) or rejects with a reason from the products table in `/admin/products`. `products.status` pending/approved/rejected; a DB check allows `active` only when approved, so the shop and ordering never see unapproved products.
 6. **Receive** (manager) – on `/admin/orders` for a closed day with orders in production, one "Xác nhận đã nhận hàng" button (with confirmation): all jobs received at planned kg, orders → ready ("Đã nhận hàng"). Refused on an open day. Factories are expected to produce exactly what is required.
 7. **Dispatch** (manager) – on `/admin/orders?date=`, tick received orders (or "Chọn tất cả") and pick a driver → "Giao cho tài xế".
 8. **Driver** – `/driver` lists only the driver's own orders in three sections: "Chờ lên xe", "Đang giao", "Đã giao hôm nay". Each card shows customer, phone (call button), address (Google Maps directions), note, packs and kg, and the COD amount ("Thu hộ") or "Đã thanh toán". "XÁC NHẬN HÀNG ĐÃ LÊN XE" moves every listed waiting order to `out_for_delivery` in one atomic update and stamps `departed_at`; each card also has "Lên xe" for one order. "HOÀN THÀNH GIAO HÀNG" opens a dialog with an optional proof photo (downscaled on the phone to 1600 px JPEG, stored in the private `delivery-photos` bucket) and marks the order delivered. "Thất bại" needs a reason.
@@ -71,9 +71,9 @@ Per sale, per month: `sum(order.total where status=delivered and delivered_at in
 ## Screens
 - Public: `/`, `/checkout`, `/orders` (lookup), `/r/[code]` (sets ref cookie → `/`)
 - Sale: `/sale` (dashboard + ref link), `/sale/orders/new`, `/sale/customers`
-- Manager: `/admin` (month overview), `/admin/orders?date=` (day table: cancel, receive day, assign driver; payment shown read-only), `/admin/orders/[code]` (detail), `/admin/production/[date]` (review + close), `/admin/commission` (+ per sale), `/admin/settings` (products, factories, staff, cutoff)
+- Manager: `/admin` (month overview), `/admin/orders?date=` (day table: cancel, receive day, assign driver; payment shown read-only), `/admin/orders/[code]` (detail), `/admin/production/[date]` (review + close), `/admin/commission` (+ per sale), `/admin/staff` (create accounts by email invite, edit, resend password link), `/admin/products` (pricing; one products table for all factories with status filter, approve/reject, edit pop-up incl. per-product packs), `/admin/factories` (monthly report + add/edit factories)
 - Finance (cashier, accountant): `/finance` (Công nợ), `/finance/payments` (Lịch sử thu), `/finance/orders/[code]` (detail + payment log)
-- Factory: `/factory`
+- Factory: `/factory`, `/factory/products`
 - Driver: `/driver`
 
 ## Out of scope (MVP)
@@ -85,8 +85,8 @@ OTP, per-customer price lists, online payment, e-invoice/MISA, Zalo OA, forecast
 - The manager receives a whole day at the planned kg; a factory shortfall is handled manually outside the app.
 
 ## Seed data (local)
-- Products (wholesale per kg; packs Kg 1 kg plus Thùng/Bao/Túi): Mì trứng 25.000đ/kg, Mì vàng sợi nhỏ 24.000đ/kg, Hủ tiếu dai 22.000đ/kg, Bánh phở tươi 18.000đ/kg, Bún tươi 15.000đ/kg, Mì quảng 26.000đ/kg
-- Factories: Xưởng Bình Tân, Xưởng Hóc Môn. Mì trứng, Mì vàng, Hủ tiếu → Bình Tân; Bánh phở, Bún, Mì quảng → Hóc Môn
+- Products: VinaCook's real fresh catalog (bảng báo giá Quý III/2026), 18 products created by migration `20261031000000_vinacook_catalog.sql`; wholesale/kg = the "theo bao 30–50 kg" price, packs Cây 5 kg, Bao 30 kg, Bao 50 kg. Dry products (per-carton, quantity tiers) not imported yet
+- Factories: Chu Hải, Miễn Huyền, Kim Ửng, Phở Việt Gia Truyền, Nguyễn Hải, Vũ Thị Thắng, Minh Anh, VinaCook (for the two products whose maker is not listed). Seed factory accounts: factory1 → Chu Hải, factory2 → Minh Anh
 - Staff: manager@local, sale1@local (ref NVKD01, 5%), sale2@local (ref NVKD02, 7%), factory1@local, factory2@local, driver1@local, driver2@local, cashier@local (Thủ quỹ), accountant@local (Kế toán) — password `password123`
 
 ## Local setup

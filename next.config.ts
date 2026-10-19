@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.ngrok-free.app", "*.ngrok-free.dev", "*.ngrok.app", "*.ngrok.dev"],
   // Delivery photos go through a server action; the bucket caps them at 5MB.
   experimental: { serverActions: { bodySizeLimit: "6mb" } },
+  // The manager's product page used to be "Cài đặt" at /admin/settings.
+  async redirects() {
+    return [{ source: "/admin/settings", destination: "/admin/products", permanent: true }];
+  },
   turbopack: {
     root: process.cwd(),
     rules: {

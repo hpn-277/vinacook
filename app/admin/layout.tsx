@@ -5,7 +5,8 @@ const LINKS = [
   { href: "/admin/commission", label: "Hoa hồng" },
   { href: "/admin/drivers", label: "Tài xế" },
   { href: "/admin/factories", label: "Xưởng" },
-  { href: "/admin/settings", label: "Cài đặt" },
+  { href: "/admin/staff", label: "Nhân viên" },
+  { href: "/admin/products", label: "Sản phẩm" },
   { href: "/sale/orders/new", label: "Tạo đơn" },
 ];
 

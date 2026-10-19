@@ -11,13 +11,14 @@ import { formatKg } from "@/lib/domain/money";
 import { parseIsoDate } from "@/lib/domain/time";
 import { jobKg, jobsInMonth } from "@/lib/factory-stats";
 import { today } from "@/lib/period";
+import { FactoryDialog } from "./FactoryDialog";
 
 export default async function FactoriesPage({ searchParams }: PageProps<"/admin/factories">) {
   await requireRole("manager");
   const raw = (await searchParams).month;
   const month = (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
   const [factories, jobs] = await Promise.all([
-    db().from("factories").select("id, name, active").order("id").then(unwrap),
+    db().from("factories").select("id, name, address, phone, active").order("id").then(unwrap),
     jobsInMonth(month),
   ]);
 
@@ -33,8 +34,11 @@ export default async function FactoriesPage({ searchParams }: PageProps<"/admin/
 
   return (
     <>
-      <PageTitle>Xưởng tháng {month}</PageTitle>
-      <AutoSubmitForm action="/admin/factories" className="mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 [&_h1]:mb-0">
+        <PageTitle>Xưởng tháng {month}</PageTitle>
+        <FactoryDialog />
+      </div>
+      <AutoSubmitForm action="/admin/factories" className="my-4">
         <Input type="month" name="month" defaultValue={month} aria-label="Chọn tháng" className="w-auto" />
       </AutoSubmitForm>
       <Card size="sm">
@@ -48,6 +52,7 @@ export default async function FactoriesPage({ searchParams }: PageProps<"/admin/
                 <TableHead className="text-right">Số lệnh</TableHead>
                 <TableHead className="text-right">Ngày có lệnh</TableHead>
                 <TableHead className="text-right">TB kg/ngày</TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -57,7 +62,7 @@ export default async function FactoriesPage({ searchParams }: PageProps<"/admin/
                     <Link href={`/admin/factories/${r.id}?month=${month}`} className="font-medium text-primary after:absolute after:inset-0 hover:underline">
                       {r.name}
                     </Link>
-                    {!r.active && <div className="text-xs text-muted-foreground">Ngừng hoạt động</div>}
+                    <div className="text-xs text-muted-foreground">{[r.address, r.phone, !r.active && "Ngừng hoạt động"].filter(Boolean).join(" · ")}</div>
                   </TableCell>
                   <TableCell className="text-right font-semibold tabular-nums" data-testid={`factory-produced-${r.id}`}>
                     {formatKg(r.produced)}
@@ -66,6 +71,11 @@ export default async function FactoriesPage({ searchParams }: PageProps<"/admin/
                   <TableCell className="text-right tabular-nums">{r.jobs}</TableCell>
                   <TableCell className="text-right tabular-nums">{r.days}</TableCell>
                   <TableCell className="text-right tabular-nums">{r.days ? formatKg(r.perDay) : "—"}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="relative z-10 inline-block">
+                      <FactoryDialog factory={r} />
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -75,7 +85,7 @@ export default async function FactoriesPage({ searchParams }: PageProps<"/admin/
                 <TableCell className="text-right tabular-nums">{formatKg(rows.reduce((s, r) => s + r.produced, 0))}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatKg(rows.reduce((s, r) => s + r.producing, 0))}</TableCell>
                 <TableCell className="text-right tabular-nums">{rows.reduce((s, r) => s + r.jobs, 0)}</TableCell>
-                <TableCell colSpan={2} />
+                <TableCell colSpan={3} />
               </TableRow>
             </TableFooter>
           </Table>

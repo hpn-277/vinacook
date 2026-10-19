@@ -1,33 +1,12 @@
-insert into factories (name, address, phone) values
-  ('Xưởng Bình Tân', 'Bình Tân, TP.HCM', '0281000001'),
-  ('Xưởng Hóc Môn', 'Hóc Môn, TP.HCM', '0281000002');
-
--- price_per_kg is the wholesale price; retail adds settings.retail_markup_pct (25%). Each product is made by one factory.
-insert into products (name, price_per_kg, image_url, description, factory_id) values
-  ('Mì trứng', 25000, '/products/mi-trung.svg', 'Mì trứng tươi làm từ bột mì và trứng gà, sợi vàng dai. Hợp xào, trụng nước lèo. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Bình Tân')),
-  ('Mì vàng sợi nhỏ', 24000, '/products/mi-vang-soi-nho.svg', 'Sợi mì vàng nhỏ, mềm, chín nhanh. Hợp mì nước, mì hoành thánh. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Bình Tân')),
-  ('Hủ tiếu dai', 22000, '/products/hu-tieu-dai.svg', 'Hủ tiếu bột gạo sợi dai, không bở khi trụng. Hợp hủ tiếu Nam Vang, hủ tiếu xào. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Bình Tân')),
-  ('Bánh phở tươi', 18000, '/products/banh-pho-tuoi.svg', 'Bánh phở gạo tươi tráng mỗi sáng, sợi mềm. Hợp phở bò, phở gà, phở xào. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Hóc Môn')),
-  ('Bún tươi', 15000, '/products/bun-tuoi.svg', 'Bún gạo tươi sợi vừa, trắng mềm. Hợp bún chả, bún thịt nướng, bún riêu. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Hóc Môn')),
-  ('Mì quảng', 26000, '/products/mi-quang.svg', 'Sợi mì quảng bản to, màu vàng nghệ. Hợp mì quảng gà, tôm thịt. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Hóc Môn'));
-
--- Kg and Túi are no longer sold; they stay (inactive) for history orders.
-insert into product_packs (product_id, name, kg_per_unit, image_url, active)
-select p.id, pk.name, pk.kg, '/packs/' || pk.image || '.svg', pk.active
-from products p
-cross join (values
-  ('Kg', 1, 'kg', false), ('Cây', 5, 'cay', true), ('Thùng', 5, 'thung', true),
-  ('Thùng', 10, 'thung', true), ('Thùng', 15, 'thung', true), ('Bao', 30, 'bao', true)
-) as pk(name, kg, image, active)
-order by p.id, pk.kg;
+-- Factories and the product catalog come from the migrations (20261031000000_vinacook_catalog.sql); this file adds demo people and orders.
 
 create temp table seed_staff (email text, role staff_role, name text, phone text, ref_code text, pct numeric, factory text);
 insert into seed_staff values
   ('manager@local', 'manager', 'Quản lý', '0900000000', null, null, null),
   ('sale1@local', 'sale', 'NVKD 01', '0900000001', 'NVKD01', 5, null),
   ('sale2@local', 'sale', 'NVKD 02', '0900000002', 'NVKD02', 7, null),
-  ('factory1@local', 'factory', 'Xưởng Bình Tân', '0281000001', null, null, 'Xưởng Bình Tân'),
-  ('factory2@local', 'factory', 'Xưởng Hóc Môn', '0281000002', null, null, 'Xưởng Hóc Môn'),
+  ('factory1@local', 'factory', 'Xưởng Chu Hải', '0281000001', null, null, 'Chu Hải'),
+  ('factory2@local', 'factory', 'Xưởng Minh Anh', '0281000002', null, null, 'Minh Anh'),
   ('driver1@local', 'driver', 'Tài xế 1', '0910000001', null, null, null),
   ('driver2@local', 'driver', 'Tài xế 2', '0910000002', null, null, null),
   ('cashier@local', 'cashier', 'Thủ quỹ', '0920000001', null, null, null),
@@ -57,13 +36,16 @@ from seed_staff s
 join auth.users u on u.email = s.email
 left join factories f on f.name = s.factory;
 
+-- Seeded sales already hold NVKD01/02; new codes continue after them.
+select setval('staff_ref_seq', (select max(substring(ref_code from '^NVKD(\d+)$')::int) from staff) + 1, false);
+
 insert into customers (phone, name, default_address, default_district, sale_id) values
   ('0901000001', 'Chị Lan', '12 Trần Hưng Đạo', 'Quận 5', (select id from staff where ref_code = 'NVKD01')),
   ('0901000002', 'Anh Minh', '45 Cộng Hòa', 'Tân Bình', (select id from staff where ref_code = 'NVKD02')),
   ('0901000003', 'Cô Hoa', '8 Ba Tháng Hai', 'Quận 10', null);
 
 -- History lives in the previous month so it never mixes into the current month's commission.
--- 1 Thùng Mì trứng + 10 Kg Bún tươi = 20 kg, under both wholesale thresholds, so retail: 10 × 31.300 + 10 × 18.800.
+-- 2 Cây Hủ tiếu dai vắt + 2 Cây Bún bò = 20 kg, under both wholesale thresholds, so both lines are retail (wholesale + 25%, rounded to 100đ).
 insert into orders (customer_id, sale_id, created_by, production_date, address, district, phone, status, payment_status, total, driver_id, departed_at, delivered_at, created_at,
                     price_tier, retail_markup_pct, wholesale_min_kg, wholesale_min_total)
 select c.id, c.sale_id, 'customer', (now() - interval '40 days')::date, c.default_address, c.default_district, c.phone,
@@ -78,10 +60,11 @@ select c.id, c.sale_id, 'customer', (now() - interval '38 days')::date, c.defaul
 from customers c where c.phone = '0901000003';
 
 insert into order_items (order_id, product_id, pack_id, pack_name, kg_per_unit, pack_qty, wholesale_price_per_kg, price_per_kg, line_total)
-select o.id, p.id, pk.id, pk.name, pk.kg_per_unit, l.qty, p.price_per_kg, l.retail, l.qty * pk.kg_per_unit * l.retail
+select o.id, p.id, pk.id, pk.name, pk.kg_per_unit, l.qty, p.price_per_kg, r.retail, l.qty * pk.kg_per_unit * r.retail
 from orders o
-cross join (values ('Mì trứng', 'Thùng', 10, 1, 31300), ('Bún tươi', 'Kg', 1, 10, 18800)) as l(product, pack, kg, qty, retail)
+cross join (values ('Hủ tiếu dai vắt Chu Hải', 'Cây', 5, 2), ('Bún bò Minh Anh', 'Cây', 5, 2)) as l(product, pack, kg, qty)
 join products p on p.name = l.product
-join product_packs pk on pk.product_id = p.id and pk.name = l.pack and pk.kg_per_unit = l.kg;
+join product_packs pk on pk.product_id = p.id and pk.name = l.pack and pk.kg_per_unit = l.kg
+cross join lateral (select round(p.price_per_kg * 125 / 10000.0) * 100 as retail) r;
 
 update orders o set total = (select sum(line_total) from order_items where order_id = o.id);

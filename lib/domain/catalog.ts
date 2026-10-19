@@ -25,7 +25,12 @@ export function cartLines(catalog: CatalogProduct[], cart: Cart): CartLine[] {
   );
 }
 
-/** Packs every new product starts with. */
+const PACK_IMAGE: Record<string, string> = { cây: "/packs/cay.svg", thùng: "/packs/thung.svg", bao: "/packs/bao.svg", túi: "/packs/tui.svg", kg: "/packs/kg.svg" };
+
+/** The stock picture for a pack name ("Thùng" -> /packs/thung.svg); null for names without one. */
+export const defaultPackImage = (name: string): string | null => PACK_IMAGE[name.trim().toLowerCase()] ?? null;
+
+/** Packs a new product can start with; the manager picks which ones each product is sold in. */
 export const STANDARD_PACKS = [
   { name: "Cây", kg_per_unit: 5, image_url: "/packs/cay.svg" },
   { name: "Thùng", kg_per_unit: 5, image_url: "/packs/thung.svg" },
@@ -36,6 +41,15 @@ export const STANDARD_PACKS = [
 
 export function packSize(pack: { name: string; kg_per_unit: number }): string {
   return `${pack.name} ${formatKg(pack.kg_per_unit)}`;
+}
+
+/** One label per pack name, sizes merged and smallest first: ["Cây 5 kg", "Thùng 5/10/15 kg", "Bao 30 kg"]. */
+export function packGroupLabels(packs: { name: string; kg_per_unit: number }[]): string[] {
+  const sorted = [...packs].sort((a, b) => a.kg_per_unit - b.kg_per_unit);
+  return [...Map.groupBy(sorted, (p) => p.name)].map(([name, sizes]) => {
+    const kg = sizes.map((p) => new Intl.NumberFormat("vi-VN").format(p.kg_per_unit)).join("/");
+    return name.toLowerCase() === "kg" ? "Kg" : `${name} ${kg} kg`;
+  });
 }
 
 /** What one unit of a pack holds: "1 Thùng = 10 kg"; a plain Kg pack reads "1 kg". */

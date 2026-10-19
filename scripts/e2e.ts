@@ -462,7 +462,7 @@ async function main() {
     assert(lookup.includes("Bún tươi · 2 Thùng (20 kg)"), "lookup lists packs");
 
     step("one-tap reorder");
-    await mgr.page.goto(`${BASE}/admin/settings`);
+    await mgr.page.goto(`${BASE}/admin/products`);
     await mgr.page.getByLabel("Đang bán Bún tươi - Thùng").click();
     await mgr.page.getByLabel("Tải ảnh Bún tươi - Thùng").setInputFiles({ name: "thung.png", mimeType: "image/png", buffer: Buffer.from(bigPhoto, "base64") });
     await mgr.page.getByRole("button", { name: "Lưu Bún tươi - Thùng" }).click();

@@ -5,12 +5,12 @@ import { downscale } from "@/lib/downscale";
 
 const MAX_SIDE = 800;
 
-/** Swaps the picked file for a downscaled JPEG before the form submits it as `image_file`. */
-export function ImageFileInput({ form, label }: { form: string; label: string }) {
+/** Swaps the picked file for a downscaled JPEG before the form submits it (as `image_file` unless `name` says otherwise). */
+export function ImageFileInput({ form, label, name = "image_file" }: { form: string; label: string; name?: string }) {
   return (
     <Input
       form={form}
-      name="image_file"
+      name={name}
       type="file"
       accept="image/*"
       aria-label={label}
