@@ -17,7 +17,7 @@ export default async function FactoriesPage({ searchParams }: PageProps<"/admin/
   const raw = (await searchParams).month;
   const month = (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
   const [factories, jobs] = await Promise.all([
-    db().from("factories").select("id, name, capacity_kg_per_day, active").order("id").then(unwrap),
+    db().from("factories").select("id, name, active").order("id").then(unwrap),
     jobsInMonth(month),
   ]);
 
@@ -28,7 +28,7 @@ export default async function FactoriesPage({ searchParams }: PageProps<"/admin/
     const produced = received.reduce((s, j) => s + jobKg(j), 0);
     const producing = mine.filter((j) => j.status === "producing").reduce((s, j) => s + j.qty_kg, 0);
     const perDay = days ? Math.round((produced + producing) / days) : 0;
-    return { ...f, jobs: mine.length, days, produced, producing, perDay, load: f.capacity_kg_per_day ? Math.round((perDay / f.capacity_kg_per_day) * 100) : null };
+    return { ...f, jobs: mine.length, days, produced, producing, perDay };
   });
 
   return (
@@ -48,7 +48,6 @@ export default async function FactoriesPage({ searchParams }: PageProps<"/admin/
                 <TableHead className="text-right">Số lệnh</TableHead>
                 <TableHead className="text-right">Ngày có lệnh</TableHead>
                 <TableHead className="text-right">TB kg/ngày</TableHead>
-                <TableHead className="text-right">Công suất dùng</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -58,9 +57,7 @@ export default async function FactoriesPage({ searchParams }: PageProps<"/admin/
                     <Link href={`/admin/factories/${r.id}?month=${month}`} className="font-medium text-primary after:absolute after:inset-0 hover:underline">
                       {r.name}
                     </Link>
-                    <div className="text-xs text-muted-foreground">
-                      Công suất {formatKg(r.capacity_kg_per_day)}/ngày{r.active ? "" : " · ngừng hoạt động"}
-                    </div>
+                    {!r.active && <div className="text-xs text-muted-foreground">Ngừng hoạt động</div>}
                   </TableCell>
                   <TableCell className="text-right font-semibold tabular-nums" data-testid={`factory-produced-${r.id}`}>
                     {formatKg(r.produced)}
@@ -69,9 +66,6 @@ export default async function FactoriesPage({ searchParams }: PageProps<"/admin/
                   <TableCell className="text-right tabular-nums">{r.jobs}</TableCell>
                   <TableCell className="text-right tabular-nums">{r.days}</TableCell>
                   <TableCell className="text-right tabular-nums">{r.days ? formatKg(r.perDay) : "—"}</TableCell>
-                  <TableCell className={`text-right tabular-nums ${r.load != null && r.load > 100 ? "font-semibold text-destructive" : ""}`}>
-                    {r.days && r.load != null ? `${r.load}%` : "—"}
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -81,12 +75,12 @@ export default async function FactoriesPage({ searchParams }: PageProps<"/admin/
                 <TableCell className="text-right tabular-nums">{formatKg(rows.reduce((s, r) => s + r.produced, 0))}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatKg(rows.reduce((s, r) => s + r.producing, 0))}</TableCell>
                 <TableCell className="text-right tabular-nums">{rows.reduce((s, r) => s + r.jobs, 0)}</TableCell>
-                <TableCell colSpan={3} />
+                <TableCell colSpan={2} />
               </TableRow>
             </TableFooter>
           </Table>
           <p className="mt-2 text-xs text-muted-foreground">
-            Theo ngày sản xuất. “Đã sản xuất” là kg quản lý đã nhận; “Công suất dùng” = TB kg mỗi ngày có lệnh ÷ công suất/ngày.
+            Theo ngày sản xuất. “Đã sản xuất” là kg quản lý đã nhận.
           </p>
         </CardContent>
       </Card>

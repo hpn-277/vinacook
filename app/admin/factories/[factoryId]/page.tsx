@@ -22,7 +22,7 @@ export default async function FactoryMonthPage({ params, searchParams }: PagePro
   const raw = (await searchParams).month;
   const month = (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
   if (!Number.isInteger(factoryId)) notFound();
-  const { data: factory } = await db().from("factories").select("id, name, address, phone, capacity_kg_per_day, active").eq("id", factoryId).maybeSingle();
+  const { data: factory } = await db().from("factories").select("id, name, address, phone, active").eq("id", factoryId).maybeSingle();
   if (!factory) notFound();
 
   const jobs = await jobsInMonth(month, factoryId);
@@ -39,7 +39,7 @@ export default async function FactoryMonthPage({ params, searchParams }: PagePro
     { label: "Đã sản xuất", value: formatKg(produced), note: `${jobs.filter((j) => j.status === "received").length} lệnh đã nhận` },
     { label: "Đang sản xuất", value: formatKg(producing), note: producing ? "Chờ quản lý nhận hàng" : "Không có" },
     { label: "Ngày có lệnh", value: String(days.length), note: days.length ? `TB ${formatKg(Math.round(total / days.length))}/ngày` : "—" },
-    { label: "Ngày cao nhất", value: formatKg(peak), note: `Công suất ${formatKg(factory.capacity_kg_per_day)}/ngày` },
+    { label: "Ngày cao nhất", value: formatKg(peak), note: "Tổng kg một ngày" },
   ];
 
   return (
@@ -103,9 +103,7 @@ export default async function FactoryMonthPage({ params, searchParams }: PagePro
                           </TableCell>
                           <TableCell className="text-right tabular-nums">{formatKg(js.reduce((s, j) => s + j.qty_kg, 0))}</TableCell>
                           <TableCell className="text-right tabular-nums">{formatKg(dayKg)}</TableCell>
-                          <TableCell className={`text-xs font-normal ${dayKg > factory.capacity_kg_per_day ? "text-destructive" : "text-muted-foreground"}`}>
-                            {Math.round((dayKg / factory.capacity_kg_per_day) * 100)}% công suất
-                          </TableCell>
+                          <TableCell />
                         </TableRow>
                         {js.map((j) => (
                           <TableRow key={j.id}>

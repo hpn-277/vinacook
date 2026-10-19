@@ -1,11 +1,15 @@
--- price_per_kg is the wholesale price; retail adds settings.retail_markup_pct (25%).
-insert into products (name, price_per_kg, image_url, description) values
-  ('Mì trứng', 25000, '/products/mi-trung.svg', 'Mì trứng tươi làm từ bột mì và trứng gà, sợi vàng dai. Hợp xào, trụng nước lèo. Dùng trong 2 ngày, bảo quản mát.'),
-  ('Mì vàng sợi nhỏ', 24000, '/products/mi-vang-soi-nho.svg', 'Sợi mì vàng nhỏ, mềm, chín nhanh. Hợp mì nước, mì hoành thánh. Dùng trong 2 ngày, bảo quản mát.'),
-  ('Hủ tiếu dai', 22000, '/products/hu-tieu-dai.svg', 'Hủ tiếu bột gạo sợi dai, không bở khi trụng. Hợp hủ tiếu Nam Vang, hủ tiếu xào. Dùng trong 2 ngày, bảo quản mát.'),
-  ('Bánh phở tươi', 18000, '/products/banh-pho-tuoi.svg', 'Bánh phở gạo tươi tráng mỗi sáng, sợi mềm. Hợp phở bò, phở gà, phở xào. Dùng trong 2 ngày, bảo quản mát.'),
-  ('Bún tươi', 15000, '/products/bun-tuoi.svg', 'Bún gạo tươi sợi vừa, trắng mềm. Hợp bún chả, bún thịt nướng, bún riêu. Dùng trong 2 ngày, bảo quản mát.'),
-  ('Mì quảng', 26000, '/products/mi-quang.svg', 'Sợi mì quảng bản to, màu vàng nghệ. Hợp mì quảng gà, tôm thịt. Dùng trong 2 ngày, bảo quản mát.');
+insert into factories (name, address, phone) values
+  ('Xưởng Bình Tân', 'Bình Tân, TP.HCM', '0281000001'),
+  ('Xưởng Hóc Môn', 'Hóc Môn, TP.HCM', '0281000002');
+
+-- price_per_kg is the wholesale price; retail adds settings.retail_markup_pct (25%). Each product is made by one factory.
+insert into products (name, price_per_kg, image_url, description, factory_id) values
+  ('Mì trứng', 25000, '/products/mi-trung.svg', 'Mì trứng tươi làm từ bột mì và trứng gà, sợi vàng dai. Hợp xào, trụng nước lèo. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Bình Tân')),
+  ('Mì vàng sợi nhỏ', 24000, '/products/mi-vang-soi-nho.svg', 'Sợi mì vàng nhỏ, mềm, chín nhanh. Hợp mì nước, mì hoành thánh. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Bình Tân')),
+  ('Hủ tiếu dai', 22000, '/products/hu-tieu-dai.svg', 'Hủ tiếu bột gạo sợi dai, không bở khi trụng. Hợp hủ tiếu Nam Vang, hủ tiếu xào. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Bình Tân')),
+  ('Bánh phở tươi', 18000, '/products/banh-pho-tuoi.svg', 'Bánh phở gạo tươi tráng mỗi sáng, sợi mềm. Hợp phở bò, phở gà, phở xào. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Hóc Môn')),
+  ('Bún tươi', 15000, '/products/bun-tuoi.svg', 'Bún gạo tươi sợi vừa, trắng mềm. Hợp bún chả, bún thịt nướng, bún riêu. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Hóc Môn')),
+  ('Mì quảng', 26000, '/products/mi-quang.svg', 'Sợi mì quảng bản to, màu vàng nghệ. Hợp mì quảng gà, tôm thịt. Dùng trong 2 ngày, bảo quản mát.', (select id from factories where name = 'Xưởng Hóc Môn'));
 
 -- Kg and Túi are no longer sold; they stay (inactive) for history orders.
 insert into product_packs (product_id, name, kg_per_unit, image_url, active)
@@ -16,10 +20,6 @@ cross join (values
   ('Thùng', 10, 'thung', true), ('Thùng', 15, 'thung', true), ('Bao', 30, 'bao', true)
 ) as pk(name, kg, image, active)
 order by p.id, pk.kg;
-
-insert into factories (name, address, phone, capacity_kg_per_day) values
-  ('Xưởng Bình Tân', 'Bình Tân, TP.HCM', '0281000001', 500),
-  ('Xưởng Hóc Môn', 'Hóc Môn, TP.HCM', '0281000002', 300);
 
 create temp table seed_staff (email text, role staff_role, name text, phone text, ref_code text, pct numeric, factory text);
 insert into seed_staff values

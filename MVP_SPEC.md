@@ -15,11 +15,11 @@ Next.js (App Router) + Supabase (Postgres + Auth for staff) + Vercel. UI Vietnam
 | Driver | yes | see own assigned deliveries, confirm the goods are loaded, mark delivered (optional proof photo) or failed |
 
 ## Data model
-- `products` (id, name, image_url, price_per_kg = wholesale price, active)
+- `products` (id, name, image_url, price_per_kg = wholesale price, factory_id = the one factory that makes it, active)
 - `product_packs` (id, product_id, name e.g. Kg/Thùng/Bao, kg_per_unit, active)
 - `customers` (id, phone UNIQUE, name, default_address, default_district, sale_id NULL, created_at)
 - `staff` (id, auth_user_id, role[manager|sale|factory|driver|cashier|accountant], name, phone, ref_code UNIQUE NULL, commission_pct NULL, factory_id NULL, active)
-- `factories` (id, name, address, phone, capacity_kg_per_day, active)
+- `factories` (id, name, address, phone, active)
 - `orders` (id, code, customer_id, sale_id NULL — snapshot at creation, created_by[customer|sale|manager], created_by_staff_id NULL, production_date, address, district, phone, note, status, payment_status[unpaid|paid], paid_at NULL, paid_by NULL → staff, total, driver_id NULL, fail_reason NULL, departed_at NULL, delivered_at NULL, delivery_photo_path NULL, created_at)
 - `order_items` (id, order_id, product_id, pack_id, pack_name, kg_per_unit, pack_qty, qty_kg = pack_qty × kg_per_unit, wholesale_price_per_kg, price_per_kg, line_total — snapshots); `orders` also snapshot price_tier (si|le) and the pricing terms
 - `payment_events` (id, order_id, staff_id, action[paid|unpaid], amount = order total at the time, note NULL, created_at): audit log, one row per real payment change
@@ -51,7 +51,7 @@ Close day creates jobs as `producing` ("Đang sản xuất"); receive day marks 
 1. **Customer order** – `/` product list → cart (pack + quantity per line, converted to kg; wholesale or retail for the whole order) → name, phone, address, note → submit. If `?ref=CODE` (stored in cookie) and customer phone has no sale → bind sale (sticky forever). Existing owner never overwritten. production_date = today if before cutoff else tomorrow.
 2. **Sale order** – sale picks/creates customer by phone. If phone owned by another sale → order saved, `sale_id` = existing owner, warning shown.
 3. **Review** (manager) – `placed` orders need no approval; the manager cancels unwanted ones before closing the day.
-4. **Close day** (manager) – every `placed` order of the date; shows totals kg per product for date. Manager splits each product across factories (inputs per factory, capacity warning if sum per factory > capacity). Must allocate 100% before send. Send → jobs `producing`, orders → `in_production`, day `closed`, orders locked.
+4. **Close day** (manager) – every `placed` order of the date; shows kg per product grouped under the factory that makes it (`products.factory_id`). Manager only checks and cancels invalid orders; no manual split. Send → jobs `producing`, orders → `in_production`, day `closed`, orders locked.
 5. **Factory** – read-only list of its own jobs for today and tomorrow. No buttons; never shows customers or prices.
 6. **Receive** (manager) – on `/admin/orders` for a closed day with orders in production, one "Xác nhận đã nhận hàng" button (with confirmation): all jobs received at planned kg, orders → ready ("Đã nhận hàng"). Refused on an open day. Factories are expected to produce exactly what is required.
 7. **Dispatch** (manager) – on `/admin/orders?date=`, tick received orders (or "Chọn tất cả") and pick a driver → "Giao cho tài xế".
@@ -71,7 +71,7 @@ Per sale, per month: `sum(order.total where status=delivered and delivered_at in
 ## Screens
 - Public: `/`, `/checkout`, `/orders` (lookup), `/r/[code]` (sets ref cookie → `/`)
 - Sale: `/sale` (dashboard + ref link), `/sale/orders/new`, `/sale/customers`
-- Manager: `/admin` (month overview), `/admin/orders?date=` (day table: cancel, receive day, assign driver; payment shown read-only), `/admin/orders/[code]` (detail), `/admin/production/[date]` (close + split), `/admin/commission` (+ per sale), `/admin/settings` (products, factories, staff, cutoff)
+- Manager: `/admin` (month overview), `/admin/orders?date=` (day table: cancel, receive day, assign driver; payment shown read-only), `/admin/orders/[code]` (detail), `/admin/production/[date]` (review + close), `/admin/commission` (+ per sale), `/admin/settings` (products, factories, staff, cutoff)
 - Finance (cashier, accountant): `/finance` (Công nợ), `/finance/payments` (Lịch sử thu), `/finance/orders/[code]` (detail + payment log)
 - Factory: `/factory`
 - Driver: `/driver`
@@ -86,7 +86,7 @@ OTP, per-customer price lists, online payment, e-invoice/MISA, Zalo OA, forecast
 
 ## Seed data (local)
 - Products (wholesale per kg; packs Kg 1 kg plus Thùng/Bao/Túi): Mì trứng 25.000đ/kg, Mì vàng sợi nhỏ 24.000đ/kg, Hủ tiếu dai 22.000đ/kg, Bánh phở tươi 18.000đ/kg, Bún tươi 15.000đ/kg, Mì quảng 26.000đ/kg
-- Factories: Xưởng Bình Tân (cap 500kg/day), Xưởng Hóc Môn (cap 300kg/day, inactive-ready second factory for split testing)
+- Factories: Xưởng Bình Tân, Xưởng Hóc Môn. Mì trứng, Mì vàng, Hủ tiếu → Bình Tân; Bánh phở, Bún, Mì quảng → Hóc Môn
 - Staff: manager@local, sale1@local (ref NVKD01, 5%), sale2@local (ref NVKD02, 7%), factory1@local, factory2@local, driver1@local, driver2@local, cashier@local (Thủ quỹ), accountant@local (Kế toán) — password `password123`
 
 ## Local setup

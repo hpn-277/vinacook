@@ -85,14 +85,14 @@ isOneToOne: false
                   ]
                 },"factories": {
                   Row: {
-                    "active": boolean,"address": string | null,"capacity_kg_per_day": number,"id": number,"name": string,"phone": string | null
+                    "active": boolean,"address": string | null,"id": number,"name": string,"phone": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"address"?: string | null,"capacity_kg_per_day": number,"id"?: never,"name": string,"phone"?: string | null
+                    "active"?: boolean,"address"?: string | null,"id"?: never,"name": string,"phone"?: string | null
                   }
                   Update: {
-                    "active"?: boolean,"address"?: string | null,"capacity_kg_per_day"?: number,"id"?: never,"name"?: string,"phone"?: string | null
+                    "active"?: boolean,"address"?: string | null,"id"?: never,"name"?: string,"phone"?: string | null
                   }
                   Relationships: [
                     
@@ -279,17 +279,23 @@ isOneToOne: false
                   ]
                 },"products": {
                   Row: {
-                    "active": boolean,"description": string | null,"id": number,"image_url": string | null,"name": string,"price_per_kg": number
+                    "active": boolean,"description": string | null,"factory_id": number,"id": number,"image_url": string | null,"name": string,"price_per_kg": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"description"?: string | null,"id"?: never,"image_url"?: string | null,"name": string,"price_per_kg": number
+                    "active"?: boolean,"description"?: string | null,"factory_id": number,"id"?: never,"image_url"?: string | null,"name": string,"price_per_kg": number
                   }
                   Update: {
-                    "active"?: boolean,"description"?: string | null,"id"?: never,"image_url"?: string | null,"name"?: string,"price_per_kg"?: number
+                    "active"?: boolean,"description"?: string | null,"factory_id"?: number,"id"?: never,"image_url"?: string | null,"name"?: string,"price_per_kg"?: number
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "products_factory_id_fkey"
+      columns: ["factory_id"]
+isOneToOne: false
+      referencedRelation: "factories"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"settings": {
                   Row: {
@@ -346,7 +352,7 @@ isOneToOne: false
           }
           Functions: {
             "close_production_day":
-{ Args: { "p_alloc": Json,"p_date": string }; Returns: undefined
+{ Args: { "p_date": string }; Returns: undefined
                            },
 "commission_report":
 { Args: { "p_month": string }; Returns: {

@@ -89,6 +89,7 @@ export default async function SettingsPage() {
                 <TableHead>Tên</TableHead>
                 <TableHead>Giá sỉ/kg</TableHead>
                 <TableHead>Giá lẻ/kg</TableHead>
+                <TableHead>Xưởng</TableHead>
                 <TableHead>Ảnh</TableHead>
                 <TableHead>Mô tả</TableHead>
                 <TableHead>Đang bán</TableHead>
@@ -108,6 +109,19 @@ export default async function SettingsPage() {
                     </TableCell>
                     <TableCell className="align-middle text-muted-foreground">
                       {p && formatVnd(retailPerKg(p.price_per_kg, settings.retail_markup_pct))}
+                    </TableCell>
+                    <TableCell>
+                      <NativeSelect form={form} name="factory_id" required defaultValue={p?.factory_id ?? ""} aria-label={`Xưởng làm ${p?.name ?? "sản phẩm mới"}`} className="min-w-36">
+                        <NativeSelectOption value="" disabled>
+                          Chọn xưởng
+                        </NativeSelectOption>
+                        {factories.map((f) => (
+                          <NativeSelectOption key={f.id} value={f.id}>
+                            {f.name}
+                            {f.active ? "" : " (ngừng)"}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelect>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
@@ -262,7 +276,6 @@ export default async function SettingsPage() {
                 <TableHead>Tên</TableHead>
                 <TableHead>Địa chỉ</TableHead>
                 <TableHead>SĐT</TableHead>
-                <TableHead>Công suất kg/ngày</TableHead>
                 <TableHead>Hoạt động</TableHead>
                 <TableHead />
               </TableRow>
@@ -280,17 +293,6 @@ export default async function SettingsPage() {
                     </TableCell>
                     <TableCell>
                       <Input form={form} name="phone" defaultValue={f?.phone ?? ""} placeholder="SĐT" className="w-32" />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        form={form}
-                        name="capacity_kg_per_day"
-                        type="number"
-                        defaultValue={f?.capacity_kg_per_day}
-                        placeholder="Công suất kg/ngày"
-                        required
-                        className="w-40"
-                      />
                     </TableCell>
                     <TableCell className="align-middle">
                       <Checkbox form={form} name="active" defaultChecked={f?.active ?? true} aria-label="Hoạt động" />

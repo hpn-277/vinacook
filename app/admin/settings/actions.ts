@@ -21,6 +21,7 @@ const productSchema = z.object({
   id: optionalId,
   name: z.string().trim().min(1, "Nhập tên sản phẩm"),
   price_per_kg: z.coerce.number().int("Giá phải là số nguyên").positive("Giá phải > 0"),
+  factory_id: z.coerce.number({ message: "Chọn xưởng sản xuất" }).int().positive("Chọn xưởng sản xuất"),
   description: z.preprocess(
     (v) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null),
     z.string().max(1000, "Mô tả tối đa 1000 ký tự").nullable(),
@@ -87,7 +88,6 @@ const factorySchema = z.object({
   name: z.string().trim().min(1, "Nhập tên xưởng"),
   address: optionalText,
   phone: optionalText,
-  capacity_kg_per_day: z.coerce.number().min(0),
   active: checkbox,
 });
 
