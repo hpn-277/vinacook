@@ -7,7 +7,6 @@ const LINKS = [
   { href: "/admin/factories", label: "Xưởng" },
   { href: "/admin/staff", label: "Nhân viên" },
   { href: "/admin/products", label: "Sản phẩm" },
-  { href: "/sale/orders/new", label: "Tạo đơn" },
 ];
 
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {

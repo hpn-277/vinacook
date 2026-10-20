@@ -19,10 +19,15 @@ type Props = {
   className?: string;
   confirm?: string;
   id?: string;
+  onSuccess?: () => void;
 };
 
-export function ActionForm({ action, children, className, confirm, id }: Props) {
-  const [state, formAction, pending] = useActionState(action, null);
+export function ActionForm({ action, children, className, confirm, id, onSuccess }: Props) {
+  const [state, formAction, pending] = useActionState(async (prev: ActionResult, fd: FormData) => {
+    const result = await action(prev, fd);
+    if (result?.ok) onSuccess?.();
+    return result;
+  }, null);
   const form = useRef<HTMLFormElement>(null);
   const confirmed = useRef(false);
   const [asking, setAsking] = useState(false);

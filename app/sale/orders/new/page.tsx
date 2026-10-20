@@ -1,18 +1,13 @@
-import { ActionForm } from "@/components/ActionForm";
 import { PageTitle } from "@/components/page-title";
-import { wholesaleRule } from "@/components/PricingSummary";
+import { StaffOrderForm } from "@/components/StaffOrderForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { Textarea } from "@/components/ui/textarea";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { packSize } from "@/lib/domain/catalog";
 import { DISTRICTS } from "@/lib/domain/districts";
-import { formatVnd } from "@/lib/domain/money";
-import { retailPerKg } from "@/lib/domain/pricing";
 import { getSettings, loadCatalog, pricingTerms } from "@/lib/orders";
 import { placeStaffOrder } from "./actions";
 
@@ -50,9 +45,9 @@ export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sa
           )}
         </p>
       )}
-      <Card>
-        <CardContent>
-          <ActionForm action={placeStaffOrder} key={phone}>
+      <StaffOrderForm action={placeStaffOrder} catalog={catalog} terms={terms} key={phone}>
+        <Card>
+          <CardContent>
             <FieldGroup className="gap-4">
               <Field>
                 <FieldLabel htmlFor="order-phone">Số điện thoại</FieldLabel>
@@ -77,48 +72,10 @@ export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sa
                   ))}
                 </NativeSelect>
               </Field>
-              <FieldSet className="gap-3">
-                <FieldLegend variant="label">Sản phẩm (số lượng theo quy cách)</FieldLegend>
-                <FieldDescription>{wholesaleRule(terms)}, áp dụng cho cả đơn; giá được tính khi lưu.</FieldDescription>
-                {catalog.map((p) => (
-                  <div key={p.id} className="rounded-lg border p-2.5">
-                    <div className="mb-2 text-sm">
-                      <b>{p.name}</b>{" "}
-                      <span className="text-muted-foreground">
-                        Sỉ {formatVnd(p.price_per_kg)}/kg · Lẻ {formatVnd(retailPerKg(p.price_per_kg, terms.retailMarkupPct))}/kg
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {p.packs.map((pack) => (
-                        <label key={pack.id} className="text-xs text-muted-foreground">
-                          {packSize(pack)}
-                          <Input
-                            name={`qty_${pack.id}`}
-                            aria-label={`Số lượng ${p.name} - ${packSize(pack)}`}
-                            type="number"
-                            inputMode="numeric"
-                            min={0}
-                            step={1}
-                            placeholder="0"
-                            className="mt-1 text-right"
-                          />
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </FieldSet>
-              <Field>
-                <FieldLabel htmlFor="order-note">Ghi chú</FieldLabel>
-                <Textarea id="order-note" name="note" rows={2} />
-              </Field>
-              <Button type="submit" size="lg" className="w-full">
-                Tạo đơn
-              </Button>
             </FieldGroup>
-          </ActionForm>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </StaffOrderForm>
     </>
   );
 }

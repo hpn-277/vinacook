@@ -1,4 +1,5 @@
 -- Factories and the product catalog come from the migrations (20261031000000_vinacook_catalog.sql); this file adds demo people and orders.
+-- Every factory gets a login except VinaCook, whose production the manager runs directly.
 
 create temp table seed_staff (email text, role staff_role, name text, phone text, ref_code text, pct numeric, factory text);
 insert into seed_staff values
@@ -7,6 +8,11 @@ insert into seed_staff values
   ('sale2@local', 'sale', 'NVKD 02', '0900000002', 'NVKD02', 7, null),
   ('factory1@local', 'factory', 'Xưởng Chu Hải', '0281000001', null, null, 'Chu Hải'),
   ('factory2@local', 'factory', 'Xưởng Minh Anh', '0281000002', null, null, 'Minh Anh'),
+  ('factory3@local', 'factory', 'Xưởng Nguyễn Hải', '0281000003', null, null, 'Nguyễn Hải'),
+  ('factory4@local', 'factory', 'Xưởng Vũ Thị Thắng', '0281000004', null, null, 'Vũ Thị Thắng'),
+  ('factory5@local', 'factory', 'Xưởng Miễn Huyền', '0281000005', null, null, 'Miễn Huyền'),
+  ('factory6@local', 'factory', 'Xưởng Phở Việt Gia Truyền', '0281000006', null, null, 'Phở Việt Gia Truyền'),
+  ('factory7@local', 'factory', 'Xưởng Kim Ửng', '0281000007', null, null, 'Kim Ửng'),
   ('driver1@local', 'driver', 'Tài xế 1', '0910000001', null, null, null),
   ('driver2@local', 'driver', 'Tài xế 2', '0910000002', null, null, null),
   ('cashier@local', 'cashier', 'Thủ quỹ', '0920000001', null, null, null),
