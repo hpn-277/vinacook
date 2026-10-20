@@ -73,8 +73,11 @@ async function login(browser: Browser, email: string, mobile: boolean) {
 
 type Info = { name: string; phone: string; address: string; district: string; note?: string };
 async function customerCheckout(page: Page, items: Record<string, number>, info: Info, slug?: string) {
-  await page.goto(`${BASE}/`);
-  for (const [pack, qty] of Object.entries(items)) await page.getByLabel(`Số lượng ${pack}`, { exact: true }).fill(String(qty));
+  for (const [pack, qty] of Object.entries(items)) {
+    await page.goto(`${BASE}/`);
+    await page.locator(`[data-product="${pack.split(" - ")[0]}"]`).click();
+    await page.getByLabel(`Số lượng ${pack}`, { exact: true }).fill(String(qty));
+  }
   if (slug) await shot(page, `${slug}-shop`);
   await page.getByRole("link", { name: "Đặt hàng" }).click();
   await page.waitForURL("**/checkout");

@@ -80,8 +80,11 @@ async function login(browser: Browser, email: string, mobile = false) {
 
 /** items: "<product> - <pack>" -> pack quantity. Returns the order code and the shop's tier hint before checkout. */
 async function customerCheckout(page: Page, items: Record<string, number>, info: { name: string; phone: string; address: string; district: string }) {
-  await page.goto(`${BASE}/`);
-  for (const [pack, qty] of Object.entries(items)) await page.getByLabel(`Số lượng ${pack}`, { exact: true }).fill(String(qty));
+  for (const [pack, qty] of Object.entries(items)) {
+    await page.goto(`${BASE}/`);
+    await page.locator(`[data-product="${pack.split(" - ")[0]}"]`).click();
+    await page.getByLabel(`Số lượng ${pack}`, { exact: true }).fill(String(qty));
+  }
   const hint = await page.getByTestId("tier-hint").innerText();
   await page.getByRole("link", { name: "Đặt hàng" }).click();
   await page.waitForURL("**/checkout");

@@ -20,7 +20,7 @@ export async function ShopPage({ referrer }: { referrer?: { name: string; code: 
         </Alert>
       )}
       <p className="mb-4 text-sm text-muted-foreground">
-        Chọn quy cách và số lượng. {wholesaleRule(terms)}, áp dụng cho cả đơn. Đặt trước {settings.cutoff_time.slice(0, 5)} giao trong ngày sản
+        Chọn sản phẩm để xem quy cách và đặt hàng. {wholesaleRule(terms)}, áp dụng cho cả đơn. Đặt trước {settings.cutoff_time.slice(0, 5)} giao trong ngày sản
         xuất hôm nay.
       </p>
       <LastOrderCard />
