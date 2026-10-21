@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/PasswordInput";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { currentStaff, ROLE_HOME } from "@/lib/auth";
 import { login } from "./actions";
 

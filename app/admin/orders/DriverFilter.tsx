@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { applyRowFilters, NO_DRIVER } from "@/components/row-filters";
+import { applyRowFilters, NO_DRIVER } from "./row-filters";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
 export function DriverFilter({ drivers, unassigned }: { drivers: { id: number; name: string; count: number }[]; unassigned: number }) {

@@ -1,4 +1,4 @@
-import { ShopPage } from "@/components/ShopPage";
+import { ShopPage } from "@/components/shop/ShopPage";
 import { db } from "@/lib/db";
 
 export default async function ReferralShopPage({ params }: PageProps<"/r/[code]">) {

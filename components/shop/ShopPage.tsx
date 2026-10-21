@@ -1,7 +1,7 @@
-import { PublicShell } from "@/components/PublicShell";
+import { PublicShell } from "@/components/shop/PublicShell";
 import { wholesaleRule } from "@/components/PricingSummary";
-import { LastOrderCard } from "@/components/Reorder";
-import { Shop } from "@/components/Shop";
+import { LastOrderCard } from "@/components/shop/Reorder";
+import { Shop } from "@/components/shop/Shop";
 import { PageTitle } from "@/components/page-title";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getSettings, loadCatalog, pricingTerms } from "@/lib/orders";

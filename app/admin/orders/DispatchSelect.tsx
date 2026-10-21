@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { applyRowFilters } from "@/components/row-filters";
+import { applyRowFilters } from "./row-filters";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
 const boxes = (form: string) => document.querySelectorAll<HTMLInputElement>(`input[type=checkbox][form="${form}"][name="order_id"]`);

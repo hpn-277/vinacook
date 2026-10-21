@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { ADMIN_ORDER_SELECT, type AdminOrder } from "@/components/AdminOrderCard";
-import { AdminOrderTable } from "@/components/AdminOrderTable";
+import { AdminOrderTable } from "./AdminOrderTable";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageTitle } from "@/components/page-title";
-import { DispatchSelect } from "@/components/DispatchSelect";
-import { DriverFilter } from "@/components/DriverFilter";
+import { DispatchSelect } from "./DispatchSelect";
+import { DriverFilter } from "./DriverFilter";
 import { Badge } from "@/components/ui/badge";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";

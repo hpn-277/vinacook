@@ -1,5 +1,5 @@
 import { PageTitle } from "@/components/page-title";
-import { StaffOrderForm } from "@/components/StaffOrderForm";
+import { StaffOrderForm } from "./StaffOrderForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";

@@ -3,7 +3,7 @@
 import { RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ComponentProps } from "react";
-import { rememberContact, setCart, useContact } from "@/components/cart";
+import { rememberContact, setCart, useContact } from "@/components/shop/cart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { ReorderSource } from "@/lib/reorder";

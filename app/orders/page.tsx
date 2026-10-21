@@ -1,7 +1,7 @@
 import { TruckIcon } from "lucide-react";
 import { PageTitle } from "@/components/page-title";
-import { PublicShell } from "@/components/PublicShell";
-import { ReorderButton } from "@/components/Reorder";
+import { PublicShell } from "@/components/shop/PublicShell";
+import { ReorderButton } from "@/components/shop/Reorder";
 import { OrderBadge, TierBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

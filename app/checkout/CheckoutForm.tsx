@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
-import { rememberContact, setCart, useCart, useContact } from "@/components/cart";
+import { rememberContact, setCart, useCart, useContact } from "@/components/shop/cart";
 import { TierHint } from "@/components/PricingSummary";
 import { TierBadge } from "@/components/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

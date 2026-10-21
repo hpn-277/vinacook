@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { setCart, useCart } from "@/components/cart";
+import { setCart, useCart } from "@/components/shop/cart";
 import { TierHint } from "@/components/PricingSummary";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

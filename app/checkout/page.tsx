@@ -1,4 +1,4 @@
-import { PublicShell } from "@/components/PublicShell";
+import { PublicShell } from "@/components/shop/PublicShell";
 import { PageTitle } from "@/components/page-title";
 import { getSettings, loadCatalog, pricingTerms } from "@/lib/orders";
 import { placeCustomerOrder } from "./actions";

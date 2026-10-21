@@ -3,7 +3,7 @@
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { QtyStepper } from "@/components/QtyStepper";
-import { CartBar, ProductImage, useShopCart } from "@/components/Shop";
+import { CartBar, ProductImage, useShopCart } from "@/components/shop/Shop";
 import { Card } from "@/components/ui/card";
 import { packCaption, packSize, type CatalogProduct } from "@/lib/domain/catalog";
 import { formatVnd } from "@/lib/domain/money";

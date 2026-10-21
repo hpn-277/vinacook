@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/PasswordInput";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { authClient } from "@/lib/supabase/auth-client";
 import { setPassword } from "./actions";
 

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { ProductView } from "@/components/ProductView";
-import { PublicShell } from "@/components/PublicShell";
+import { ProductView } from "./ProductView";
+import { PublicShell } from "@/components/shop/PublicShell";
 import { getSettings, loadCatalog, pricingTerms } from "@/lib/orders";
 
 export default async function ProductPage({ params }: PageProps<"/products/[id]">) {

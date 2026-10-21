@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AutoSubmitForm } from "@/components/AutoSubmitForm";
 import { PageTitle } from "@/components/page-title";
-import { StatTiles } from "@/components/StatTiles";
+import { StatTiles } from "@/components/finance/StatTiles";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";

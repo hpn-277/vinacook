@@ -1,7 +1,7 @@
 import { AutoSubmitForm } from "@/components/AutoSubmitForm";
-import { DebtTable, type DebtCustomer } from "@/components/DebtTable";
+import { DebtTable, type DebtCustomer } from "./DebtTable";
 import { PageTitle } from "@/components/page-title";
-import { StatTiles } from "@/components/StatTiles";
+import { StatTiles } from "@/components/finance/StatTiles";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { unwrap } from "@/lib/action";
 import { requireRole } from "@/lib/auth";
