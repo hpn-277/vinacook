@@ -10,3 +10,6 @@ supabase/.branches
 .dev.vars*
 .env
 .playwright-mcp
+
+# wrangler types output (apps/api: pnpm cf-typegen, run by dev/typecheck)
+worker-configuration.d.ts

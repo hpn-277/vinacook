@@ -8,6 +8,8 @@ const lines = [
   `SUPABASE_PUBLISHABLE_KEY=${status.PUBLISHABLE_KEY}`,
   `SUPABASE_SECRET_KEY=${status.SECRET_KEY}`,
   `DATABASE_URL=${status.DB_URL}`,
-];
-writeFileSync(".env.local", lines.join("\n") + "\n");
-console.log("wrote .env.local");
+].join("\n") + "\n";
+// next dev reads apps/web/.env.local; wrangler dev reads apps/api/.dev.vars.
+writeFileSync("apps/web/.env.local", lines);
+writeFileSync("apps/api/.dev.vars", lines);
+console.log("wrote apps/web/.env.local and apps/api/.dev.vars");

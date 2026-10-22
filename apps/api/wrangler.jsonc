@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "noodle-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // Reached through the web worker's API service binding (same origin /api/* and /files/*), not directly.
+  "workers_dev": false,
+  // Delivery photos (staff-only) and product images (public), served by src/routes/files.ts.
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "noodle-files" }]
+}

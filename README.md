@@ -2,35 +2,58 @@
 
 VinaCook is the ordering, production and delivery app for a fresh-noodle distributor in Ho Chi Minh City. The UI is Vietnamese. See `MVP_SPEC.md` for scope.
 
-Stack: Next.js (App Router) on Cloudflare Workers via OpenNext, Supabase (Postgres and Auth), and Cloudflare R2 for files. All data access runs on the server with the Supabase secret key, after a role check in `lib/auth.ts` (`requireRole`).
+Stack: a pnpm monorepo on Cloudflare Workers, Supabase (Postgres and Auth), and Cloudflare R2 for files.
+
+| Path | What |
+|---|---|
+| `apps/web` | Next.js (App Router) via OpenNext: pages, components, server-rendered reads. |
+| `apps/api` | Hono API worker: every write, auth, and `/files`. Web forms and the future mobile app both call it. |
+| `packages/core` | Shared domain logic, Supabase client and types, zod field schemas. |
+| `supabase/` | Migrations, seed, email templates. |
+
+All data access runs on the server with the Supabase secret key, after a role check: `requireRole` (`apps/web/lib/auth.ts`) for pages, `role(...)` (`apps/api/src/http.ts`) for the API.
+
+The web worker forwards `/api/*` and `/files/*` to the API worker over the `API` service binding, so the API is same-origin with the pages and the Supabase session cookies just work. Mobile calls the same URLs with `Authorization: Bearer <supabase access token>`.
+
+## API
+
+Hono, mounted at `/api/v1`. Routes live in `apps/api/src/routes/`, one file per area. Error bodies are `{ "error": "<Vietnamese message>" }` (400 validation and domain errors, 401, 403, 500); successful writes answer `{ "message"?: string, "redirect"?: string }`.
+
+Clients use the typed Hono RPC client: `hc<AppType>(origin)` with `import type { AppType } from "@noodle/api"` (see `apps/web/lib/api.ts`). Web forms go through `apps/web/lib/mutations.ts`, which maps each form's fields onto its API call; `<ActionForm action="<name>">` submits one.
+
+Uploads (delivery photo, product images) are `multipart/form-data`; everything else is JSON.
 
 ## Prerequisites
 
-- Node.js 20 or later
+- Node.js 20 or later, pnpm (`corepack enable pnpm`)
 - Docker, running
 
 ## Run locally
 
 ```sh
-npm install
+pnpm install
 npx supabase start          # first run pulls Docker images
 npx supabase db reset       # applies supabase/migrations and supabase/seed.sql
-npm run env                 # writes .env.local from `supabase status`
-npm run dev                 # http://localhost:3000
-npm run seed:history        # optional: 6 weeks of past orders for demos (run right after db reset)
+pnpm run env                # writes apps/web/.env.local and apps/api/.dev.vars from `supabase status`
+pnpm dev                    # API on :8787 (wrangler), web on http://localhost:3000
+pnpm seed:history           # optional: 6 weeks of past orders for demos (run right after db reset)
 ```
 
-`.env.local` holds `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`. All three are server-only.
+The env files hold `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`. All three are server-only.
 
-`npm run dev` emulates the R2 bucket locally (stored in `.wrangler/`). `app/files/[...key]/route.ts` serves the bucket: `products/` is public, `delivery/` needs a staff login.
+`pnpm dev` emulates the R2 bucket locally (in `apps/api/.wrangler/`). `apps/api/src/routes/files.ts` serves it: `products/` is public, `delivery/` needs a staff login.
+
+Checks: `pnpm typecheck`, `pnpm test` (domain unit tests), `pnpm lint`, and `pnpm smoke` (drives every web form against the running app and checks the database; resets the local database first).
 
 ## Deploy (Cloudflare Workers)
 
 ```sh
 npx wrangler login
 npx wrangler r2 bucket create noodle-files
-npx wrangler secret put SUPABASE_URL              # repeat for SUPABASE_PUBLISHABLE_KEY and SUPABASE_SECRET_KEY
-npm run deploy
+# repeat for SUPABASE_PUBLISHABLE_KEY and SUPABASE_SECRET_KEY, in both apps/api and apps/web
+(cd apps/api && npx wrangler secret put SUPABASE_URL)
+(cd apps/web && npx wrangler secret put SUPABASE_URL)
+pnpm run deploy             # the API worker first, then the web worker that binds to it
 ```
 
 Production gets migrations only (`npx supabase db push`, never `--include-seed`), so it starts with no staff. Create the first manager with `scripts/create-manager.sql` (steps in the file), then add other staff from `/admin/staff`.
@@ -43,7 +66,7 @@ New staff get an email with a link to choose their password, and `/forgot-passwo
 
 Locally the emails land in Mailpit at http://127.0.0.1:54324.
 
-`npm run preview` runs the production build on the local Workers runtime with `.dev.vars` (copy of `.env.local`). After changing `wrangler.jsonc`, run `npm run cf-typegen`.
+`pnpm --filter @noodle/web preview` runs the production build on the local Workers runtime with `apps/web/.dev.vars`. After changing a `wrangler.jsonc`, run `pnpm --filter <app> cf-typegen`.
 
 ## Logins
 
