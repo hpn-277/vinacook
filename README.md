@@ -107,7 +107,7 @@ Customers do not log in. Open `/r/NVKD01` to order as a customer referred by sal
 ## Tests
 
 ```sh
-npm test        # vitest: state-machine tables, the 17:00 production-date cutoff, wholesale/retail pricing, and debt aging
+npm test        # vitest: state-machine tables, the 17:00 production-date cutoff, and wholesale/retail pricing
 npm run e2e     # full lifecycle in a real browser; needs `npm run dev` running
 ```
 
@@ -121,7 +121,7 @@ After a schema change, run `npm run gen:types` to regenerate `lib/database.types
 - `status_transitions` and a trigger in `supabase/migrations` hold the same tables in the database, so bulk moves inside SQL functions are checked too. The e2e script asserts that the two copies match.
 - `lib/domain/pricing.ts` is the only pricing rule. `products.price_per_kg` is the wholesale price; retail adds `settings.retail_markup_pct` rounded to 100đ. An order gets wholesale when it reaches `wholesale_min_kg` or a retail total of `wholesale_min_total`. Server actions price every order with it and pass the snapshots to `place_order`, which refuses a snapshot whose pack size or wholesale price no longer matches the catalog. Each order stores its tier and the terms it was priced with. Orders can be cancelled but not edited. The admin can restore a cancelled order ("Khôi phục") back to placed while its production day is today or later and not yet closed; a trigger in `supabase/migrations` refuses it otherwise.
 - Customers order packs (`product_packs`, managed in `/admin/products`). `order_items.qty_kg` is generated from pack quantity × kg per pack, so production and dispatch still work in kg.
-- Only the admin moves orders and jobs. Closing a day sends every `placed` order to production and creates `producing` jobs; receiving the day marks them `received` and the orders `ready` ("Đã nhận hàng"). Factories only read their jobs.
+- Only the admin moves orders and jobs. Closing a day sends every `placed` order to production and creates `producing` jobs; receiving a factory marks its jobs `received`, and each order turns `ready` ("Đã nhận hàng") once all its factories are received. Factories only read their jobs.
 - Drivers move orders themselves: `assigned` ("Chờ lên xe") to `out_for_delivery` when the goods are loaded (one UPDATE for the whole load, guarded by the trigger), then `delivered` or `failed`. Proof photos go to R2 under `delivery/` through a server action (`lib/delivery-photos.ts`).
-- Payment (gạch nợ) goes only through `set_payment()` in `supabase/migrations`, called by the server action in `app/finance/actions.ts` (admin or manager). It updates `payment_status`, `paid_at` and `paid_by` and writes one `payment_events` row per changed order. A trigger refuses any other change to those columns. Debt age and payment totals are pure helpers in `lib/domain/debt.ts`.
-- `close_production_day` and `receive_day` in `supabase/migrations` are atomic. Running close-day again on a closed day raises an error and creates no jobs.
+- Payment (gạch nợ) goes only through `set_payment()` in `supabase/migrations`, called from the order list's "Đã thu" action and the order page's payment box (admin or manager). It updates `payment_status`, `paid_at` and `paid_by` and writes one `payment_events` row per changed order. A trigger refuses any other change to those columns.
+- `close_production_day` and `receive_factory` in `supabase/migrations` are atomic. Goods are received per factory; an order turns ready only when every factory making something in it has delivered. Running close-day again on a closed day raises an error and creates no jobs.
