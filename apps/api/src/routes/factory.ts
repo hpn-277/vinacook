@@ -22,7 +22,7 @@ async function productRow(bucket: Bucket, { image_file, ...fields }: z.infer<typ
   return imageUrl ? { ...fields, image_url: imageUrl } : fields;
 }
 
-/** A factory proposes products it makes; they stay hidden from customers until the manager approves them. */
+/** A factory proposes products it makes; they stay hidden from customers until the admin approves them. */
 export const factory = new Hono<ApiEnv>()
   .use(role("factory"))
   .get("/days", async (c) => c.json(await factoryDays(c.get("staff").factory_id!)))
@@ -40,7 +40,7 @@ export const factory = new Hono<ApiEnv>()
     check(await db().from("product_packs").insert(STANDARD_PACKS.map((pk) => ({ ...pk, product_id: created.id }))));
     return c.json({ message: "Đã gửi sản phẩm, chờ quản lý duyệt" });
   })
-  /** Only its own products still under review or sent back; an approved product is the manager's to change. */
+  /** Only its own products still under review or sent back; an approved product is the admin's to change. */
   .patch("/products/:id", valid("param", z.object({ id })), valid("form", productForm), async (c) => {
     const updated = unwrap(
       await db()

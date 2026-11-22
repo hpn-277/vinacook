@@ -4,21 +4,19 @@ export type StaffRole = Enums<"staff_role">;
 export type Staff = Tables<"staff">;
 
 export const ROLE_HOME: Record<StaffRole, string> = {
-  manager: "/admin",
+  admin: "/admin/orders",
+  manager: "/admin/orders",
   sale: "/sale",
   factory: "/factory",
   driver: "/driver",
-  cashier: "/finance",
-  accountant: "/finance",
 };
 
 export const ROLE_LABEL: Record<StaffRole, string> = {
+  admin: "Quản trị",
   manager: "Quản lý",
   sale: "NVKD",
   factory: "Xưởng",
   driver: "Tài xế",
-  cashier: "Thủ quỹ",
-  accountant: "Kế toán",
 };
 
 export async function staffByAuthUser(authUserId: string): Promise<Staff | null> {

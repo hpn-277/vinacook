@@ -43,8 +43,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /**
- * Full order page. Managers get actions and the factory jobs; a sale sees only orders credited to them, read-only.
- * Finance (cashier, accountant) sees every order read-only plus the payment section; the cashier and the manager can settle.
+ * Full order page. The admin gets actions, payment and the factory jobs; the manager sees the same but may only mark payment.
+ * A sale sees only orders credited to them, read-only.
  */
 export async function OrderDetail({
   code,
@@ -53,9 +53,9 @@ export async function OrderDetail({
   code: string;
   viewer: OrderViewer;
 }) {
-  const manager = viewer.role === "manager";
-  const finance = viewer.role === "cashier" || viewer.role === "accountant";
-  const base = manager ? "/admin/orders" : finance ? "/finance/orders" : "/sale/orders";
+  const admin = viewer.role === "admin";
+  const office = viewer.role !== "sale";
+  const base = office ? "/admin/orders" : "/sale/orders";
   const detail = await orderDetail(code, viewer);
   if (!detail) notFound();
   const { order, creatorLabel, customerSince, photo, kg, atWholesale, commission, timeline, jobs, history } = detail;
@@ -64,10 +64,10 @@ export async function OrderDetail({
   return (
     <>
       <Link
-        href={manager ? `/admin/orders?date=${order.production_date}` : finance ? "/finance" : "/sale"}
+        href={office ? `/admin/orders?date=${order.production_date}` : "/sale"}
         className="mb-3 inline-block text-sm text-muted-foreground hover:text-foreground"
       >
-        {manager ? `‹ Đơn hàng ngày ${order.production_date}` : finance ? "‹ Công nợ" : "‹ Tổng quan"}
+        {office ? `‹ Đơn hàng ngày ${order.production_date}` : "‹ Tổng quan"}
       </Link>
       <div
         className="mb-4 flex flex-wrap items-center gap-2"
@@ -80,7 +80,7 @@ export async function OrderDetail({
         <span className="ml-auto text-xl font-bold tabular-nums">
           {formatVnd(order.total)}
         </span>
-        {manager && (MANAGER_ORDER_MOVES[order.status]?.length ?? 0) > 0 && (
+        {admin && (MANAGER_ORDER_MOVES[order.status]?.length ?? 0) > 0 && (
           <div className="flex w-full flex-wrap gap-2">
             <OrderActions order={order} />
           </div>
@@ -98,7 +98,7 @@ export async function OrderDetail({
             </Row>
             <Row label="Địa chỉ giao">
               {order.address}, {order.district}
-              {manager && CONTACT_EDITABLE(order.status) && (
+              {admin && CONTACT_EDITABLE(order.status) && (
                 <div className="mt-1">
                   <EditContact order={order} />
                 </div>
@@ -188,7 +188,7 @@ export async function OrderDetail({
       </div>
 
       <div className="mt-4 grid gap-4">
-        {(finance || manager) && <PaymentPanel order={order} canSettle={viewer.role === "cashier" || manager} />}
+        {office && <PaymentPanel order={order} />}
         <Section title="Hàng hóa & giá">
           <Table>
             <TableHeader>
@@ -248,7 +248,7 @@ export async function OrderDetail({
           </p>
         </Section>
 
-        <div className={manager ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}>
+        <div className={office ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}>
           <Section title="Tiến trình">
             <ol className="space-y-3 text-sm">
               {timeline.map((t) => (
@@ -274,7 +274,7 @@ export async function OrderDetail({
             </ol>
           </Section>
 
-          {manager && (
+          {office && (
             <Section title={`Lệnh sản xuất ngày ${order.production_date}`}>
               {jobs.length === 0 ? (
                 <p className="text-sm text-muted-foreground">

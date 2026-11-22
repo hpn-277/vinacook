@@ -11,8 +11,8 @@ const paymentSchema = z.object({
   note: z.string().trim().max(500, "Ghi chú tối đa 500 ký tự").optional(),
 });
 
-/** Gạch nợ: the cashier or the manager (never the accountant). Orders already in the target state are skipped. */
-export const payments = new Hono().post("/", role("cashier", "manager"), valid("json", paymentSchema), async (c) => {
+/** Gạch nợ: admin or manager. Orders already in the target state are skipped. */
+export const payments = new Hono().post("/", role("admin", "manager"), valid("json", paymentSchema), async (c) => {
   const { order_ids, paid, note } = c.req.valid("json");
   const changed = unwrap(await db().rpc("set_payment", { p_order_ids: order_ids, p_paid: paid, p_staff_id: c.get("staff").id, p_note: note ?? "" }));
   if (changed === 0) return c.json({ message: "Không có đơn nào thay đổi" });

@@ -61,6 +61,12 @@ async function staffId(email: string) {
 
 const MOBILE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
 
+/** Picks an action from an order row's "⋯" menu; the confirm dialog it opens is left to the caller. */
+async function rowAction(page: Page, code: string, item: string | RegExp) {
+  await page.locator(`[data-order-code="${code}"]`).getByRole("button", { name: `Thao tác ${code}` }).click();
+  await page.getByRole("menuitem", { name: item }).click();
+}
+
 async function newPage(browser: Browser, mobile = false): Promise<{ ctx: BrowserContext; page: Page }> {
   const ctx = await browser.newContext(mobile ? MOBILE : { viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
@@ -123,7 +129,7 @@ async function structuralChecks() {
   step("public API key cannot reach data or RPCs");
   const read = await anon.from("orders").select("id");
   eq(read.data, [], "anon reads no orders (RLS)");
-  const rpc = await anon.rpc("close_production_day", { p_date: "2030-01-01", p_alloc: [] });
+  const rpc = await anon.rpc("close_production_day", { p_date: "2030-01-01" });
   assert(rpc.error?.code === "42501", `anon cannot call close_production_day (${rpc.error?.message})`);
   const pay = await anon.rpc("set_payment", { p_order_ids: [1], p_paid: true, p_staff_id: 1, p_note: "" });
   assert(pay.error?.code === "42501", `anon cannot call set_payment (${pay.error?.message})`);
@@ -207,35 +213,35 @@ async function main() {
     const { code: S } = await customerCheckout(spam.page, { "Mì quảng - Kg": 3 }, { name: "Khách lạ", phone: "0909777888", address: "1 Lê Duẩn", district: "Quận 1" });
     eq((await order(S)).production_date, D, "spam order lands on the same day");
 
-    step("manager reviews placed orders without an approval step");
-    const mgr = await login(browser, "manager@local");
-    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    const cardA = await mgr.page.locator(`[data-order-code="${A}"]`).innerText();
+    step("admin reviews placed orders without an approval step");
+    const adm = await login(browser, "admin@local");
+    await adm.page.goto(`${BASE}/admin/orders?date=${D}`);
+    const cardA = await adm.page.locator(`[data-order-code="${A}"]`).innerText();
     assert(cardA.includes("Mì trứng · 1 Bao (25 kg)") && cardA.includes("Sỉ"), "admin card shows packs and the Sỉ badge");
     assert(cardA.includes("Đặt ") && !cardA.includes("Chờ xử lý"), "placed order shows booking time, no status badge");
-    eq(await mgr.page.getByRole("button", { name: /Duyệt/ }).count(), 0, "no approve buttons anywhere");
-    eq(await mgr.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).count(), 0, "no receive button on an open day");
+    eq(await adm.page.getByRole("button", { name: /Duyệt/ }).count(), 0, "no approve buttons anywhere");
+    eq(await adm.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).count(), 0, "no receive button on an open day");
     const openReceive = await admin.rpc("receive_day", { p_date: D });
     assert(openReceive.error?.message.includes("chưa chốt"), `receive_day refused on an open day: ${openReceive.error?.message}`);
 
-    await mgr.page.locator(`[data-order-code="${S}"]`).getByRole("button", { name: "Hủy" }).click();
-    const cancelDialog = mgr.page.getByRole("alertdialog");
+    await rowAction(adm.page, S, "Hủy");
+    const cancelDialog = adm.page.getByRole("alertdialog");
     assert((await cancelDialog.innerText()).includes(`Hủy đơn ${S}?`), "cancel asks for confirmation");
     await cancelDialog.getByRole("button", { name: "Xác nhận" }).click();
     await until(() => orderStatus(S), (s) => s === "cancelled", "spam order cancelled");
 
-    step("manager closes the day splitting Mì trứng across two factories");
-    await mgr.page.goto(`${BASE}/admin/production/${D}`);
-    eq(await mgr.page.locator('[data-product="Mì quảng"]').count(), 0, "cancelled order is not in the allocation");
-    const submit = mgr.page.getByRole("button", { name: "Chốt ngày và gửi xưởng" });
+    step("admin closes the day splitting Mì trứng across two factories");
+    await adm.page.goto(`${BASE}/admin/production/${D}`);
+    eq(await adm.page.locator('[data-product="Mì quảng"]').count(), 0, "cancelled order is not in the allocation");
+    const submit = adm.page.getByRole("button", { name: "Chốt ngày và gửi xưởng" });
     assert(await submit.isEnabled(), "default allocation (all to first factory) is complete");
-    await mgr.page.getByLabel("Mì trứng - Xưởng Bình Tân").fill("30");
+    await adm.page.getByLabel("Mì trứng - Xưởng Bình Tân").fill("30");
     assert(await submit.isDisabled(), "send disabled while Mì trứng is under-allocated");
-    await mgr.page.getByLabel("Mì trứng - Xưởng Hóc Môn").fill("25");
+    await adm.page.getByLabel("Mì trứng - Xưởng Hóc Môn").fill("25");
     assert(await submit.isEnabled(), "send enabled once 30 + 25 = 55 kg (1 Bao + 5 Kg + 1 Thùng + 1 Thùng + 5 Kg)");
-    await mgr.page.getByLabel("Bún tươi - Xưởng Hóc Môn").fill("0");
+    await adm.page.getByLabel("Bún tươi - Xưởng Hóc Môn").fill("0");
     await submit.click();
-    await mgr.page.getByRole("heading", { name: "Lệnh sản xuất" }).waitFor();
+    await adm.page.getByRole("heading", { name: "Lệnh sản xuất" }).waitFor();
     const { data: jobs0 } = await admin.from("production_jobs").select("id, qty_kg, status, products(name), factories(name)").eq("date", D).order("id");
     eq(
       jobs0!.map((j) => `${j.products!.name}@${j.factories!.name}=${j.qty_kg}:${j.status}`).sort(),
@@ -244,7 +250,7 @@ async function main() {
     );
     eq([await orderStatus(A), await orderStatus(B), await orderStatus(C)], ["in_production", "in_production", "in_production"], "every placed order -> in_production");
     eq(await orderStatus(S), "cancelled", "cancelled order stays cancelled");
-    eq(await mgr.page.locator("main").getByRole("button").count(), 0, "closed production page has no job actions");
+    eq(await adm.page.locator("main").getByRole("button").count(), 0, "closed production page has no job actions");
 
     step("close day is idempotent");
     const again = await admin.rpc("close_production_day", { p_date: D, p_alloc: [{ product_id: 1, factory_id: 1, qty_kg: 55 }] });
@@ -280,31 +286,31 @@ async function main() {
     eq(await f2.page.locator(`[data-job-id="${f2Job}"]`).count(), 1, "factory2 sees its job");
     eq(await f2.page.locator(`[data-job-id="${f1Jobs[0]}"]`).count(), 0, "factory2 cannot see factory1's jobs");
 
-    step("manager confirms the whole day received");
-    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    eq(await mgr.page.getByRole("button", { name: /Chờ xưởng/ }).count(), 0, "no waiting-for-factory state");
-    await mgr.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
-    const receiveDialog = mgr.page.getByRole("alertdialog");
+    step("admin confirms the whole day received");
+    await adm.page.goto(`${BASE}/admin/orders?date=${D}`);
+    eq(await adm.page.getByRole("button", { name: /Chờ xưởng/ }).count(), 0, "no waiting-for-factory state");
+    await adm.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
+    const receiveDialog = adm.page.getByRole("alertdialog");
     assert((await receiveDialog.innerText()).includes(`Xác nhận đã nhận đủ hàng ngày ${D}?`), "receive asks for confirmation");
     await receiveDialog.getByRole("button", { name: "Xác nhận" }).click();
     await until(() => orderStatus(A), (s) => s === "ready", "A ready");
     eq([await orderStatus(B), await orderStatus(C)], ["ready", "ready"], "all orders of the day -> ready");
     const { data: receivedJobs } = await admin.from("production_jobs").select("status, qty_kg, received_kg").eq("date", D);
     assert(receivedJobs!.every((j) => j.status === "received" && j.received_kg === j.qty_kg), "every job received at its planned kg");
-    await mgr.page.reload();
-    assert((await mgr.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Đã nhận hàng"), "orders table labels ready orders Đã nhận hàng");
-    eq(await mgr.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).count(), 0, "receive button gone once received");
+    await adm.page.reload();
+    assert((await adm.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Đã nhận hàng"), "orders table labels ready orders Đã nhận hàng");
+    eq(await adm.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).count(), 0, "receive button gone once received");
     await f1.page.reload();
     assert((await f1.page.locator(`[data-job-id="${f1Jobs[0]}"]`).innerText()).includes("Đã nhận hàng"), "factory1 sees its job received");
 
-    step("manager assigns received orders to a driver from the orders page");
-    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    assert((await mgr.page.getByTestId("dispatch-bar").innerText()).includes("3 đơn đã nhận hàng"), "dispatch bar counts the day's received orders");
-    eq(await mgr.page.getByLabel(`Chọn ${C}`).count(), 1, "every received order has a dispatch checkbox");
-    await mgr.page.getByLabel(`Chọn ${A}`).check();
-    await mgr.page.getByLabel(`Chọn ${B}`).check();
-    await mgr.page.getByLabel("Tài xế").selectOption({ label: "Tài xế 1" });
-    await mgr.page.getByRole("button", { name: "Giao cho tài xế" }).click();
+    step("admin assigns received orders to a driver from the orders page");
+    await adm.page.goto(`${BASE}/admin/orders?date=${D}`);
+    assert((await adm.page.getByTestId("dispatch-bar").innerText()).includes("3 đơn đã nhận hàng"), "dispatch bar counts the day's received orders");
+    eq(await adm.page.getByLabel(`Chọn ${C}`).count(), 1, "every received order has a dispatch checkbox");
+    await adm.page.getByLabel(`Chọn ${A}`).check();
+    await adm.page.getByLabel(`Chọn ${B}`).check();
+    await adm.page.getByLabel("Tài xế").selectOption({ label: "Tài xế 1" });
+    await adm.page.getByRole("button", { name: "Giao cho tài xế" }).click();
     await until(() => orderStatus(B), (s) => s === "assigned", "B assigned");
     eq([(await order(A)).status, (await order(A)).driver_id, (await order(A)).departed_at], ["assigned", driver1, null], "A assigned to driver1, not yet departed");
     const skip = await admin.from("orders").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("code", A);
@@ -352,13 +358,13 @@ async function main() {
     assert(onTheWay.includes("Đơn hàng đang trên đường giao đến bạn") && onTheWay.includes("Tài xế 1") && onTheWay.includes("0910000001"), `customer sees on-the-way notice with driver phone: "${onTheWay}"`);
     const s1 = await login(browser, "sale1@local", true);
     assert((await s1.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Đang giao"), "sale1 dashboard shows A Đang giao");
-    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    assert((await mgr.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Đã rời kho ·"), "manager orders page shows A Đã rời kho");
+    await adm.page.goto(`${BASE}/admin/orders?date=${D}`);
+    assert((await adm.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Đã rời kho ·"), "admin orders page shows A Đã rời kho");
 
     step("a single late order is loaded on its own");
-    await mgr.page.getByLabel(`Chọn ${C}`).check();
-    await mgr.page.getByLabel("Tài xế").selectOption({ label: "Tài xế 1" });
-    await mgr.page.getByRole("button", { name: "Giao cho tài xế" }).click();
+    await adm.page.getByLabel(`Chọn ${C}`).check();
+    await adm.page.getByLabel("Tài xế").selectOption({ label: "Tài xế 1" });
+    await adm.page.getByRole("button", { name: "Giao cho tài xế" }).click();
     await until(() => orderStatus(C), (s) => s === "assigned", "C assigned");
     await d1.page.reload();
     await d1.page.getByRole("button", { name: "XÁC NHẬN HÀNG ĐÃ LÊN XE (1 đơn)" }).waitFor();
@@ -403,59 +409,59 @@ async function main() {
     await until(() => orderStatus(B), (s) => s === "failed", "B failed");
     eq((await order(B)).fail_reason, "Khách vắng nhà", "fail reason stored");
 
-    step("manager sees the proof photo and the departure in the timeline");
-    await mgr.page.goto(`${BASE}/admin/orders/${A}`);
-    const proof = mgr.page.getByTestId("delivery-photo").getByRole("img");
+    step("admin sees the proof photo and the departure in the timeline");
+    await adm.page.goto(`${BASE}/admin/orders/${A}`);
+    const proof = adm.page.getByTestId("delivery-photo").getByRole("img");
     await proof.waitFor();
-    eq(await proof.evaluate((img: HTMLImageElement) => (img.complete ? [img.naturalWidth, img.naturalHeight] : null)), [1600, 1200], "manager detail renders the photo, downscaled to 1600px");
-    assert((await mgr.page.locator("main").innerText()).includes("Hàng đã lên xe ·"), "timeline shows when the goods left");
+    eq(await proof.evaluate((img: HTMLImageElement) => (img.complete ? [img.naturalWidth, img.naturalHeight] : null)), [1600, 1200], "admin detail renders the photo, downscaled to 1600px");
+    assert((await adm.page.locator("main").innerText()).includes("Hàng đã lên xe ·"), "timeline shows when the goods left");
 
-    step("manager sends failed B back to ready; payment is read-only for the manager");
-    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    await mgr.page.locator(`[data-order-code="${B}"]`).getByRole("button", { name: "Giao lại" }).click();
+    step("admin sends failed B back to ready");
+    await adm.page.goto(`${BASE}/admin/orders?date=${D}`);
+    await rowAction(adm.page, B, "Giao lại");
+    await adm.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
     await until(() => orderStatus(B), (s) => s === "ready", "B back to ready");
     eq([(await order(B)).driver_id, (await order(B)).departed_at], [null, null], "B driver and departure cleared for re-dispatch");
+
+    step("manager sees orders, overview and staff read-only, but may mark payment");
+    const mgr = await login(browser, "manager@local");
+    eq(new URL(mgr.page.url()).pathname, "/admin/orders", "manager lands on today's orders");
+    eq(await mgr.page.locator("aside nav a").allInnerTexts(), ["Đơn hàng", "Tổng quan", "Nhân viên"], "manager nav has only the read-only pages");
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     const mgrRowA = mgr.page.locator(`[data-order-code="${A}"]`);
     assert((await mgrRowA.innerText()).includes("Chưa trả"), "manager sees A unpaid");
-    eq(await mgrRowA.getByRole("button", { name: "Đánh dấu đã trả", exact: true }).count(), 1, "manager may also mark paid (one click in the table)");
+    await mgrRowA.getByRole("button", { name: `Thao tác ${A}` }).click();
+    eq(await mgr.page.getByRole("menuitem").allInnerTexts(), ["Đã thu"], "manager's row menu only marks paid");
+    await mgr.page.keyboard.press("Escape");
+    eq(await mgr.page.getByTestId("dispatch-bar").count(), 0, "no dispatch bar for the manager");
+    eq(await mgr.page.getByRole("link", { name: /Chốt sản xuất|Xem lệnh sản xuất/ }).count(), 0, "no production link for the manager");
+    await mgr.page.goto(`${BASE}/admin/orders/${A}`);
+    await mgr.page.goto(`${BASE}/admin/staff`);
+    eq(await mgr.page.locator("main").getByRole("button").count(), 0, "staff page has no create, edit or resend for the manager");
+    await mgr.page.goto(`${BASE}/admin/products`);
+    eq(new URL(mgr.page.url()).pathname, "/admin/orders", "manager is sent back from admin-only pages");
+    const refused = await mgr.page.request.post(`${BASE}/api/v1/orders/${a0.id}/move`, { data: { to: "cancelled" } });
+    eq(refused.status(), 403, "API refuses order moves from the manager");
 
-    step("accountant tracks debt but cannot settle it");
-    const acc = await login(browser, "accountant@local");
-    eq(new URL(acc.page.url()).pathname, "/finance", "accountant lands on Công nợ");
-    const accRowA = acc.page.locator(`[data-order-code="${A}"]`);
-    assert(await accRowA.getByRole("checkbox").isDisabled(), "accountant cannot tick A");
-    assert(await acc.page.getByRole("button", { name: /Xác nhận đã thu/ }).isDisabled(), "accountant settle button disabled");
-    await acc.page.goto(`${BASE}/finance/orders/${A}`);
-    await acc.page.evaluate(() => document.querySelectorAll("[data-testid=payment-panel] [disabled]").forEach((el) => el.removeAttribute("disabled")));
-    await acc.page.getByRole("button", { name: "Xác nhận đã thu" }).click();
-    await acc.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
-    await acc.page.waitForURL((u) => u.pathname === "/finance");
-    eq((await order(A)).payment_status, "unpaid", "accountant forcing the form is refused by the server");
-
-    step("cashier confirms A paid");
-    const cashier = await staffId("cashier@local");
-    const cas = await login(browser, "cashier@local");
-    eq(new URL(cas.page.url()).pathname, "/finance", "cashier lands on Công nợ");
-    await cas.page.locator(`[data-order-code="${A}"]`).getByRole("checkbox").click();
-    await cas.page.getByTestId("settle-bar").getByLabel("Ghi chú thu tiền").fill("Tiền mặt");
-    await cas.page.getByRole("button", { name: /Xác nhận đã thu \(1 đơn/ }).click();
-    assert((await cas.page.getByRole("alertdialog").innerText()).includes(formatVnd(a0.total)), "confirm dialog shows the total");
-    await cas.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
+    step("admin confirms A paid from Công nợ");
+    const adminId = await staffId("admin@local");
+    await adm.page.goto(`${BASE}/finance`);
+    await adm.page.locator(`[data-order-code="${A}"]`).getByRole("checkbox").click();
+    await adm.page.getByTestId("settle-bar").getByLabel("Ghi chú thu tiền").fill("Tiền mặt");
+    await adm.page.getByRole("button", { name: /Xác nhận đã thu \(1 đơn/ }).click();
+    assert((await adm.page.getByRole("alertdialog").innerText()).includes(formatVnd(a0.total)), "confirm dialog shows the total");
+    await adm.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
     await until(async () => (await order(A)).payment_status, (s) => s === "paid", "A paid");
-    eq((await order(A)).paid_by, cashier, "A paid_by the cashier");
+    eq((await order(A)).paid_by, adminId, "A paid_by the admin");
     const { data: payEvents } = await admin.from("payment_events").select("action, amount, staff_id, note").eq("order_id", a0.id);
-    eq(payEvents, [{ action: "paid", amount: a0.total, staff_id: cashier, note: "Tiền mặt" }], "one payment event logged");
-    await cas.page.goto(`${BASE}/finance/payments`);
-    assert((await cas.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Thủ quỹ"), "Lịch sử thu shows A collected by Thủ quỹ");
+    eq(payEvents, [{ action: "paid", amount: a0.total, staff_id: adminId, note: "Tiền mặt" }], "one payment event logged");
+    await adm.page.goto(`${BASE}/finance/payments`);
+    assert((await adm.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Quản trị"), "Lịch sử thu shows A collected by Quản trị");
 
     step("commission");
     const expected = Math.round((a0.total * 5) / 100);
-    await mgr.page.goto(`${BASE}/admin/commission`);
-    eq(await mgr.page.getByTestId("commission-NVKD01").innerText(), formatVnd(expected), "sale1 commission = 5% of delivered A only");
-    eq(await mgr.page.getByTestId("commission-NVKD02").innerText(), formatVnd(0), "sale2 earns nothing for B");
     await s1.page.reload();
-    eq(await s1.page.getByTestId("sale-commission").innerText(), formatVnd(expected), "sale1 dashboard shows same estimate");
+    eq(await s1.page.getByTestId("sale-commission").innerText(), formatVnd(expected), "sale1 commission = 5% of delivered A only");
     assert((await s1.page.getByTestId("ref-link").innerText()).endsWith("/r/NVKD01"), "sale1 sees own ref link");
 
     step("customer lookup by phone");
@@ -465,10 +471,10 @@ async function main() {
     assert(lookup.includes("Bún tươi · 2 Thùng (20 kg)"), "lookup lists packs");
 
     step("one-tap reorder");
-    await mgr.page.goto(`${BASE}/admin/products`);
-    await mgr.page.getByLabel("Đang bán Bún tươi - Thùng").click();
-    await mgr.page.getByLabel("Tải ảnh Bún tươi - Thùng").setInputFiles({ name: "thung.png", mimeType: "image/png", buffer: Buffer.from(bigPhoto, "base64") });
-    await mgr.page.getByRole("button", { name: "Lưu Bún tươi - Thùng" }).click();
+    await adm.page.goto(`${BASE}/admin/products`);
+    await adm.page.getByLabel("Đang bán Bún tươi - Thùng").click();
+    await adm.page.getByLabel("Tải ảnh Bún tươi - Thùng").setInputFiles({ name: "thung.png", mimeType: "image/png", buffer: Buffer.from(bigPhoto, "base64") });
+    await adm.page.getByRole("button", { name: "Lưu Bún tươi - Thùng" }).click();
     const thungId = (await items(A)).find((i) => i.pack_name === "Thùng")!.pack_id;
     const thung = await until(async () => (await admin.from("product_packs").select("active, image_url").eq("id", thungId).single()).data!, (pk) => !pk.active, "pack deactivated in settings");
     assert(thung.image_url?.startsWith("/files/products/"), `uploaded pack image stored in R2 (${thung.image_url})`);

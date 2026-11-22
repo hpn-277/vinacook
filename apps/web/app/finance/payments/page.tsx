@@ -18,7 +18,7 @@ const WIDE = "hidden md:table-cell";
 const dateTime = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" });
 
 export default async function PaymentsPage({ searchParams }: PageProps<"/finance/payments">) {
-  await requireRole("cashier", "accountant");
+  await requireRole("admin");
   const raw = (await searchParams).month;
   const start = (typeof raw === "string" && parseIsoDate(`${raw}-01`)) || today();
   const month = start.slice(0, 7);
@@ -69,7 +69,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/finance
                   <TableRow key={e.id} data-order-code={e.orders?.code} data-payment-event={e.action}>
                     <TableCell className={`${WIDE} tabular-nums`}>{dateTime.format(new Date(e.created_at))}</TableCell>
                     <TableCell className="whitespace-normal">
-                      <Link href={`/finance/orders/${e.orders?.code}`} className="font-semibold text-primary hover:underline">
+                      <Link href={`/admin/orders/${e.orders?.code}`} className="font-semibold text-primary hover:underline">
                         {e.orders?.code}
                       </Link>
                       <div className="mt-0.5 text-xs text-muted-foreground md:hidden">

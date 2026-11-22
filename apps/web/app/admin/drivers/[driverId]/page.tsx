@@ -18,7 +18,7 @@ const hm = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour
 const time = (iso: string | null) => (iso ? hm.format(new Date(iso)) : "—");
 
 export default async function DriverMonthPage({ params, searchParams }: PageProps<"/admin/drivers/[driverId]">) {
-  await requireRole("manager");
+  await requireRole("admin");
   const driverId = Number((await params).driverId);
   const raw = (await searchParams).month;
   const month = (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
@@ -45,8 +45,8 @@ export default async function DriverMonthPage({ params, searchParams }: PageProp
 
   return (
     <>
-      <Link href={`/admin/drivers?month=${month}`} className="mb-3 inline-block text-sm text-muted-foreground hover:text-foreground">
-        ‹ Tài xế tháng {month}
+      <Link href="/admin/staff?role=driver" className="mb-3 inline-block text-sm text-muted-foreground hover:text-foreground">
+        ‹ Nhân viên · Tài xế
       </Link>
       <PageTitle>
         {driver.name} <span className="text-base font-normal text-muted-foreground">{driver.phone}</span>

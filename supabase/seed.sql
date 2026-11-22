@@ -3,6 +3,7 @@
 
 create temp table seed_staff (email text, role staff_role, name text, phone text, ref_code text, pct numeric, factory text);
 insert into seed_staff values
+  ('admin@local', 'admin', 'Quản trị', '0900000009', null, null, null),
   ('manager@local', 'manager', 'Quản lý', '0900000000', null, null, null),
   ('sale1@local', 'sale', 'NVKD 01', '0900000001', 'NVKD01', 5, null),
   ('sale2@local', 'sale', 'NVKD 02', '0900000002', 'NVKD02', 7, null),
@@ -14,9 +15,7 @@ insert into seed_staff values
   ('factory6@local', 'factory', 'Xưởng Phở Việt Gia Truyền', '0281000006', null, null, 'Phở Việt Gia Truyền'),
   ('factory7@local', 'factory', 'Xưởng Kim Ửng', '0281000007', null, null, 'Kim Ửng'),
   ('driver1@local', 'driver', 'Tài xế 1', '0910000001', null, null, null),
-  ('driver2@local', 'driver', 'Tài xế 2', '0910000002', null, null, null),
-  ('cashier@local', 'cashier', 'Thủ quỹ', '0920000001', null, null, null),
-  ('accountant@local', 'accountant', 'Kế toán', '0920000002', null, null, null);
+  ('driver2@local', 'driver', 'Tài xế 2', '0910000002', null, null, null);
 
 -- Token columns must be '' not NULL or GoTrue fails to load the user on sign-in.
 insert into auth.users (

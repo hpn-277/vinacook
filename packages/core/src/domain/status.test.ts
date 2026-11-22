@@ -12,6 +12,7 @@ describe("order transitions", () => {
     ["out_for_delivery", "failed"],
     ["failed", "ready"],
     ["failed", "cancelled"],
+    ["cancelled", "placed"],
   ] as const)("allows %s -> %s", (from, to) => {
     expect(canTransition("orders", from, to)).toBe(true);
   });
@@ -31,7 +32,7 @@ describe("order transitions", () => {
     ["out_for_delivery", "ready"],
     ["failed", "out_for_delivery"],
     ["delivered", "failed"],
-    ["cancelled", "placed"],
+    ["cancelled", "ready"],
   ] as const)("rejects %s -> %s", (from, to) => {
     expect(canTransition("orders", from, to)).toBe(false);
   });
@@ -41,10 +42,10 @@ describe("order transitions", () => {
     expect(sources).toEqual(["out_for_delivery"]);
   });
 
-  it("delivered and cancelled are terminal", () => {
+  it("delivered is terminal; cancelled can only be restored to placed", () => {
     for (const to of ORDER_STATUSES) {
       expect(canTransition("orders", "delivered", to)).toBe(false);
-      expect(canTransition("orders", "cancelled", to)).toBe(false);
+      expect(canTransition("orders", "cancelled", to)).toBe(to === "placed");
     }
   });
 });
@@ -84,12 +85,13 @@ describe("manager order moves", () => {
   it("send orders back to pending only from before dispatch (reopen day)", () => {
     expect(canTransition("orders", "in_production", "placed")).toBe(true);
     expect(canTransition("orders", "ready", "placed")).toBe(true);
-    for (const from of ["assigned", "out_for_delivery", "delivered", "failed", "cancelled"] as const) expect(canTransition("orders", from, "placed")).toBe(false);
+    for (const from of ["assigned", "out_for_delivery", "delivered", "failed"] as const) expect(canTransition("orders", from, "placed")).toBe(false);
   });
 
   it("label the two ways back to ready differently", () => {
     expect(moveLabel("assigned", "ready")).toBe("Hủy phân công");
     expect(moveLabel("failed", "ready")).toBe("Giao lại");
     expect(moveLabel("placed", "cancelled")).toBe("Hủy");
+    expect(moveLabel("cancelled", "placed")).toBe("Khôi phục");
   });
 });

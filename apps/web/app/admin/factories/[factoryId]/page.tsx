@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Fragment } from "react";
 import { AutoSubmitForm } from "@/components/AutoSubmitForm";
+import { FactoryDialog } from "@/components/admin/FactoryDialog";
 import { PageTitle } from "@/components/page-title";
 import { JobBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import { today } from "@noodle/core/period";
 const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 export default async function FactoryMonthPage({ params, searchParams }: PageProps<"/admin/factories/[factoryId]">) {
-  await requireRole("manager");
+  await requireRole("admin");
   const factoryId = Number((await params).factoryId);
   const raw = (await searchParams).month;
   const month = (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
@@ -44,15 +45,18 @@ export default async function FactoryMonthPage({ params, searchParams }: PagePro
 
   return (
     <>
-      <Link href={`/admin/factories?month=${month}`} className="mb-3 inline-block text-sm text-muted-foreground hover:text-foreground">
-        ‹ Xưởng tháng {month}
+      <Link href="/admin/staff?role=factory" className="mb-3 inline-block text-sm text-muted-foreground hover:text-foreground">
+        ‹ Nhân viên · Xưởng
       </Link>
-      <PageTitle>
-        {factory.name}{" "}
-        <span className="text-base font-normal text-muted-foreground">
-          {[factory.address, factory.phone].filter(Boolean).join(" · ")}
-        </span>
-      </PageTitle>
+      <div className="flex flex-wrap items-center justify-between gap-3 [&_h1]:mb-0">
+        <PageTitle>
+          {factory.name}{" "}
+          <span className="text-base font-normal text-muted-foreground">
+            {[factory.address, factory.phone, !factory.active && "Ngừng hoạt động"].filter(Boolean).join(" · ")}
+          </span>
+        </PageTitle>
+        <FactoryDialog factory={factory} />
+      </div>
       <AutoSubmitForm action={`/admin/factories/${factoryId}`} className="mb-4">
         <Input type="month" name="month" defaultValue={month} aria-label="Chọn tháng" className="w-auto" />
       </AutoSubmitForm>

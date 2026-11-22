@@ -14,7 +14,7 @@ const factorySchema = z.object({
 });
 
 export const factories = new Hono()
-  .use(role("manager"))
+  .use(role("admin"))
   .post("/", valid("json", factorySchema), async (c) => {
     check(await db().from("factories").insert(c.req.valid("json")));
     return c.json({ message: "Đã thêm xưởng" });

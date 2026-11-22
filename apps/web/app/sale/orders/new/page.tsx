@@ -10,7 +10,7 @@ import { DISTRICTS } from "@noodle/core/domain/districts";
 import { customerLookup, normalizePhone, orderForm } from "@noodle/core/queries/sale";
 
 export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sale/orders/new">) {
-  const me = await requireRole("sale", "manager");
+  const me = await requireRole("sale", "admin");
   const phone = normalizePhone((await searchParams).phone);
   const [{ catalog, terms }, lookup] = await Promise.all([orderForm(), customerLookup(phone, me.id)]);
   const found = lookup?.found ?? null;

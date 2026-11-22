@@ -35,7 +35,7 @@ function byFactory(lines: Line[]): FactoryGroup[] {
 }
 
 export default async function ProductionDayPage({ params }: PageProps<"/admin/production/[date]">) {
-  await requireRole("manager");
+  await requireRole("admin");
   const date = parseIsoDate((await params).date);
   if (!date) notFound();
 

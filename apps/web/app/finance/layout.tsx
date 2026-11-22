@@ -1,10 +1,5 @@
-import { StaffShell } from "@/components/StaffShell";
-
-const LINKS = [
-  { href: "/finance", label: "Công nợ" },
-  { href: "/finance/payments", label: "Lịch sử thu" },
-];
+import { AdminShell } from "@/components/AdminShell";
 
 export default function FinanceLayout({ children }: LayoutProps<"/finance">) {
-  return <StaffShell links={LINKS}>{children}</StaffShell>;
+  return <AdminShell>{children}</AdminShell>;
 }

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { unwrap } from "@noodle/core/action";
 import { db } from "@noodle/core/db";
-import { NO_SETTLE_RIGHTS, PAYMENT_ACTION_LABEL } from "@noodle/core/domain/debt";
+import { PAYMENT_ACTION_LABEL } from "@noodle/core/domain/debt";
 import { formatVnd } from "@noodle/core/domain/money";
 import type { OrderStatus } from "@noodle/core/domain/status";
 
@@ -12,11 +12,10 @@ const dateTime = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh"
 
 type Props = {
   order: { id: number; code: string; status: OrderStatus; total: number; payment_status: "paid" | "unpaid" };
-  canSettle: boolean;
 };
 
-/** "Thanh toán" on the order page: who settled it, the audit log, and the mark/undo control (cashier and manager). */
-export async function PaymentPanel({ order, canSettle }: Props) {
+/** "Thanh toán" on the order page: who settled it, the audit log, and the mark/undo control (admin and manager). */
+export async function PaymentPanel({ order }: Props) {
   const [payment, events] = await Promise.all([
     db().from("orders").select("paid_at, payer:staff!orders_paid_by_fkey(name)").eq("id", order.id).single().then(unwrap),
     db()
@@ -58,8 +57,8 @@ export async function PaymentPanel({ order, canSettle }: Props) {
           <ActionForm action="setPayment" className="flex flex-wrap items-start gap-2">
             <input type="hidden" name="order_id" value={order.id} />
             <input type="hidden" name="paid" value="unpaid" />
-            <Input name="note" required disabled={!canSettle} maxLength={500} placeholder="Lý do bỏ đánh dấu (bắt buộc)" aria-label="Lý do bỏ đánh dấu" className="w-full sm:w-72" />
-            <Button variant="outline" disabled={!canSettle}>
+            <Input name="note" required maxLength={500} placeholder="Lý do bỏ đánh dấu (bắt buộc)" aria-label="Lý do bỏ đánh dấu" className="w-full sm:w-72" />
+            <Button variant="outline">
               Bỏ đánh dấu đã thu
             </Button>
           </ActionForm>
@@ -67,11 +66,10 @@ export async function PaymentPanel({ order, canSettle }: Props) {
           <ActionForm action="setPayment" confirm={`Xác nhận đã thu ${formatVnd(order.total)} cho đơn ${order.code}?`} className="flex flex-wrap items-start gap-2">
             <input type="hidden" name="order_id" value={order.id} />
             <input type="hidden" name="paid" value="paid" />
-            <Input name="note" disabled={!canSettle} maxLength={500} placeholder="Ghi chú (không bắt buộc)" aria-label="Ghi chú thu tiền" className="w-full sm:w-72" />
-            <Button disabled={!canSettle}>Xác nhận đã thu</Button>
+            <Input name="note" maxLength={500} placeholder="Ghi chú (không bắt buộc)" aria-label="Ghi chú thu tiền" className="w-full sm:w-72" />
+            <Button>Xác nhận đã thu</Button>
           </ActionForm>
         )}
-        {!canSettle && order.status !== "cancelled" && <p className="text-xs text-muted-foreground">{NO_SETTLE_RIGHTS}.</p>}
 
         {events.length > 0 ? (
           <ul className="divide-y border-t">

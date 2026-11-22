@@ -1,4 +1,4 @@
-import { DomainError } from "@noodle/core/action";
+import { DomainError, pgFailure } from "@noodle/core/action";
 import { db } from "@noodle/core/db";
 import type { Database } from "@noodle/core/database.types";
 import { canTransition, JOB_STATUS_LABEL, ORDER_STATUS_LABEL, type Machine, type StatusOf } from "@noodle/core/domain/status";
@@ -25,7 +25,7 @@ export async function transition<M extends Machine>(
   let read = table().select("status").eq("id", id);
   for (const [column, value] of Object.entries(opts.scope ?? {})) read = read.eq(column as "id", value);
   const { data, error } = await read.maybeSingle();
-  if (error) throw error;
+  if (error) throw pgFailure(error);
   if (!data) throw new DomainError("Không tìm thấy hoặc bạn không có quyền");
 
   const from = data.status as StatusOf<M>;
@@ -39,6 +39,6 @@ export async function transition<M extends Machine>(
     .eq("id", id)
     .eq("status", from as never)
     .select("id");
-  if (updateError) throw updateError;
+  if (updateError) throw pgFailure(updateError);
   if (!moved?.length) throw new DomainError("Trạng thái vừa thay đổi, vui lòng tải lại trang");
 }

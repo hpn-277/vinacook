@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { getCookie } from "hono/cookie";
 import { z } from "zod";
+import { pgFailure } from "@noodle/core/action";
 import { db } from "@noodle/core/db";
 import { formatVnd } from "@noodle/core/domain/money";
 import { TIER_LABEL } from "@noodle/core/domain/pricing";
@@ -18,7 +19,7 @@ const contact = {
   items: orderItems,
 };
 
-/** Placing orders: customers from the public shop, sales and the manager on a customer's behalf. */
+/** Placing orders: customers from the public shop, sales and the admin on a customer's behalf. */
 export const shop = new Hono()
   /** Public. A sale's ref link (cookie set by the web app's /r/<code>) claims the customer. */
   .post("/orders", valid("json", z.object({ name: z.string().trim().min(1, "Nhập tên"), ...contact })), async (c) => {
@@ -42,15 +43,15 @@ export const shop = new Hono()
       .order("id", { referencedTable: "order_items" })
       .limit(1)
       .maybeSingle();
-    if (error) throw error;
+    if (error) throw pgFailure(error);
     c.header("Cache-Control", "no-store");
     return c.json(data ? toReorderSource(data) : null);
   })
-  .post("/staff-orders", role("sale", "manager"), valid("json", z.object({ name: z.string().trim().min(1, "Nhập tên khách"), ...contact })), async (c) => {
+  .post("/staff-orders", role("sale", "admin"), valid("json", z.object({ name: z.string().trim().min(1, "Nhập tên khách"), ...contact })), async (c) => {
     const me = c.get("staff");
     const order = await placeOrder({
       ...c.req.valid("json"),
-      createdBy: me.role === "sale" ? "sale" : "manager",
+      createdBy: me.role === "sale" ? "sale" : "manager", // order_creator keeps "manager" for staff-office orders
       createdByStaffId: me.id,
       claimSaleId: me.role === "sale" ? me.id : null,
     });

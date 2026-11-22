@@ -4,7 +4,7 @@ import type { PriceTier } from "../domain/pricing";
 import type { OrderStatus } from "../domain/status";
 import { deliveryPhotoUrl } from "../files";
 
-export type OrderViewer = { role: "manager" } | { role: "sale"; saleId: number } | { role: "cashier" | "accountant" };
+export type OrderViewer = { role: "admin" | "manager" } | { role: "sale"; saleId: number };
 
 export type OrderDetailOrder = {
   id: number;
@@ -131,7 +131,7 @@ export async function orderDetail(code: string, viewer: OrderViewer) {
     atWholesale: order.items.reduce((s, i) => s + Math.round(i.qty_kg * i.wholesale_price_per_kg), 0),
     commission: order.sale && owner?.commission_pct != null && order.status === "delivered" ? Math.round((order.total * owner.commission_pct) / 100) : null,
     timeline,
-    jobs: viewer.role === "manager" ? jobs : [],
+    jobs: viewer.role === "sale" ? [] : jobs,
     history,
   };
 }

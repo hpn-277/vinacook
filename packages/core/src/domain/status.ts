@@ -12,7 +12,7 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   out_for_delivery: ["delivered", "failed"],
   delivered: [],
   failed: ["ready", "cancelled"],
-  cancelled: [],
+  cancelled: ["placed"],
 };
 
 export const JOB_TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
@@ -50,12 +50,14 @@ export const JOB_STATUS_LABEL: Record<JobStatus, string> = {
 
 /**
  * Order edges a manager clicks directly; the others happen via close-day, receive-day, assigning a driver, the driver,
- * or reopen-day (in_production/ready -> placed, whole day only).
+ * or reopen-day (in_production/ready -> placed, whole day only). cancelled -> placed ("Khôi phục") is refused by the
+ * database once the order's production day is past or closed.
  */
 export const MANAGER_ORDER_MOVES: Partial<Record<OrderStatus, readonly OrderStatus[]>> = {
   placed: ["cancelled"],
   assigned: ["ready"],
   failed: ["ready", "cancelled"],
+  cancelled: ["placed"],
 };
 
 /** Phone and address can be corrected until the order is delivered or cancelled. */
@@ -64,6 +66,7 @@ export const CONTACT_EDITABLE = (status: OrderStatus) => status !== "delivered" 
 /** Button text depends on where the order is: assigned -> ready takes it back from the driver, failed -> ready re-dispatches. */
 export function moveLabel(from: OrderStatus, to: OrderStatus): string {
   if (to === "cancelled") return "Hủy";
+  if (from === "cancelled") return "Khôi phục";
   return from === "assigned" ? "Hủy phân công" : "Giao lại";
 }
 

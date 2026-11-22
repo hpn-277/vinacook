@@ -23,7 +23,7 @@ type StatusFilter = keyof typeof STATUS_FILTERS;
 const NO_SALE = "none";
 
 export default async function DebtPage({ searchParams }: PageProps<"/finance">) {
-  const me = await requireRole("cashier", "accountant");
+  await requireRole("admin");
   const sp = await searchParams;
   const status: StatusFilter = typeof sp.status === "string" && sp.status in STATUS_FILTERS ? (sp.status as StatusFilter) : "all";
   const sale = typeof sp.sale === "string" ? sp.sale : "";
@@ -102,7 +102,7 @@ export default async function DebtPage({ searchParams }: PageProps<"/finance">) 
         </NativeSelect>
       </AutoSubmitForm>
 
-      <DebtTable key={`${status}-${sale}`} customers={customers} canSettle={me.role === "cashier"} />
+      <DebtTable key={`${status}-${sale}`} customers={customers} />
     </>
   );
 }

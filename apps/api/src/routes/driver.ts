@@ -50,7 +50,7 @@ export const driver = new Hono<ApiEnv>()
     await transition("orders", orderId, "failed", { scope: { driver_id: c.get("staff").id }, patch: { fail_reason: c.req.valid("json").reason } });
     return c.json({});
   })
-  /** "Trả đơn": before loading, the driver hands the order back to Đã nhận hàng so the manager can assign someone else. */
+  /** "Trả đơn": before loading, the driver hands the order back to Đã nhận hàng so the admin can assign someone else. */
   .post("/orders/:id/return", orderParam, valid("json", z.object({ reason: z.string().trim().min(1, "Nhập lý do trả đơn").max(500) })), async (c) => {
     const me = c.get("staff");
     const { id: orderId } = c.req.valid("param");

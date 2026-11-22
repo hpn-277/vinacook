@@ -121,15 +121,15 @@ async function main() {
     assert(B, `staff order placed: "${saleMsg}"`);
     assert((await order(B)).created_by === "sale", "staff order stored as the sale's");
 
-    step("manager cancels the spam order (POST /orders/:id/move)");
-    const mgr = await login(browser, "manager@local");
+    step("admin cancels the spam order (POST /orders/:id/move)");
+    const mgr = await login(browser, "admin@local");
     await mgr.goto(`${BASE}/admin/orders/${C}`);
     await mgr.locator(`form:has(input[name="to"][value="cancelled"]) button`).click();
     await confirm(mgr);
     await waitStatus(C, "cancelled");
     assert(true, "C cancelled");
 
-    step("manager edits A's contact (PATCH /orders/:id/contact)");
+    step("admin edits A's contact (PATCH /orders/:id/contact)");
     await mgr.goto(`${BASE}/admin/orders/${A}`);
     await mgr.getByRole("button", { name: `Sửa SĐT, địa chỉ đơn ${A}` }).click();
     await mgr.getByRole("dialog").locator('[name="address"]').fill("100 Nguyễn Trãi");
@@ -137,21 +137,21 @@ async function main() {
     await until(() => order(A).then((o) => o.address), (v) => v === "100 Nguyễn Trãi", "address saved");
     assert(true, "contact edit saved and logged");
 
-    step("manager closes the day (POST /days/:date/close)");
+    step("admin closes the day (POST /days/:date/close)");
     await mgr.goto(`${BASE}/admin/production/${D}`);
     await mgr.getByRole("button", { name: "Chốt ngày và gửi lệnh sản xuất" }).click();
     await confirm(mgr);
     await waitStatus(A, "in_production");
     assert((await statusOf(B)) === "in_production", "every placed order -> in_production");
 
-    step("manager receives the day (POST /days/:date/receive)");
+    step("admin receives the day (POST /days/:date/receive)");
     await mgr.goto(`${BASE}/admin/orders?date=${D}`);
     await mgr.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
     await confirm(mgr);
     await waitStatus(A, "ready");
     assert((await statusOf(B)) === "ready", "orders -> ready");
 
-    step("manager assigns, unassigns all, reassigns (POST /orders/assign, /days/:date/unassign)");
+    step("admin assigns, unassigns all, reassigns (POST /orders/assign, /days/:date/unassign)");
     const driver1 = (await admin.from("staff").select("id").eq("name", "Tài xế 1").single()).data!.id;
     const assign = async () => {
       await mgr.goto(`${BASE}/admin/orders?date=${D}`);
@@ -197,19 +197,18 @@ async function main() {
 
     step("delivery photo is staff-only (GET /files/delivery/*)");
     const photoUrl = `${BASE}/files/delivery/${delivered[0].delivery_photo_path}`;
-    assert((await mgr.request.get(photoUrl)).status() === 200, "manager can load the proof photo");
+    assert((await mgr.request.get(photoUrl)).status() === 200, "admin can load the proof photo");
     assert((await customer.request.get(photoUrl)).status() === 404, "anonymous visitor gets 404");
 
-    step("cashier settles the delivered order (POST /payments)");
-    const cashier = await login(browser, "cashier@local");
-    await cashier.goto(`${BASE}/finance`);
-    await cashier.getByLabel(new RegExp(`Chọn.*${delivered[0].code}`)).check();
-    await cashier.getByRole("button", { name: /Xác nhận đã thu/ }).click();
-    await confirm(cashier);
+    step("admin settles the delivered order (POST /payments)");
+    await mgr.goto(`${BASE}/finance`);
+    await mgr.getByLabel(new RegExp(`Chọn.*${delivered[0].code}`)).check();
+    await mgr.getByRole("button", { name: /Xác nhận đã thu/ }).click();
+    await confirm(mgr);
     await until(() => order(delivered[0].code).then((o) => o.paid_at), (v) => v != null, "paid");
     assert(true, "payment recorded");
 
-    step("factory proposes two products, manager approves one, rejects one (POST /factory/products, /products/:id/approve|reject)");
+    step("factory proposes two products, admin approves one, rejects one (POST /factory/products, /products/:id/approve|reject)");
     const fac = await login(browser, "factory1@local");
     const propose = async (name: string) => {
       await fac.goto(`${BASE}/factory/products`);
@@ -233,22 +232,22 @@ async function main() {
     await until(async () => (await admin.from("products").select("status").eq("name", "Bún thử").single()).data?.status, (s) => s === "rejected", "rejected");
     assert(true, "reject with reason");
 
-    step("manager saves pricing (PUT /settings/pricing)");
+    step("admin saves pricing (PUT /settings/pricing)");
     await mgr.goto(`${BASE}/admin/products`);
     await mgr.locator('[name="retail_markup_pct"]').fill("12");
     await mgr.locator('form:has([name="retail_markup_pct"]) button').click();
     await until(async () => (await admin.from("settings").select("retail_markup_pct").single()).data?.retail_markup_pct, (v) => Number(v) === 12, "markup 12");
     assert(true, "pricing saved");
 
-    step("manager adds a factory (POST /factories)");
-    await mgr.goto(`${BASE}/admin/factories`);
+    step("admin adds a factory from Nhân viên (POST /factories)");
+    await mgr.goto(`${BASE}/admin/staff`);
     await mgr.getByRole("button", { name: /Thêm xưởng/ }).first().click();
     await mgr.getByRole("dialog").locator('[name="name"]').fill("Xưởng thử");
     await mgr.getByRole("dialog").getByRole("button", { name: "Thêm xưởng" }).click();
     await until(async () => (await admin.from("factories").select("id").eq("name", "Xưởng thử")).data?.length, (n) => n === 1, "factory added");
     assert(true, "factory added");
 
-    step("manager creates a staff account, then edits it (POST /staff, PATCH /staff/:id)");
+    step("admin creates a staff account, then edits it (POST /staff, PATCH /staff/:id)");
     await mgr.goto(`${BASE}/admin/staff`);
     await mgr.getByRole("button", { name: /Thêm nhân viên/ }).click();
     const sd = mgr.getByRole("dialog");
@@ -264,21 +263,22 @@ async function main() {
     await until(async () => (await admin.from("staff").select("phone").eq("name", "Tài xế 9").single()).data?.phone, (p) => p === "0912345678", "staff phone saved");
     assert(true, "staff updated");
 
-    step("manager emails a password link (POST /staff/:id/password-link)");
+    step("admin emails a password link (POST /staff/:id/password-link)");
     await mgr.goto(`${BASE}/admin/staff`);
     await mgr.locator(`form:has(input[name="id"]) button:has-text("Gửi lại link")`).first().click();
     await confirm(mgr);
     assert((await mgr.getByRole("status").first().innerText()).includes("Đã gửi link đặt mật khẩu"), "password link sent");
 
-    step("manager renames the new factory (PATCH /factories/:id)");
-    await mgr.goto(`${BASE}/admin/factories`);
+    step("admin renames the new factory on its page (PATCH /factories/:id)");
+    const { data: newFactory } = await admin.from("factories").select("id").eq("name", "Xưởng thử").single();
+    await mgr.goto(`${BASE}/admin/factories/${newFactory!.id}`);
     await mgr.getByRole("button", { name: "Sửa Xưởng thử" }).click();
     await mgr.getByRole("dialog").locator('[name="name"]').fill("Xưởng thử 2");
     await mgr.getByRole("dialog").getByRole("button", { name: "Lưu" }).click();
     await until(async () => (await admin.from("factories").select("id").eq("name", "Xưởng thử 2")).data?.length, (n) => n === 1, "factory renamed");
     assert(true, "factory updated");
 
-    step("manager adds a product, then a pack for it (POST /products, POST /products/:id/packs)");
+    step("admin adds a product, then a pack for it (POST /products, POST /products/:id/packs)");
     await mgr.goto(`${BASE}/admin/products`);
     await mgr.getByRole("button", { name: "Thêm sản phẩm" }).first().click();
     const pd = mgr.getByRole("dialog");
@@ -288,7 +288,7 @@ async function main() {
     await pd.getByRole("button", { name: "Thêm sản phẩm" }).click();
     const created = await until(async () => (await admin.from("products").select("id, status").eq("name", "Mì thử").maybeSingle()).data, (p) => p != null, "product created");
     const packs = (await admin.from("product_packs").select("id").eq("product_id", created!.id)).data!;
-    assert(created!.status === "approved" && packs.length > 0, `manager product created approved with ${packs.length} standard packs`);
+    assert(created!.status === "approved" && packs.length > 0, `admin product created approved with ${packs.length} standard packs`);
     await mgr.reload();
     await mgr.getByRole("button", { name: "Sửa Mì thử" }).click();
     await mgr.getByRole("dialog").locator('[name="new_name"]').fill("Thùng");

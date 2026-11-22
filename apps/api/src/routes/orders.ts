@@ -15,7 +15,7 @@ export async function logUnassign(staffId: number, codes: string[], driverId: nu
 
 /** Manager moves on single orders and dispatch. */
 export const orders = new Hono()
-  .use(role("manager"))
+  .use(role("admin"))
   .post("/assign", valid("json", z.object({ driver_id: id, order_ids: z.array(id).min(1, "Chọn ít nhất 1 đơn") })), async (c) => {
     const { driver_id, order_ids } = c.req.valid("json");
     const { data: driver } = await db().from("staff").select("id").eq("id", driver_id).eq("role", "driver").eq("active", true).maybeSingle();

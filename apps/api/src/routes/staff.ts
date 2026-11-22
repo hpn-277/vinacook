@@ -31,7 +31,7 @@ async function refCodeFor(role: string, current: string | null): Promise<string 
 }
 
 export const staff = new Hono()
-  .use(role("manager"))
+  .use(role("admin"))
   /** The new staff member gets an email with a link to choose their own password (supabase/templates/invite.html). */
   .post("/", valid("json", newStaffSchema), async (c) => {
     const { email, ...fields } = c.req.valid("json");
@@ -53,7 +53,7 @@ export const staff = new Hono()
     const { id: staffId } = c.req.valid("param");
     const row = byRole(c.req.valid("json"));
     const target = unwrap(await db().from("staff").select("role, ref_code").eq("id", staffId).single());
-    if (target.role === "manager" && staffId !== me.id) throw new DomainError("Không thể sửa tài khoản quản lý khác");
+    if (target.role === "admin" && staffId !== me.id) throw new DomainError("Không thể sửa tài khoản quản trị khác");
     if (staffId === me.id && !row.active) throw new DomainError("Không thể tự khóa tài khoản của mình");
     if (staffId === me.id && row.role !== target.role) throw new DomainError("Không thể tự đổi vai trò của mình");
     if (target.role === "driver" && row.role !== "driver") {

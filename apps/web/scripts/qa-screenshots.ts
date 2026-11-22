@@ -54,6 +54,12 @@ const orderStatus = (code: string) => order(code).then((o) => o.status);
 const MOBILE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
 const DESKTOP = { viewport: { width: 1280, height: 800 } };
 
+/** Picks an action from an order row's "⋯" menu; the confirm dialog it opens is left to the caller. */
+async function rowAction(page: Page, code: string, item: string | RegExp) {
+  await page.locator(`[data-order-code="${code}"]`).getByRole("button", { name: `Thao tác ${code}` }).click();
+  await page.getByRole("menuitem", { name: item }).click();
+}
+
 async function newPage(browser: Browser, mobile: boolean): Promise<{ ctx: BrowserContext; page: Page }> {
   const ctx = await browser.newContext(mobile ? MOBILE : DESKTOP);
   const page = await ctx.newPage();
@@ -135,7 +141,7 @@ async function main() {
     const mgrLogin = await newPage(browser, false);
     await mgrLogin.page.goto(`${BASE}/login`);
     await shot(mgrLogin.page, "manager-login");
-    const mgr = await login(browser, "manager@local", false);
+    const mgr = await login(browser, "admin@local", false);
 
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     await shot(mgr.page, "admin-orders-placed");
@@ -250,28 +256,30 @@ async function main() {
 
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     await shot(mgr.page, "admin-orders-failed-order");
-    await mgr.page.locator(`[data-order-code="${B}"]`).getByRole("button", { name: "Giao lại" }).click();
+    await rowAction(mgr.page, B, "Giao lại");
+    await mgr.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
     await until(() => orderStatus(B), (s) => s === "ready", "B back to ready");
     await mgr.page.reload();
     await shot(mgr.page, "admin-orders-failed-sent-back-ready");
 
-    const acc = await login(browser, "accountant@local", false);
-    await shot(acc.page, "accountant-debt-read-only");
-    if (!(await acc.page.locator(`[data-order-code="${A}"]`).getByRole("checkbox").isDisabled())) throw new Error("accountant can tick A");
+    const ro = await login(browser, "manager@local", false);
+    await ro.page.goto(`${BASE}/admin/orders?date=${D}`);
+    await shot(ro.page, "manager-orders-read-only");
+    await ro.page.locator(`[data-order-code="${A}"]`).getByRole("button", { name: `Thao tác ${A}` }).click();
+    if ((await ro.page.getByRole("menuitem").allInnerTexts()).some((t) => !["Đã thu"].includes(t))) throw new Error("manager has order moves");
+    await ro.page.keyboard.press("Escape");
 
-    const cas = await login(browser, "cashier@local", false);
-    await cas.page.locator(`[data-order-code="${A}"]`).getByRole("checkbox").click();
-    await shot(cas.page, "cashier-debt-a-selected");
-    await cas.page.getByRole("button", { name: /Xác nhận đã thu \(1 đơn/ }).click();
-    await cas.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
+    await mgr.page.goto(`${BASE}/finance`);
+    await mgr.page.locator(`[data-order-code="${A}"]`).getByRole("checkbox").click();
+    await shot(mgr.page, "admin-debt-a-selected");
+    await mgr.page.getByRole("button", { name: /Xác nhận đã thu \(1 đơn/ }).click();
+    await mgr.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
     await until(async () => (await order(A)).payment_status, (s) => s === "paid", "A paid");
-    await cas.page.goto(`${BASE}/finance/payments`);
-    await shot(cas.page, "cashier-payment-history");
+    await mgr.page.goto(`${BASE}/finance/payments`);
+    await shot(mgr.page, "admin-payment-history");
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     await shot(mgr.page, "admin-orders-paid-read-only");
 
-    await mgr.page.goto(`${BASE}/admin/commission`);
-    await shot(mgr.page, "admin-commission");
     await mgr.page.goto(`${BASE}/admin/products`);
     await shot(mgr.page, "admin-settings");
 

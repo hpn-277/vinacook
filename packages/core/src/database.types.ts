@@ -1,3 +1,4 @@
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
@@ -389,7 +390,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "day_status": "open"|"closed","job_status": "producing"|"received","order_creator": "customer"|"sale"|"manager","order_status": "placed"|"in_production"|"ready"|"assigned"|"out_for_delivery"|"delivered"|"failed"|"cancelled","payment_action": "paid"|"unpaid","payment_status": "unpaid"|"paid","price_tier": "si"|"le","product_status": "pending"|"approved"|"rejected","staff_role": "manager"|"sale"|"factory"|"driver"|"cashier"|"accountant"
+            "day_status": "open"|"closed","job_status": "producing"|"received","order_creator": "customer"|"sale"|"manager","order_status": "placed"|"in_production"|"ready"|"assigned"|"out_for_delivery"|"delivered"|"failed"|"cancelled","payment_action": "paid"|"unpaid","payment_status": "unpaid"|"paid","price_tier": "si"|"le","product_status": "pending"|"approved"|"rejected","staff_role": "admin"|"manager"|"sale"|"factory"|"driver"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -509,7 +510,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "day_status": ["open", "closed"],"job_status": ["producing", "received"],"order_creator": ["customer", "sale", "manager"],"order_status": ["placed", "in_production", "ready", "assigned", "out_for_delivery", "delivered", "failed", "cancelled"],"payment_action": ["paid", "unpaid"],"payment_status": ["unpaid", "paid"],"price_tier": ["si", "le"],"product_status": ["pending", "approved", "rejected"],"staff_role": ["manager", "sale", "factory", "driver", "cashier", "accountant"]
+            "day_status": ["open", "closed"],"job_status": ["producing", "received"],"order_creator": ["customer", "sale", "manager"],"order_status": ["placed", "in_production", "ready", "assigned", "out_for_delivery", "delivered", "failed", "cancelled"],"payment_action": ["paid", "unpaid"],"payment_status": ["unpaid", "paid"],"price_tier": ["si", "le"],"product_status": ["pending", "approved", "rejected"],"staff_role": ["admin", "manager", "sale", "factory", "driver"]
           }
         }
 } as const

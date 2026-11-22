@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { csrf } from "hono/csrf";
-import { DomainError, isPgError } from "@noodle/core/action";
+import { DomainError, PgFailure } from "@noodle/core/action";
 import { auth } from "./routes/auth";
 import { days } from "./routes/days";
 import { driver } from "./routes/driver";
@@ -36,7 +36,7 @@ app.use("/api/*", (c, next) => (c.req.header("authorization") ? next() : csrf()(
 app.onError((e: unknown, c) => {
   if (e instanceof DomainError) return c.json({ error: e.message }, 400);
   // P0001 = RAISE EXCEPTION from our SQL functions; their text is user-facing Vietnamese.
-  if (isPgError(e) && e.code === "P0001") return c.json({ error: e.message }, 400);
+  if (e instanceof PgFailure && e.code === "P0001") return c.json({ error: e.message }, 400);
   console.error(e);
   return c.json({ error: "Có lỗi xảy ra, vui lòng thử lại" }, 500);
 });

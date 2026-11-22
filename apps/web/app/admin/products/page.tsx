@@ -32,7 +32,7 @@ const BUCKET_LABEL: Record<Bucket, string> = {
 const bucketOf = (p: { status: ProductStatus; active: boolean }): Bucket => (p.status === "approved" ? (p.active ? "selling" : "stopped") : p.status);
 
 export default async function ProductsPage({ searchParams }: PageProps<"/admin/products">) {
-  await requireRole("manager");
+  await requireRole("admin");
   const sp = await searchParams;
   const bucket = BUCKETS.find((b) => b === sp.status);
   const [settings, products, packs, factories] = await Promise.all([

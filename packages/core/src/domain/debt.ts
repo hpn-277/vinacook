@@ -41,4 +41,3 @@ export function paymentTotals(events: { action: "paid" | "unpaid"; amount: numbe
 }
 
 export const PAYMENT_ACTION_LABEL = { paid: "Đã thu", unpaid: "Bỏ đánh dấu" } as const;
-export const NO_SETTLE_RIGHTS = "Kế toán không có quyền gạch nợ";

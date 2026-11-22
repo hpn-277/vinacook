@@ -29,7 +29,7 @@ function daysOf(month: string) {
 const compactVnd = new Intl.NumberFormat("vi-VN", { notation: "compact", maximumFractionDigits: 1 });
 
 export default async function OverviewPage({ searchParams }: PageProps<"/admin">) {
-  await requireRole("manager");
+  await requireRole("admin", "manager");
   const raw = (await searchParams).month;
   const month = (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
   const rows = unwrap(await db().rpc("daily_overview", { p_from: `${month}-01`, p_to: `${shiftMonth(month, 1)}-01` }));

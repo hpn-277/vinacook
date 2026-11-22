@@ -11,11 +11,20 @@ import { ROLE_LABEL, type StaffRole } from "@noodle/core/staff";
 import { db } from "@noodle/core/db";
 import { CreateStaffDialog } from "./CreateStaffDialog";
 import { EditStaffDialog } from "./EditStaffDialog";
+import { FactoryDialog } from "@/components/admin/FactoryDialog";
 
 const ROLES = Object.keys(ROLE_LABEL) as StaffRole[];
 
+/** Drivers open their delivery stats, factory accounts their factory's production. */
+function detailHref(s: { id: number; role: StaffRole; factory_id: number | null }) {
+  if (s.role === "driver") return `/admin/drivers/${s.id}`;
+  if (s.role === "factory" && s.factory_id) return `/admin/factories/${s.factory_id}`;
+  return null;
+}
+
 export default async function StaffPage({ searchParams }: PageProps<"/admin/staff">) {
-  const me = await requireRole("manager");
+  const me = await requireRole("admin", "manager");
+  const admin = me.role === "admin";
   const raw = (await searchParams).role;
   const role = ROLES.find((r) => r === raw);
   const [staff, factories, users] = await Promise.all([
@@ -33,7 +42,12 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 [&_h1]:mb-0">
         <PageTitle>Nhân viên</PageTitle>
-        <CreateStaffDialog roles={roles} factories={factories} />
+        {admin && (
+          <div className="flex gap-2">
+            <FactoryDialog />
+            <CreateStaffDialog roles={roles} factories={factories} />
+          </div>
+        )}
       </div>
       <Card size="sm">
         <CardHeader>
@@ -72,7 +86,13 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
                   <TableRow key={s.id} className={s.active ? undefined : "opacity-60"} data-staff={s.name}>
                     <TableCell>
                       <div className="flex items-center gap-2 font-medium">
-                        {s.name}
+                        {admin && detailHref(s) ? (
+                          <Link href={detailHref(s)!} className="text-primary hover:underline">
+                            {s.name}
+                          </Link>
+                        ) : (
+                          s.name
+                        )}
                         {!s.active && <Badge variant="outline">Đã khóa</Badge>}
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -89,7 +109,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
                             Chưa đăng nhập
                           </Badge>
                         )}
-                        {account?.email && s.active && (
+                        {admin && account?.email && s.active && (
                           <ActionForm action="sendPasswordLink" confirm={`Gửi link đặt mật khẩu tới ${account.email}?`}>
                             <input type="hidden" name="id" value={s.id} />
                             <Button variant="link" size="xs" className="h-auto px-0">
@@ -102,7 +122,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/staf
                     <TableCell className="tabular-nums">{s.phone ?? "—"}</TableCell>
                     {hasSales && <TableCell className="tabular-nums">{s.role === "sale" ? `${s.commission_pct ?? 0}%` : ""}</TableCell>}
                     <TableCell className="text-right">
-                      {(s.role !== "manager" || s.id === me.id) && <EditStaffDialog staff={s} roles={roles} factories={factories} email={account?.email} isSelf={s.id === me.id} />}
+                      {admin && (s.role !== "admin" || s.id === me.id) && <EditStaffDialog staff={s} roles={roles} factories={factories} email={account?.email} isSelf={s.id === me.id} />}
                     </TableCell>
                   </TableRow>
                 );

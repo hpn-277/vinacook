@@ -32,11 +32,11 @@ async function productRow(bucket: Bucket, fd: FormData) {
 }
 
 /**
- * The manager's catalog. Create, update and packs take multipart/form-data (fields plus image files,
+ * The admin's catalog. Create, update and packs take multipart/form-data (fields plus image files,
  * `std_<i>`/`active_<packId>`/`image_<packId>` per pack); the rest take JSON.
  */
 export const products = new Hono<ApiEnv>()
-  .use(role("manager"))
+  .use(role("admin"))
   .post("/", async (c) => {
     const fd = await c.req.formData();
     const row = await productRow(c.env.FILES, fd);
@@ -106,7 +106,7 @@ const pricingSchema = z.object({
   wholesale_min_total: z.number({ message: "Số tiền không hợp lệ" }).int("Số tiền phải là số nguyên").min(0, "Số tiền không hợp lệ"),
 });
 
-export const settings = new Hono().use(role("manager")).put("/pricing", valid("json", pricingSchema), async (c) => {
+export const settings = new Hono().use(role("admin")).put("/pricing", valid("json", pricingSchema), async (c) => {
   check(await db().from("settings").update(c.req.valid("json")).eq("id", true));
   return c.json({ message: "Đã lưu cách tính giá; áp dụng cho đơn mới" });
 });

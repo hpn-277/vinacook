@@ -12,13 +12,13 @@ import { Button } from "@/components/ui/button";
 import { unwrap } from "@noodle/core/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@noodle/core/db";
-import { formatKg } from "@noodle/core/domain/money";
 import { ORDER_STATUS_LABEL, ORDER_STATUSES, type OrderStatus } from "@noodle/core/domain/status";
 import { parseIsoDate } from "@noodle/core/domain/time";
 import { today } from "@noodle/core/period";
 
 export default async function AdminOrdersPage({ searchParams }: PageProps<"/admin/orders">) {
-  await requireRole("manager");
+  const me = await requireRole("admin", "manager");
+  const admin = me.role === "admin";
   const sp = await searchParams;
   const date = parseIsoDate(typeof sp.date === "string" ? sp.date : null) ?? today();
 
@@ -36,12 +36,6 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   const reopenable = (counts.get("in_production") ?? 0) + readyCount;
   const waitingToLoad = counts.get("assigned") ?? 0;
 
-  const kgByProduct = new Map<string, number>();
-  for (const o of orders) {
-    if (o.status === "cancelled") continue;
-    for (const i of o.order_items) kgByProduct.set(i.products?.name ?? "?", (kgByProduct.get(i.products?.name ?? "?") ?? 0) + i.qty_kg);
-  }
-
   return (
     <>
       <PageTitle>Đơn hàng ngày {date}</PageTitle>
@@ -55,6 +49,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
           </Badge>
         ))}
       </div>
+      {admin && (
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Button asChild>
           <Link href={`/admin/production/${date}`}>{day.data?.status === "closed" ? "Xem lệnh sản xuất" : "Chốt sản xuất ngày này"}</Link>
@@ -80,13 +75,8 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
           </ActionForm>
         )}
       </div>
-      {kgByProduct.size > 0 && (
-        <p className="mb-3 text-sm text-muted-foreground">
-          Tổng kg (không tính đơn hủy):{" "}
-          {[...kgByProduct].map(([name, kg]) => `${name} ${formatKg(kg)}`).join(" · ")}
-        </p>
       )}
-      {readyCount > 0 && (
+      {admin && readyCount > 0 && (
         <Card size="sm" className="mb-3 border-primary/30 bg-primary/5" data-testid="dispatch-bar">
           <CardContent>
             <ActionForm id="dispatch-form" action="assignDriver" className="flex flex-wrap items-center gap-3">
@@ -114,7 +104,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
             drivers={[...Map.groupBy(orders.filter((o) => o.driver), (o) => o.driver!.id)].map(([id, os]) => ({ id, name: os[0].driver!.name, count: os.length })).sort((a, b) => a.name.localeCompare(b.name, "vi"))}
             unassigned={orders.filter((o) => !o.driver).length}
           />
-          {waitingToLoad > 0 && (
+          {admin && waitingToLoad > 0 && (
             <ActionForm action="unassignDay" confirm={`Hủy phân công ${waitingToLoad} đơn đang chờ lên xe? Các đơn quay về "Đã nhận hàng".`} className="ml-auto">
               <input type="hidden" name="date" value={date} />
               <Button variant="outline" size="sm">
@@ -129,7 +119,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
       ) : (
         <Card size="sm">
           <CardContent>
-            <AdminOrderTable orders={orders} />
+            <AdminOrderTable orders={orders} readOnly={!admin} />
           </CardContent>
         </Card>
       )}

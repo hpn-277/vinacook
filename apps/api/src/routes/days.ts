@@ -9,9 +9,9 @@ import { logUnassign } from "./orders";
 
 const dateParam = valid("param", z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Ngày không hợp lệ") }));
 
-/** A production day's lifecycle, all manager-only. */
+/** A production day's lifecycle, all admin-only. */
 export const days = new Hono()
-  .use(role("manager"))
+  .use(role("admin"))
   /** Each product's kg goes to the factory it belongs to (trang Sản phẩm). */
   .post("/:date/close", dateParam, async (c) => {
     check(await db().rpc("close_production_day", { p_date: c.req.valid("param").date }));

@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { PriceTier } from "@noodle/core/domain/pricing";
 import { cn } from "@/lib/utils";
@@ -40,17 +38,9 @@ export type AdminOrder = {
 export const ADMIN_ORDER_SELECT =
   "id, code, status, payment_status, total, price_tier, phone, address, district, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name))";
 
-const clock = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit" });
-
-/** "Đã rời kho · HH:mm" while the driver is on the road. */
-export function Departed({ order, className }: { order: AdminOrder; className?: string }) {
-  if (order.status !== "out_for_delivery" || !order.departed_at) return null;
-  return <span className={cn("text-blue-800", className)}>Đã rời kho · {clock.format(new Date(order.departed_at))}</span>;
-}
-
 export function OrderActions({ order, size }: { order: AdminOrder; size?: "sm" }) {
   return (MANAGER_ORDER_MOVES[order.status] ?? []).map((to) => (
-    <ActionForm key={to} action="moveOrder" confirm={to === "cancelled" ? `Hủy đơn ${order.code}?` : undefined}>
+    <ActionForm key={to} action="moveOrder" confirm={to === "cancelled" ? `Hủy đơn ${order.code}?` : order.status === "cancelled" ? `Khôi phục đơn ${order.code}?` : undefined}>
       <input type="hidden" name="order_id" value={order.id} />
       <input type="hidden" name="to" value={to} />
       <Button size={size} variant={to === "cancelled" ? "destructive" : order.status === "assigned" ? "outline" : "default"}>
@@ -67,29 +57,6 @@ export function Returned({ order, className }: { order: AdminOrder; className?: 
     <div className={cn("text-amber-700", className)}>
       {order.returner?.name ?? "Tài xế"} trả: {order.return_reason}
     </div>
-  );
-}
-
-/** Payment state for tables. Read-only: only the cashier settles debt, from /finance. */
-/** Unpaid: one click marks it paid (logged). Paid: links to the order, where undo asks for a reason. */
-export function PaidPill({ order }: { order: AdminOrder }) {
-  if (order.status === "cancelled") return <span className="text-xs text-muted-foreground">—</span>;
-  if (order.payment_status === "paid")
-    return (
-      <Badge asChild variant="outline" className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100">
-        <Link href={`/admin/orders/${order.code}#thanh-toan`} title="Mở đơn để bỏ đánh dấu (cần lý do)">
-          ✓ Đã trả
-        </Link>
-      </Badge>
-    );
-  return (
-    <ActionForm action="setPayment">
-      <input type="hidden" name="order_id" value={order.id} />
-      <input type="hidden" name="paid" value="paid" />
-      <Button size="xs" variant="outline" aria-label="Đánh dấu đã trả" title="Bấm để đánh dấu đã trả" className="text-muted-foreground">
-        Chưa trả
-      </Button>
-    </ActionForm>
   );
 }
 
