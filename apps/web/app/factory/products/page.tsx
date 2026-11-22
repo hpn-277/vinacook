@@ -2,21 +2,14 @@ import { PageTitle } from "@/components/page-title";
 import { ProductStatusBadge } from "@/components/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { unwrap } from "@noodle/core/action";
 import { requireRole } from "@/lib/auth";
-import { db } from "@noodle/core/db";
 import { formatVnd } from "@noodle/core/domain/money";
+import { factoryProducts } from "@noodle/core/queries/factory";
 import { ProductDialog } from "./ProductDialog";
 
 export default async function FactoryProductsPage() {
   const me = await requireRole("factory");
-  const products = unwrap(
-    await db()
-      .from("products")
-      .select("id, name, price_per_kg, description, image_url, status, reject_reason, active")
-      .eq("factory_id", me.factory_id!)
-      .order("id", { ascending: false }),
-  );
+  const products = await factoryProducts(me.factory_id!);
 
   return (
     <>

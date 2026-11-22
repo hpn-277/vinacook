@@ -4,6 +4,7 @@ import { check, DomainError, unwrap } from "@noodle/core/action";
 import { db } from "@noodle/core/db";
 import { STANDARD_PACKS } from "@noodle/core/domain/catalog";
 import { id } from "@noodle/core/form";
+import { factoryDays, factoryMonth, factoryProducts } from "@noodle/core/queries/factory";
 import { role, valid, type ApiEnv, type Bucket } from "../http";
 import { uploadProductImage } from "../lib/product-images";
 
@@ -24,6 +25,9 @@ async function productRow(bucket: Bucket, { image_file, ...fields }: z.infer<typ
 /** A factory proposes products it makes; they stay hidden from customers until the manager approves them. */
 export const factory = new Hono<ApiEnv>()
   .use(role("factory"))
+  .get("/days", async (c) => c.json(await factoryDays(c.get("staff").factory_id!)))
+  .get("/month", valid("query", z.object({ month: z.string().optional() })), async (c) => c.json(await factoryMonth(c.get("staff").factory_id!, c.req.valid("query").month)))
+  .get("/products", async (c) => c.json(await factoryProducts(c.get("staff").factory_id!)))
   .post("/products", valid("form", productForm), async (c) => {
     const me = c.get("staff");
     const created = unwrap(

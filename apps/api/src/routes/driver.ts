@@ -3,15 +3,17 @@ import { z } from "zod";
 import { check, unwrap } from "@noodle/core/action";
 import { db } from "@noodle/core/db";
 import { id } from "@noodle/core/form";
+import { driverBoard } from "@noodle/core/queries/driver";
 import { role, valid, type ApiEnv } from "../http";
 import { removeDeliveryPhoto, uploadDeliveryPhoto } from "../lib/delivery-photos";
 import { transition } from "../lib/transition";
 
 const orderParam = valid("param", z.object({ id }));
 
-/** A driver's own orders: load, deliver (with an optional proof photo), fail, or hand back. */
+/** A driver's own orders: today's board, then load, deliver (with an optional proof photo), fail, or hand back. */
 export const driver = new Hono<ApiEnv>()
   .use(role("driver"))
+  .get("/orders", async (c) => c.json(await driverBoard(c.get("staff").id)))
   /**
    * One UPDATE moves exactly the listed orders the driver still has waiting, so it is atomic and
    * re-submitting is a no-op; orders dispatched after the page loaded stay "Chờ lên xe".

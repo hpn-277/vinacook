@@ -1,0 +1,43 @@
+{
+  "name": "@noodle/mobile",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@noodle/core": "workspace:*",
+    "@tanstack/react-query": "^5.104.5",
+    "expo": "~58.0.17",
+    "expo-build-properties": "~58.0.11",
+    "expo-constants": "~58.0.13",
+    "expo-image-manipulator": "~58.0.15",
+    "expo-image-picker": "~58.0.10",
+    "expo-linking": "~58.0.14",
+    "expo-router": "~58.0.25",
+    "expo-secure-store": "~58.0.2",
+    "expo-status-bar": "~58.0.4",
+    "hono": "^4.13.13",
+    "react": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.0"
+  },
+  "devDependencies": {
+    "@e2e-dev/mobile": "^0.12.3",
+    "@noodle/api": "workspace:*",
+    "@types/node": "^24.19.2",
+    "@types/react": "~19.3.0",
+    "e2e": "^0.21.2",
+    "eslint-config-expo": "~58.0.4",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "android:release": "expo run:android --variant release",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e",
+    "lint": "expo lint",
+    "e2e:seed": "tsx e2e/seed.ts",
+    "e2e": "tsx e2e/seed.ts && e2e run"
+  },
+  "private": true
+}

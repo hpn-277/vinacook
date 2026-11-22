@@ -9,7 +9,7 @@ import { requireRole } from "@/lib/auth";
 import { db } from "@noodle/core/db";
 import { formatVnd } from "@noodle/core/domain/money";
 import { parseIsoDate } from "@noodle/core/domain/time";
-import { today } from "@/lib/period";
+import { today } from "@noodle/core/period";
 
 export default async function CommissionPage({ searchParams }: PageProps<"/admin/commission">) {
   await requireRole("manager");

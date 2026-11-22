@@ -9,8 +9,8 @@ import { requireRole } from "@/lib/auth";
 import { db } from "@noodle/core/db";
 import { formatKg, formatVnd } from "@noodle/core/domain/money";
 import { localDate, parseIsoDate } from "@noodle/core/domain/time";
-import { deliveredInMonth, orderKg } from "@/lib/driver-stats";
-import { today } from "@/lib/period";
+import { deliveredInMonth, orderKg } from "@noodle/core/driver-stats";
+import { today } from "@noodle/core/period";
 
 export default async function DriversPage({ searchParams }: PageProps<"/admin/drivers">) {
   await requireRole("manager");

@@ -8,12 +8,31 @@ Stack: a pnpm monorepo on Cloudflare Workers, Supabase (Postgres and Auth), and 
 |---|---|
 | `apps/web` | Next.js (App Router) via OpenNext: pages, components, server-rendered reads. |
 | `apps/api` | Hono API worker: every write, auth, and `/files`. Web forms and the future mobile app both call it. |
+| `apps/mobile` | Expo (React Native) app for sale, driver and factory staff. Same screens and actions as the web; talks only to the API. |
 | `packages/core` | Shared domain logic, Supabase client and types, zod field schemas. |
 | `supabase/` | Migrations, seed, email templates. |
 
 All data access runs on the server with the Supabase secret key, after a role check: `requireRole` (`apps/web/lib/auth.ts`) for pages, `role(...)` (`apps/api/src/http.ts`) for the API.
 
 The web worker forwards `/api/*` and `/files/*` to the API worker over the `API` service binding, so the API is same-origin with the pages and the Supabase session cookies just work. Mobile calls the same URLs with `Authorization: Bearer <supabase access token>`.
+
+## Mobile app (`apps/mobile`)
+
+Expo SDK 58 + expo-router, Android-first. Sale, driver and factory staff get the same screens and actions as on the web; managers and finance keep using the web. It signs in through `POST /api/v1/auth/session` (tokens kept in the device's secure store, refreshed via `/auth/refresh`) and calls the API with the typed Hono client.
+
+Build and run on the Android emulator (needs the Android SDK and an AVD; `ANDROID_HOME` set) with `pnpm dev` running:
+
+```sh
+pnpm mobile                 # release build, installed on the running emulator
+```
+
+The app calls `EXPO_PUBLIC_API_URL`, by default `http://10.0.2.2:3000` (the host's `pnpm dev` as seen from the emulator). Set it to the deployed web origin for a production build.
+
+End-to-end tests use [tester.army e2e](https://e2e.tester.army) on the emulator, deterministic (no AI model):
+
+```sh
+pnpm e2e:mobile             # resets the local database, seeds orders via the API (e2e/seed.ts), runs e2e/tests/
+```
 
 ## API
 

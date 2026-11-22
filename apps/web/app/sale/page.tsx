@@ -8,32 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { unwrap } from "@noodle/core/action";
 import { requireRole } from "@/lib/auth";
-import { db } from "@noodle/core/db";
 import { itemLabel } from "@noodle/core/domain/catalog";
 import { formatVnd } from "@noodle/core/domain/money";
-import { parseIsoDate } from "@noodle/core/domain/time";
-import { today } from "@/lib/period";
+import { monthParam, saleActiveOrders } from "@noodle/core/queries/sale";
 
 const departedAt = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 export default async function SaleDashboard({ searchParams }: PageProps<"/sale">) {
   const me = await requireRole("sale");
-  const raw = (await searchParams).month;
-  const month = (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
+  const month = monthParam((await searchParams).month);
   const host = (await headers()).get("host");
   const refLink = `http://${host}/r/${me.ref_code}`;
-
-  const active = unwrap(
-    await db()
-      .from("orders")
-      .select("id, code, production_date, status, total, price_tier, departed_at, customers(name, phone), driver:staff!orders_driver_id_fkey(name, phone), order_items(id, pack_name, pack_qty, qty_kg, products(name))")
-      .eq("sale_id", me.id)
-      .not("status", "in", "(delivered,cancelled)")
-      .order("created_at", { ascending: false })
-      .order("id", { referencedTable: "order_items" }),
-  );
+  const active = await saleActiveOrders(me.id);
 
   return (
     <>

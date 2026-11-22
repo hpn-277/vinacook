@@ -10,8 +10,8 @@ import { requireRole } from "@/lib/auth";
 import { db } from "@noodle/core/db";
 import { formatKg, formatVnd } from "@noodle/core/domain/money";
 import { localDate, parseIsoDate } from "@noodle/core/domain/time";
-import { deliveredInMonth, orderKg } from "@/lib/driver-stats";
-import { today } from "@/lib/period";
+import { deliveredInMonth, orderKg } from "@noodle/core/driver-stats";
+import { today } from "@noodle/core/period";
 
 const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const hm = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });

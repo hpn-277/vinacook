@@ -1,6 +1,5 @@
-import "server-only";
-import { unwrap } from "@noodle/core/action";
-import { db } from "@noodle/core/db";
+import { unwrap } from "./action";
+import { db } from "./db";
 
 export function nextMonth(month: string) {
   const [y, m] = month.split("-").map(Number);

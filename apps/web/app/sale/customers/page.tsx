@@ -2,27 +2,18 @@ import Link from "next/link";
 import { PageTitle } from "@/components/page-title";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { unwrap } from "@noodle/core/action";
 import { requireRole } from "@/lib/auth";
-import { db } from "@noodle/core/db";
 import { formatVnd } from "@noodle/core/domain/money";
+import { saleCustomers } from "@noodle/core/queries/sale";
 
 export default async function SaleCustomersPage() {
   const me = await requireRole("sale");
-  const customers = unwrap(
-    await db()
-      .from("customers")
-      .select("id, name, phone, default_address, default_district, orders(total, status)")
-      .eq("sale_id", me.id)
-      .order("created_at", { ascending: false }),
-  );
+  const customers = await saleCustomers(me.id);
   return (
     <>
       <PageTitle>Khách hàng của tôi ({customers.length})</PageTitle>
       <ul className="space-y-2">
-        {customers.map((c) => {
-          const live = c.orders.filter((o) => o.status !== "cancelled");
-          return (
+        {customers.map((c) => (
             <li key={c.id}>
               <Card size="sm">
                 <CardContent className="flex items-center justify-between gap-2">
@@ -32,7 +23,7 @@ export default async function SaleCustomersPage() {
                       {c.default_address}, {c.default_district}
                     </div>
                     <div className="text-muted-foreground">
-                      {live.length} đơn · {formatVnd(live.reduce((s, o) => s + o.total, 0))}
+                      {c.orders} đơn · {formatVnd(c.total)}
                     </div>
                   </div>
                   <Button asChild variant="outline">
@@ -41,8 +32,7 @@ export default async function SaleCustomersPage() {
                 </CardContent>
               </Card>
             </li>
-          );
-        })}
+        ))}
       </ul>
     </>
   );

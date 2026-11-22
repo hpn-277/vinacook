@@ -1,5 +1,4 @@
-import "server-only";
-import { addDays, localDate, monthStart, type IsoDate } from "@noodle/core/domain/time";
+import { addDays, localDate, monthStart, type IsoDate } from "./domain/time";
 
 // Vietnam has no DST, so a fixed offset is exact.
 const OFFSET = "+07:00";

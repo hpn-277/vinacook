@@ -1,13 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import {
-  ADMIN_ORDER_SELECT,
-  OrderActions,
-  PaymentLabel,
-  Returned,
-  type AdminOrder,
-} from "@/components/AdminOrderCard";
+import { OrderActions, PaymentLabel, Returned } from "@/components/AdminOrderCard";
 import { EditContact } from "@/components/EditContact";
 import { PaymentPanel } from "@/components/PaymentPanel";
 import { JobBadge, OrderBadge, TierBadge } from "@/components/status-badge";
@@ -21,70 +15,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { unwrap } from "@noodle/core/action";
-import { db } from "@noodle/core/db";
-import { deliveryPhotoUrl } from "@noodle/core/files";
 import { lineLabel } from "@noodle/core/domain/catalog";
 import { CONTACT_EDITABLE, MANAGER_ORDER_MOVES } from "@noodle/core/domain/status";
 import { formatKg, formatVnd } from "@noodle/core/domain/money";
-
-type Detail = AdminOrder & {
-  created_by: "customer" | "sale" | "manager";
-  delivered_at: string | null;
-  delivery_photo_path: string | null;
-  retail_markup_pct: number;
-  wholesale_min_kg: number;
-  wholesale_min_total: number;
-  creator: { name: string } | null;
-  driver_contact: { phone: string | null } | null;
-  customer: {
-    id: number;
-    name: string;
-    phone: string;
-    default_address: string | null;
-    default_district: string | null;
-    created_at: string;
-    owner: {
-      name: string;
-      ref_code: string | null;
-      commission_pct: number | null;
-    } | null;
-  } | null;
-  items: {
-    id: number;
-    pack_name: string;
-    pack_qty: number;
-    qty_kg: number;
-    price_per_kg: number;
-    wholesale_price_per_kg: number;
-    line_total: number;
-    product_id: number;
-    products: { name: string } | null;
-  }[];
-};
-
-const DETAIL_SELECT = `${ADMIN_ORDER_SELECT}, created_by, delivered_at, delivery_photo_path, retail_markup_pct, wholesale_min_kg, wholesale_min_total,
-  creator:staff!orders_created_by_staff_id_fkey(name),
-  driver_contact:staff!orders_driver_id_fkey(phone),
-  customer:customers(id, name, phone, default_address, default_district, created_at, owner:staff(name, ref_code, commission_pct)),
-  items:order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, wholesale_price_per_kg, line_total, product_id, products(name))`;
-
-const dateTime = new Intl.DateTimeFormat("vi-VN", {
-  timeZone: "Asia/Ho_Chi_Minh",
-  dateStyle: "short",
-  timeStyle: "short",
-});
-const dateOnly = new Intl.DateTimeFormat("vi-VN", {
-  timeZone: "Asia/Ho_Chi_Minh",
-  dateStyle: "short",
-});
-const when = (iso: string | null | undefined) =>
-  iso ? dateTime.format(new Date(iso)) : null;
-const CREATED_BY = {
-  customer: "Khách tự đặt",
-  sale: "NVKD tạo",
-  manager: "Quản lý tạo",
-} as const;
+import { orderDetail, type OrderViewer } from "@noodle/core/queries/order-detail";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -108,11 +42,6 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export type OrderViewer =
-  | { role: "manager" }
-  | { role: "sale"; saleId: number }
-  | { role: "cashier" | "accountant" };
-
 /**
  * Full order page. Managers get actions and the factory jobs; a sale sees only orders credited to them, read-only.
  * Finance (cashier, accountant) sees every order read-only plus the payment section; the cashier and the manager can settle.
@@ -127,118 +56,10 @@ export async function OrderDetail({
   const manager = viewer.role === "manager";
   const finance = viewer.role === "cashier" || viewer.role === "accountant";
   const base = manager ? "/admin/orders" : finance ? "/finance/orders" : "/sale/orders";
-  let query = db().from("orders").select(DETAIL_SELECT).eq("code", code);
-  if (viewer.role === "sale") query = query.eq("sale_id", viewer.saleId);
-  const { data } = await query
-    .order("id", { referencedTable: "order_items" })
-    .maybeSingle();
-  if (!data) notFound();
-  const order = data as unknown as Detail;
-
-  const productIds = [...new Set(order.items.map((i) => i.product_id))];
-  const [day, jobs, history] = await Promise.all([
-    db()
-      .from("production_days")
-      .select("status, closed_at")
-      .eq("date", order.production_date)
-      .maybeSingle(),
-    db()
-      .from("production_jobs")
-      .select(
-        "id, qty_kg, received_kg, status, updated_at, products(name), factories(name)",
-      )
-      .eq("date", order.production_date)
-      .in("product_id", productIds)
-      .order("id")
-      .then(unwrap),
-    order.customer
-      ? (viewer.role === "sale"
-          ? db()
-              .from("orders")
-              .select("code, production_date, status, total, payment_status")
-              .eq("customer_id", order.customer.id)
-              .eq("sale_id", viewer.saleId)
-          : db()
-              .from("orders")
-              .select("code, production_date, status, total, payment_status")
-              .eq("customer_id", order.customer.id)
-        )
-          .order("production_date", { ascending: false })
-          .limit(10)
-          .then(unwrap)
-      : Promise.resolve([]),
-  ]);
-  const photo = order.delivery_photo_path
-    ? deliveryPhotoUrl(order.delivery_photo_path)
-    : undefined;
-
-  const kg = order.items.reduce((s, i) => s + i.qty_kg, 0);
-  const atWholesale = order.items.reduce(
-    (s, i) => s + Math.round(i.qty_kg * i.wholesale_price_per_kg),
-    0,
-  );
+  const detail = await orderDetail(code, viewer);
+  if (!detail) notFound();
+  const { order, creatorLabel, customerSince, photo, kg, atWholesale, commission, timeline, jobs, history } = detail;
   const owner = order.customer?.owner;
-  const commission =
-    order.sale && owner?.commission_pct != null && order.status === "delivered"
-      ? Math.round((order.total * owner.commission_pct) / 100)
-      : null;
-  const received = jobs
-    .filter((j) => j.status === "received")
-    .map((j) => j.updated_at);
-  const timeline: {
-    label: string;
-    at: string | null;
-    note: string;
-    done?: boolean;
-  }[] = [
-    {
-      label: "Đặt hàng",
-      at: when(order.created_at),
-      note:
-        CREATED_BY[order.created_by] +
-        (order.creator ? ` (${order.creator.name})` : ""),
-    },
-    {
-      label: "Chốt sản xuất",
-      at: when(day.data?.closed_at),
-      note:
-        day.data?.status === "closed"
-          ? "Đã gửi lệnh cho xưởng"
-          : "Ngày chưa chốt",
-    },
-    {
-      label: "Nhận hàng từ xưởng",
-      at: received.length ? when(received.sort().at(-1)) : null,
-      note: jobs.length
-        ? `${received.length}/${jobs.length} lệnh đã nhận`
-        : "Chưa có lệnh",
-    },
-    {
-      label: "Giao cho tài xế",
-      at: null,
-      done: !!order.driver,
-      note: order.driver ? order.driver.name : "Chưa phân công",
-    },
-    {
-      label: "Hàng đã lên xe",
-      at: when(order.departed_at),
-      note: order.departed_at
-        ? "Xe đã rời kho"
-        : order.status === "assigned"
-          ? "Chờ tài xế xác nhận"
-          : "",
-    },
-    {
-      label: "Giao thành công",
-      at: when(order.delivered_at),
-      note:
-        order.status === "failed"
-          ? `Thất bại: ${order.fail_reason}`
-          : order.status === "cancelled"
-            ? "Đơn đã hủy"
-            : "",
-    },
-  ];
 
   return (
     <>
@@ -285,9 +106,7 @@ export async function OrderDetail({
             </Row>
             {order.note && <Row label="Ghi chú">{order.note}</Row>}
             <Row label="Khách từ">
-              {order.customer
-                ? dateOnly.format(new Date(order.customer.created_at))
-                : "—"}
+              {customerSince ?? "—"}
             </Row>
             <Row label="Tài xế">
               {order.driver ? (
@@ -350,8 +169,7 @@ export async function OrderDetail({
             </Row>
             <Row label="Đơn tính cho">{order.sale?.name ?? "—"}</Row>
             <Row label="Người tạo đơn">
-              {CREATED_BY[order.created_by] +
-                (order.creator ? ` · ${order.creator.name}` : "")}
+              {creatorLabel}
             </Row>
             <Row label="% hoa hồng">
               {owner?.commission_pct != null ? `${owner.commission_pct}%` : "—"}

@@ -9,7 +9,7 @@ import { db } from "@noodle/core/db";
 import { groupDebts, OVERDUE_DAYS, paymentTotals } from "@noodle/core/domain/debt";
 import { formatVnd } from "@noodle/core/domain/money";
 import type { OrderStatus } from "@noodle/core/domain/status";
-import { monthRange, today } from "@/lib/period";
+import { monthRange, today } from "@noodle/core/period";
 
 const DEBT_SELECT =
   "id, code, status, total, production_date, delivered_at, district, phone, customer_id, customer:customers(name, phone, default_district, owner:staff(id, name)), driver:staff!orders_driver_id_fkey(name)";

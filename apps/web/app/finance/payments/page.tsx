@@ -11,7 +11,7 @@ import { db } from "@noodle/core/db";
 import { PAYMENT_ACTION_LABEL, paymentTotals } from "@noodle/core/domain/debt";
 import { formatVnd } from "@noodle/core/domain/money";
 import { parseIsoDate } from "@noodle/core/domain/time";
-import { monthRange, today } from "@/lib/period";
+import { monthRange, today } from "@noodle/core/period";
 
 /** Columns that fold into the first cells on phones, so code and amount stay on screen. */
 const WIDE = "hidden md:table-cell";

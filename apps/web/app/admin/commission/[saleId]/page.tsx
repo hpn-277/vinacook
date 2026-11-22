@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { requireRole } from "@/lib/auth";
 import { db } from "@noodle/core/db";
 import { parseIsoDate } from "@noodle/core/domain/time";
-import { today } from "@/lib/period";
+import { today } from "@noodle/core/period";
 
 export default async function SaleCommissionPage({ params, searchParams }: PageProps<"/admin/commission/[saleId]">) {
   await requireRole("manager");

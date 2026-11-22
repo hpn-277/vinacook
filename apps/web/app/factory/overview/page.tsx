@@ -5,27 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
 import { formatKg } from "@noodle/core/domain/money";
-import { parseIsoDate } from "@noodle/core/domain/time";
-import { jobsInMonth } from "@/lib/factory-stats";
-import { today } from "@/lib/period";
+import { factoryMonth } from "@noodle/core/queries/factory";
 
 export default async function FactoryOverviewPage({ searchParams }: PageProps<"/factory/overview">) {
   const me = await requireRole("factory");
   const raw = (await searchParams).month;
-  const month = (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
-  const jobs = await jobsInMonth(month, me.factory_id!);
-
-  const produced = jobs.filter((j) => j.status === "received");
-  const producedKg = produced.reduce((s, j) => s + (j.received_kg ?? j.qty_kg), 0);
-  const inProgressKg = jobs.filter((j) => j.status === "producing").reduce((s, j) => s + j.qty_kg, 0);
-  const days = [...new Set(jobs.map((j) => j.date))];
-
-  const byProduct = new Map<string, number>();
-  for (const j of produced) byProduct.set(j.products?.name ?? "?", (byProduct.get(j.products?.name ?? "?") ?? 0) + (j.received_kg ?? j.qty_kg));
-  const productRows = [...byProduct].sort((a, b) => b[1] - a[1]);
+  const { month, producedKg, producedCount, inProgressKg, products: productRows, days } = await factoryMonth(me.factory_id!, typeof raw === "string" ? raw : undefined);
 
   const tiles = [
-    { label: "Đã sản xuất", value: formatKg(producedKg), note: `${produced.length} lệnh đã giao cho công ty` },
+    { label: "Đã sản xuất", value: formatKg(producedKg), note: `${producedCount} lệnh đã giao cho công ty` },
     { label: "Đang sản xuất", value: formatKg(inProgressKg), note: inProgressKg ? "Chờ quản lý nhận hàng" : "Không có" },
     { label: "Số ngày có lệnh", value: String(days.length), note: `Tháng ${month}` },
   ];
@@ -71,7 +59,7 @@ export default async function FactoryOverviewPage({ searchParams }: PageProps<"/
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {productRows.map(([name, kg]) => (
+                  {productRows.map(({ name, kg }) => (
                     <TableRow key={name}>
                       <TableCell className="font-medium">{name}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatKg(kg)}</TableCell>
@@ -98,7 +86,7 @@ export default async function FactoryOverviewPage({ searchParams }: PageProps<"/
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {jobs.length === 0 ? (
+            {days.length === 0 ? (
               <p className="text-sm text-muted-foreground">Không có lệnh trong tháng.</p>
             ) : (
               <Table>
@@ -110,24 +98,18 @@ export default async function FactoryOverviewPage({ searchParams }: PageProps<"/
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {days.map((d) => {
-                    const dayJobs = jobs.filter((j) => j.date === d);
-                    const pending = dayJobs.some((j) => j.status === "producing");
-                    return (
-                      <TableRow key={d} data-factory-overview-day={d}>
-                        <TableCell className="align-top tabular-nums">
-                          {d.slice(8)}/{d.slice(5, 7)}
-                          {pending && <div className="text-xs text-primary">Đang sản xuất</div>}
-                        </TableCell>
-                        <TableCell className="text-xs whitespace-normal text-muted-foreground">
-                          {dayJobs.map((j) => `${j.products?.name} ${formatKg(j.received_kg ?? j.qty_kg)}`).join(", ")}
-                        </TableCell>
-                        <TableCell className="text-right align-top font-medium tabular-nums">
-                          {formatKg(dayJobs.reduce((s, j) => s + (j.received_kg ?? j.qty_kg), 0))}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {days.map((d) => (
+                    <TableRow key={d.date} data-factory-overview-day={d.date}>
+                      <TableCell className="align-top tabular-nums">
+                        {d.date.slice(8)}/{d.date.slice(5, 7)}
+                        {d.pending && <div className="text-xs text-primary">Đang sản xuất</div>}
+                      </TableCell>
+                      <TableCell className="text-xs whitespace-normal text-muted-foreground">
+                        {d.jobs.map((j) => `${j.product} ${formatKg(j.kg)}`).join(", ")}
+                      </TableCell>
+                      <TableCell className="text-right align-top font-medium tabular-nums">{formatKg(d.kg)}</TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             )}

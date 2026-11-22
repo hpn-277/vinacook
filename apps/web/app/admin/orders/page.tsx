@@ -15,7 +15,7 @@ import { db } from "@noodle/core/db";
 import { formatKg } from "@noodle/core/domain/money";
 import { ORDER_STATUS_LABEL, ORDER_STATUSES, type OrderStatus } from "@noodle/core/domain/status";
 import { parseIsoDate } from "@noodle/core/domain/time";
-import { today } from "@/lib/period";
+import { today } from "@noodle/core/period";
 
 export default async function AdminOrdersPage({ searchParams }: PageProps<"/admin/orders">) {
   await requireRole("manager");

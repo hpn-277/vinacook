@@ -11,8 +11,8 @@ import { requireRole } from "@/lib/auth";
 import { db } from "@noodle/core/db";
 import { formatKg } from "@noodle/core/domain/money";
 import { parseIsoDate } from "@noodle/core/domain/time";
-import { jobKg, jobsInMonth } from "@/lib/factory-stats";
-import { today } from "@/lib/period";
+import { jobKg, jobsInMonth } from "@noodle/core/factory-stats";
+import { today } from "@noodle/core/period";
 
 const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 

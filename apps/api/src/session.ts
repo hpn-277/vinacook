@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import type { Context } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { env } from "@noodle/core/env";
@@ -14,4 +15,9 @@ export function sessionClient(c: Context) {
       },
     },
   });
+}
+
+/** Stateless Supabase auth client for token clients (mobile): returns sessions instead of setting cookies. */
+export function tokenClient() {
+  return createClient(env.supabaseUrl(), env.publishableKey(), { auth: { persistSession: false, autoRefreshToken: false } });
 }

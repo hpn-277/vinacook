@@ -6,24 +6,15 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { requireRole } from "@/lib/auth";
-import { db } from "@noodle/core/db";
 import { DISTRICTS } from "@noodle/core/domain/districts";
-import { getSettings, loadCatalog, pricingTerms } from "@noodle/core/orders";
+import { customerLookup, normalizePhone, orderForm } from "@noodle/core/queries/sale";
 
 export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sale/orders/new">) {
   const me = await requireRole("sale", "manager");
-  const raw = (await searchParams).phone;
-  const phone = typeof raw === "string" ? raw.replace(/[\s.-]/g, "") : "";
-  const [catalog, settings, customer] = await Promise.all([
-    loadCatalog(),
-    getSettings(),
-    phone
-      ? db().from("customers").select("name, phone, default_address, default_district, sale_id, staff(name)").eq("phone", phone).maybeSingle()
-      : null,
-  ]);
-  const terms = pricingTerms(settings);
-  const found = customer?.data ?? null;
-  const ownedByOther = found?.sale_id != null && found.sale_id !== me.id;
+  const phone = normalizePhone((await searchParams).phone);
+  const [{ catalog, terms }, lookup] = await Promise.all([orderForm(), customerLookup(phone, me.id)]);
+  const found = lookup?.found ?? null;
+  const ownedByOther = lookup?.ownedByOther ?? false;
 
   return (
     <>
@@ -39,7 +30,7 @@ export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sa
           {found ? `Khách cũ: ${found.name}` : "Khách mới, nhập thông tin bên dưới."}
           {ownedByOther && (
             <span className="ml-1 font-medium text-amber-700">
-              Khách thuộc {found?.staff?.name}; đơn vẫn được lưu nhưng tính cho nhân viên đó.
+              Khách thuộc {lookup?.ownerName}; đơn vẫn được lưu nhưng tính cho nhân viên đó.
             </span>
           )}
         </p>

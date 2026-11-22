@@ -10,7 +10,7 @@ import { requireRole } from "@/lib/auth";
 import { db } from "@noodle/core/db";
 import { formatKg, formatVnd } from "@noodle/core/domain/money";
 import { parseIsoDate } from "@noodle/core/domain/time";
-import { today } from "@/lib/period";
+import { today } from "@noodle/core/period";
 
 type Day = { day: string; orders: number; cancelled: number; kg: number; revenue: number; paid: number; unpaid: number };
 

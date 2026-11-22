@@ -2,71 +2,19 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { unwrap } from "@noodle/core/action";
-import { db } from "@noodle/core/db";
 import { formatVnd } from "@noodle/core/domain/money";
-import { localDate, type IsoDate } from "@noodle/core/domain/time";
-import { monthRange } from "@/lib/period";
+import { saleMonthReport } from "@noodle/core/queries/sale";
 
 const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
-/** A salesperson's month: delivered orders by delivery day, commission, and their customers. Shared by the manager and the sale. */
+/** Renders saleMonthReport. Shared by the manager and the sale. */
 export async function SaleMonthReport({ sale, month, orderLinks }: { sale: { id: number; commission_pct: number | null }; month: string; orderLinks: boolean }) {
-  const saleId = sale.id;
-  const pct = Number(sale.commission_pct ?? 0);
-  const { from, to } = monthRange(`${month}-01` as IsoDate);
-
-  const [delivered, customers] = await Promise.all([
-    db()
-      .from("orders")
-      .select("code, total, delivered_at, production_date, customer_id, customers(name, phone)")
-      .eq("sale_id", saleId)
-      .eq("status", "delivered")
-      .gte("delivered_at", from)
-      .lt("delivered_at", to)
-      .order("delivered_at", { ascending: false })
-      .then(unwrap),
-    db()
-      .from("customers")
-      .select("id, name, phone, default_district, orders(code, status, total, production_date, delivered_at)")
-      .eq("sale_id", saleId)
-      .order("name")
-      .then(unwrap),
-  ]);
-
-  const sales = delivered.reduce((s, o) => s + o.total, 0);
-  const commission = Math.round((sales * pct) / 100);
-  const days = new Map<string, { sales: number; orders: typeof delivered }>();
-  for (const o of delivered) {
-    const d = localDate(new Date(o.delivered_at!));
-    const day = days.get(d) ?? { sales: 0, orders: [] };
-    day.sales += o.total;
-    day.orders.push(o);
-    days.set(d, day);
-  }
-
-  const customerRows = customers
-    .map((c) => {
-      const live = c.orders.filter((o) => o.status !== "cancelled");
-      const monthDelivered = c.orders.filter((o) => o.status === "delivered" && o.delivered_at! >= from && o.delivered_at! < to);
-      const dates = live.map((o) => o.production_date).sort();
-      const last = dates.at(-1);
-      return {
-        ...c,
-        monthOrders: monthDelivered.length,
-        monthSales: monthDelivered.reduce((s, o) => s + o.total, 0),
-        lifetimeOrders: live.length,
-        last,
-        isNew: dates[0]?.startsWith(month) ?? false,
-      };
-    })
-    .sort((a, b) => b.monthSales - a.monthSales || a.name.localeCompare(b.name, "vi"));
-
+  const r = await saleMonthReport(sale, month);
   const tiles = [
-    { label: "Đơn đã giao", value: String(delivered.length), note: `Trong tháng ${month}` },
-    { label: "Doanh số đã giao", value: formatVnd(sales), note: `${days.size} ngày có đơn giao` },
-    { label: `Hoa hồng (${pct}%)`, value: formatVnd(commission), note: "Tính trên đơn đã giao", testId: "sale-commission" },
-    { label: "Khách hàng", value: String(customers.length), note: `${customerRows.filter((c) => c.isNew).length} khách có đơn đầu tiên trong tháng` },
+    { label: "Đơn đã giao", value: String(r.orders), note: `Trong tháng ${month}` },
+    { label: "Doanh số đã giao", value: formatVnd(r.sales), note: `${r.days.length} ngày có đơn giao` },
+    { label: `Hoa hồng (${r.pct}%)`, value: formatVnd(r.commission), note: "Tính trên đơn đã giao", testId: "sale-commission" },
+    { label: "Khách hàng", value: String(r.customers.length), note: `${r.newCustomers} khách có đơn đầu tiên trong tháng` },
   ];
 
   return (
@@ -92,7 +40,7 @@ export async function SaleMonthReport({ sale, month, orderLinks }: { sale: { id:
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {days.size === 0 ? (
+          {r.days.length === 0 ? (
             <p className="text-sm text-muted-foreground">Chưa có đơn giao trong tháng.</p>
           ) : (
             <Table>
@@ -105,15 +53,15 @@ export async function SaleMonthReport({ sale, month, orderLinks }: { sale: { id:
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[...days].map(([d, day]) => (
-                  <Fragment key={d}>
-                    <TableRow className="bg-muted/50 font-medium hover:bg-muted/50" data-commission-day={d}>
+                {r.days.map((day) => (
+                  <Fragment key={day.date}>
+                    <TableRow className="bg-muted/50 font-medium hover:bg-muted/50" data-commission-day={day.date}>
                       <TableCell className="tabular-nums">
-                        {dm(d)} <span className="font-normal text-muted-foreground">· {day.orders.length} đơn</span>
+                        {dm(day.date)} <span className="font-normal text-muted-foreground">· {day.orders.length} đơn</span>
                       </TableCell>
                       <TableCell />
                       <TableCell className="text-right tabular-nums">{formatVnd(day.sales)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatVnd(Math.round((day.sales * pct) / 100))}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatVnd(day.commission)}</TableCell>
                     </TableRow>
                     {day.orders.map((o) => (
                       <TableRow key={o.code} className="relative">
@@ -126,9 +74,9 @@ export async function SaleMonthReport({ sale, month, orderLinks }: { sale: { id:
                             o.code
                           )}
                         </TableCell>
-                        <TableCell>{o.customers?.name}</TableCell>
+                        <TableCell>{o.customer}</TableCell>
                         <TableCell className="text-right text-muted-foreground tabular-nums">{formatVnd(o.total)}</TableCell>
-                        <TableCell className="text-right text-muted-foreground tabular-nums">{formatVnd(Math.round((o.total * pct) / 100))}</TableCell>
+                        <TableCell className="text-right text-muted-foreground tabular-nums">{formatVnd(o.commission)}</TableCell>
                       </TableRow>
                     ))}
                   </Fragment>
@@ -136,10 +84,10 @@ export async function SaleMonthReport({ sale, month, orderLinks }: { sale: { id:
               </TableBody>
               <TableFooter>
                 <TableRow>
-                  <TableCell>Tổng · {delivered.length} đơn</TableCell>
+                  <TableCell>Tổng · {r.orders} đơn</TableCell>
                   <TableCell />
-                  <TableCell className="text-right tabular-nums">{formatVnd(sales)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatVnd(commission)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatVnd(r.sales)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatVnd(r.commission)}</TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
@@ -150,11 +98,11 @@ export async function SaleMonthReport({ sale, month, orderLinks }: { sale: { id:
       <Card size="sm" className="mt-4">
         <CardHeader>
           <CardTitle>
-            <h2>Khách hàng phụ trách ({customers.length})</h2>
+            <h2>Khách hàng phụ trách ({r.customers.length})</h2>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {customerRows.length === 0 ? (
+          {r.customers.length === 0 ? (
             <p className="text-sm text-muted-foreground">Chưa có khách hàng.</p>
           ) : (
             <Table>
@@ -169,7 +117,7 @@ export async function SaleMonthReport({ sale, month, orderLinks }: { sale: { id:
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {customerRows.map((c) => (
+                {r.customers.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>
                       <div className="font-medium">
@@ -177,7 +125,7 @@ export async function SaleMonthReport({ sale, month, orderLinks }: { sale: { id:
                       </div>
                       <div className="text-xs text-muted-foreground">{c.phone}</div>
                     </TableCell>
-                    <TableCell>{c.default_district ?? "—"}</TableCell>
+                    <TableCell>{c.district ?? "—"}</TableCell>
                     <TableCell className="text-right tabular-nums">{c.monthOrders}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatVnd(c.monthSales)}</TableCell>
                     <TableCell className="text-right tabular-nums">{c.lifetimeOrders}</TableCell>
