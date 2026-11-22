@@ -23,7 +23,7 @@ export default function SaleCustomers() {
                     </Text>
                   </Body>
                   <Muted>
-                    {c.default_address}, {c.default_district}
+                    {c.address ?? "—"}
                   </Muted>
                   <Muted>
                     {c.orders} đơn · {formatVnd(c.total)}

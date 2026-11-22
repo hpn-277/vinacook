@@ -4,7 +4,7 @@ import { z } from "zod";
 import { pgFailure } from "@noodle/core/action";
 import { db } from "@noodle/core/db";
 import { formatVnd } from "@noodle/core/domain/money";
-import { district, phone } from "@noodle/core/form";
+import { destination, phone } from "@noodle/core/form";
 import { orderItems, placeOrder, saleIdForRefCode } from "@noodle/core/orders";
 import { REF_COOKIE } from "@noodle/core/ref";
 import { REORDER_FIELDS, toReorderSource } from "@noodle/core/reorder";
@@ -12,8 +12,7 @@ import { role, valid } from "../http";
 
 const contact = {
   phone,
-  address: z.string().trim().min(1, "Nhập địa chỉ"),
-  district,
+  destination,
   note: z.string().trim().default(""),
   items: orderItems,
 };

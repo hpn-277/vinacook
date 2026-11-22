@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { District } from "@noodle/core/domain/districts";
+import type { Country } from "@noodle/core/domain/destination";
 import type { OrderStatus } from "@noodle/core/domain/status";
 import type { StaffRole } from "@noodle/core/staff";
 
@@ -20,11 +20,20 @@ const staffFields = (fd: FormData) => ({
   factory_id: optNum(fd, "factory_id"),
 });
 
+/** The fields of components/DestinationFields. */
+export const destination = (fd: FormData) => ({
+  country: (text(fd, "country") || "VN") as Country,
+  region: text(fd, "region"),
+  district: text(fd, "district"),
+  postcode: text(fd, "postcode") || null,
+  address: text(fd, "address"),
+  company: text(fd, "company") || null,
+});
+
 const contact = (fd: FormData) => ({
   name: text(fd, "name"),
   phone: text(fd, "phone"),
-  address: text(fd, "address"),
-  district: text(fd, "district") as District,
+  destination: destination(fd),
   note: text(fd, "note"),
 });
 
@@ -52,7 +61,9 @@ export const mutations = {
 
   moveOrder: (fd: FormData) => api.orders[":id"].move.$post({ param: param(fd), json: { to: text(fd, "to") as OrderStatus } }),
   editContact: (fd: FormData) =>
-    api.orders[":id"].contact.$patch({ param: param(fd), json: { phone: text(fd, "phone"), address: text(fd, "address"), district: text(fd, "district") as District } }),
+    api.orders[":id"].contact.$patch({ param: param(fd), json: { phone: text(fd, "phone"), destination: destination(fd) } }),
+  saveShipping: (fd: FormData) =>
+    api.orders[":id"].shipping.$patch({ param: param(fd), json: { bl_no: text(fd, "bl_no"), loading_port: text(fd, "loading_port") } }),
   assignDriver: (fd: FormData) => api.orders.assign.$post({ json: { driver_id: num(fd, "driver_id"), order_ids: ids(fd, "order_id") } }),
 
   closeDay: (fd: FormData) => api.days[":date"].close.$post({ param: day(fd) }),

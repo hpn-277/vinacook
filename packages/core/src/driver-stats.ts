@@ -4,7 +4,7 @@ import { monthRange } from "./period";
 import type { IsoDate } from "./domain/time";
 
 export const DELIVERY_SELECT =
-  "code, total, district, departed_at, delivered_at, delivery_photo_path, payment_status, driver_id, customers(name), order_items(qty_kg)";
+  "code, total, country, region, district, departed_at, delivered_at, delivery_photo_path, payment_status, driver_id, customers(name), order_items(qty_kg)";
 
 /** Orders a driver completed in the month, by delivery time (the same clock commission uses). */
 export async function deliveredInMonth(month: string, driverId?: number) {

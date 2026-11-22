@@ -7,7 +7,6 @@ import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import type { Database } from "@noodle/core/database.types";
-import { DISTRICTS } from "@noodle/core/domain/districts";
 import { formatVnd } from "@noodle/core/domain/money";
 import { JOB_TRANSITIONS, ORDER_TRANSITIONS } from "@noodle/core/domain/status";
 import { addDays, type IsoDate } from "@noodle/core/domain/time";
@@ -127,8 +126,6 @@ async function items(code: string) {
 
 async function structuralChecks() {
   step("DB mirrors TS domain tables");
-  const { data: districts } = await admin.from("districts").select("name");
-  eq(districts!.map((d) => d.name).sort(), [...DISTRICTS].sort(), "districts table matches DISTRICTS");
   const { data: edges } = await admin.from("status_transitions").select("machine, from_status, to_status");
   const fromTs = [
     ...Object.entries(ORDER_TRANSITIONS).flatMap(([f, tos]) => tos.map((t) => `orders:${f}->${t}`)),

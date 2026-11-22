@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { deliveryArea } from "@noodle/core/domain/destination";
 import { ActionForm } from "@/components/ActionForm";
 import { ADMIN_ORDER_SELECT, type AdminOrder } from "@/components/AdminOrderCard";
 import { AdminOrderTable } from "./AdminOrderTable";
@@ -29,7 +30,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   ]);
   const ready = orders.filter((o) => o.status === "ready");
   const readyCount = ready.length;
-  const readyDistricts = [...Map.groupBy(ready, (o) => o.district)].map(([name, os]) => ({ name, count: os.length })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "vi"));
+  const readyDistricts = [...Map.groupBy(ready, deliveryArea)].map(([name, os]) => ({ name, count: os.length })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "vi"));
   const counts = new Map<OrderStatus, number>();
   for (const o of orders) counts.set(o.status, (counts.get(o.status) ?? 0) + 1);
   const dispatched = orders.filter((o) => ["assigned", "out_for_delivery", "delivered", "failed"].includes(o.status)).length;

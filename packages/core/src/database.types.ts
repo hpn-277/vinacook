@@ -45,43 +45,23 @@ isOneToOne: false
                   ]
                 },"customers": {
                   Row: {
-                    "created_at": string,"default_address": string | null,"default_district": string | null,"id": number,"name": string,"phone": string,"sale_id": number | null
+                    "company": string | null,"created_at": string,"default_address": string | null,"default_country": string | null,"default_district": string | null,"default_postcode": string | null,"default_region": string | null,"id": number,"name": string,"phone": string,"sale_id": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"default_address"?: string | null,"default_district"?: string | null,"id"?: never,"name": string,"phone": string,"sale_id"?: number | null
+                    "company"?: string | null,"created_at"?: string,"default_address"?: string | null,"default_country"?: string | null,"default_district"?: string | null,"default_postcode"?: string | null,"default_region"?: string | null,"id"?: never,"name": string,"phone": string,"sale_id"?: number | null
                   }
                   Update: {
-                    "created_at"?: string,"default_address"?: string | null,"default_district"?: string | null,"id"?: never,"name"?: string,"phone"?: string,"sale_id"?: number | null
+                    "company"?: string | null,"created_at"?: string,"default_address"?: string | null,"default_country"?: string | null,"default_district"?: string | null,"default_postcode"?: string | null,"default_region"?: string | null,"id"?: never,"name"?: string,"phone"?: string,"sale_id"?: number | null
                   }
                   Relationships: [
                     {
-      foreignKeyName: "customers_default_district_fkey"
-      columns: ["default_district"]
-isOneToOne: false
-      referencedRelation: "districts"
-      referencedColumns: ["name"]
-    },{
       foreignKeyName: "customers_sale_id_fkey"
       columns: ["sale_id"]
 isOneToOne: false
       referencedRelation: "staff"
       referencedColumns: ["id"]
     }
-                  ]
-                },"districts": {
-                  Row: {
-                    "name": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "name": string
-                  }
-                  Update: {
-                    "name"?: string
-                  }
-                  Relationships: [
-                    
                   ]
                 },"factories": {
                   Row: {
@@ -131,14 +111,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "address": string,"code": string,"created_at": string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id": number | null,"customer_id": number,"delivered_at": string | null,"delivery_photo_path": string | null,"departed_at": string | null,"district": string,"driver_id": number | null,"fail_reason": string | null,"id": number,"note": string | null,"paid_at": string | null,"paid_by": number | null,"payment_status": Database["public"]['Enums']["payment_status"],"phone": string,"production_date": string,"return_reason": string | null,"returned_by": number | null,"sale_id": number | null,"status": Database["public"]['Enums']["order_status"],"total": number
+                    "address": string,"bl_no": string | null,"code": string,"company": string | null,"country": string,"created_at": string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id": number | null,"customer_id": number,"delivered_at": string | null,"delivery_photo_path": string | null,"departed_at": string | null,"district": string,"driver_id": number | null,"fail_reason": string | null,"id": number,"loading_port": string | null,"note": string | null,"paid_at": string | null,"paid_by": number | null,"payment_status": Database["public"]['Enums']["payment_status"],"phone": string,"postcode": string | null,"production_date": string,"region": string,"return_reason": string | null,"returned_by": number | null,"sale_id": number | null,"status": Database["public"]['Enums']["order_status"],"total": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "address": string,"code"?: string,"created_at"?: string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id": number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district": string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone": string,"production_date": string,"return_reason"?: string | null,"returned_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total": number
+                    "address": string,"bl_no"?: string | null,"code"?: string,"company"?: string | null,"country": string,"created_at"?: string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id": number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district": string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"loading_port"?: string | null,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone": string,"postcode"?: string | null,"production_date": string,"region": string,"return_reason"?: string | null,"returned_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total": number
                   }
                   Update: {
-                    "address"?: string,"code"?: string,"created_at"?: string,"created_by"?: Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id"?: number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district"?: string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone"?: string,"production_date"?: string,"return_reason"?: string | null,"returned_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total"?: number
+                    "address"?: string,"bl_no"?: string | null,"code"?: string,"company"?: string | null,"country"?: string,"created_at"?: string,"created_by"?: Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id"?: number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district"?: string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"loading_port"?: string | null,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone"?: string,"postcode"?: string | null,"production_date"?: string,"region"?: string,"return_reason"?: string | null,"returned_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total"?: number
                   }
                   Relationships: [
                     {
@@ -153,12 +133,6 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "customers"
       referencedColumns: ["id"]
-    },{
-      foreignKeyName: "orders_district_fkey"
-      columns: ["district"]
-isOneToOne: false
-      referencedRelation: "districts"
-      referencedColumns: ["name"]
     },{
       foreignKeyName: "orders_driver_id_fkey"
       columns: ["driver_id"]
@@ -374,7 +348,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "place_order":
-{ Args: { "p_address": string,"p_claim_sale_id"?: number,"p_created_by": Database["public"]['Enums']["order_creator"],"p_created_by_staff_id"?: number,"p_district": string,"p_items": Json,"p_name": string,"p_note": string,"p_phone": string,"p_production_date": string }; Returns: Json
+{ Args: { "p_address": string,"p_claim_sale_id"?: number,"p_company"?: string,"p_country": string,"p_created_by": Database["public"]['Enums']["order_creator"],"p_created_by_staff_id"?: number,"p_district": string,"p_items": Json,"p_name": string,"p_note": string,"p_phone": string,"p_postcode"?: string,"p_production_date": string,"p_region": string }; Returns: Json
                            },
 "receive_factories":
 { Args: { "p_date": string,"p_factory_ids": (number)[] }; Returns: number

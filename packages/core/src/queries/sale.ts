@@ -1,5 +1,6 @@
 import { unwrap } from "../action";
 import { db } from "../db";
+import { formatDestination, HCMC, type Country, type Destination } from "../domain/destination";
 import { localDate, parseIsoDate, type IsoDate } from "../domain/time";
 import { loadCatalog } from "../orders";
 import { monthRange, today } from "../period";
@@ -95,25 +96,46 @@ export async function saleCustomers(saleId: number) {
   const rows = unwrap(
     await db()
       .from("customers")
-      .select("id, name, phone, default_address, default_district, orders(total, status)")
+      .select("id, name, phone, default_address, default_district, default_country, default_region, default_postcode, company, orders(total, status)")
       .eq("sale_id", saleId)
       .order("created_at", { ascending: false }),
   );
-  return rows.map(({ orders, ...c }) => {
+  return rows.map(({ orders, default_address, default_district, default_country, default_region, default_postcode, company, ...c }) => {
     const live = orders.filter((o) => o.status !== "cancelled");
-    return { ...c, orders: live.length, total: live.reduce((s, o) => s + o.total, 0) };
+    const address = default_address
+      ? formatDestination({
+          country: default_country ?? "VN",
+          region: default_region ?? HCMC,
+          district: default_district ?? "",
+          postcode: default_postcode,
+          address: default_address,
+          company,
+        })
+      : null;
+    return { ...c, address, orders: live.length, total: live.reduce((s, o) => s + o.total, 0) };
   });
 }
 
-export const normalizePhone = (raw: unknown) => (typeof raw === "string" ? raw.replace(/[\s.-]/g, "") : "");
+export const normalizePhone = (raw: unknown) => (typeof raw === "string" ? raw.replace(/[\s.()-]/g, "").replace(/^\+(61|84)/, "0") : "");
 
 /** A phone's existing customer, and whether it is credited to a sale other than `meId`. */
 export async function customerLookup(phone: string, meId: number) {
   if (!phone) return null;
-  const { data } = await db().from("customers").select("name, phone, default_address, default_district, sale_id, staff(name)").eq("phone", phone).maybeSingle();
+  const { data } = await db().from("customers").select("name, phone, default_address, default_district, default_country, default_region, default_postcode, company, sale_id, staff(name)").eq("phone", phone).maybeSingle();
   if (!data) return { found: null, ownedByOther: false, ownerName: null };
   return {
-    found: { name: data.name, phone: data.phone, default_address: data.default_address, default_district: data.default_district },
+    found: {
+      name: data.name,
+      phone: data.phone,
+      destination: {
+        country: (data.default_country ?? "VN") as Country,
+        region: data.default_region ?? HCMC,
+        district: data.default_district ?? "",
+        postcode: data.default_postcode,
+        address: data.default_address ?? "",
+        company: data.company,
+      } satisfies Destination,
+    },
     ownedByOther: data.sale_id != null && data.sale_id !== meId,
     ownerName: data.staff?.name ?? null,
   };

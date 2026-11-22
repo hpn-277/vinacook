@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { deliveryArea } from "@noodle/core/domain/destination";
 import { notFound } from "next/navigation";
 import { Fragment } from "react";
 import { AutoSubmitForm } from "@/components/AutoSubmitForm";
@@ -34,7 +35,7 @@ export default async function DriverMonthPage({ params, searchParams }: PageProp
   }
   const kg = delivered.reduce((s, o) => s + orderKg(o), 0);
   const value = delivered.reduce((s, o) => s + o.total, 0);
-  const districts = [...Map.groupBy(delivered, (o) => o.district)].sort((a, b) => b[1].length - a[1].length);
+  const districts = [...Map.groupBy(delivered, deliveryArea)].sort((a, b) => b[1].length - a[1].length);
 
   const tiles = [
     { label: "Đơn đã giao", value: String(delivered.length), note: `${days.size} ngày đi giao` },
@@ -95,7 +96,7 @@ export default async function DriverMonthPage({ params, searchParams }: PageProp
                       <TableCell className="tabular-nums">
                         {dm(d)} <span className="font-normal text-muted-foreground">· {os.length} đơn</span>
                       </TableCell>
-                      <TableCell className="text-xs font-normal text-muted-foreground">{[...new Set(os.map((o) => o.district))].join(", ")}</TableCell>
+                      <TableCell className="text-xs font-normal text-muted-foreground">{[...new Set(os.map(deliveryArea))].join(", ")}</TableCell>
                       <TableCell />
                       <TableCell className="text-right tabular-nums">{formatKg(os.reduce((s, o) => s + orderKg(o), 0))}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatVnd(os.reduce((s, o) => s + o.total, 0))}</TableCell>
@@ -109,7 +110,7 @@ export default async function DriverMonthPage({ params, searchParams }: PageProp
                           </Link>
                         </TableCell>
                         <TableCell>
-                          {o.customers?.name} <span className="text-xs text-muted-foreground">· {o.district}</span>
+                          {o.customers?.name} <span className="text-xs text-muted-foreground">· {deliveryArea(o)}</span>
                         </TableCell>
                         <TableCell className="text-muted-foreground tabular-nums">
                           {time(o.departed_at)} → {time(o.delivered_at)}

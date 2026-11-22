@@ -3,16 +3,15 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { rememberContact, setCart, useCart, useContact } from "@/components/shop/cart";
-import { submit, type MutationResult } from "@/lib/mutations";
+import { destination, submit, type MutationResult } from "@/lib/mutations";
+import { DestinationFields } from "@/components/DestinationFields";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { cartLines, lineLabel, type CartLine, type CatalogProduct } from "@noodle/core/domain/catalog";
-import { DISTRICTS } from "@noodle/core/domain/districts";
 import { formatVnd } from "@noodle/core/domain/money";
 import { priceLines, type PricedOrder } from "@noodle/core/domain/pricing";
 
@@ -30,8 +29,7 @@ export function CheckoutForm({ catalog, reorder }: { catalog: CatalogProduct[]; 
       rememberContact({
         name: String(fd.get("name")).trim(),
         phone: String(fd.get("phone")).replace(/[\s.-]/g, ""),
-        address: String(fd.get("address")).trim(),
-        district: DISTRICTS.find((d) => d === fd.get("district")) ?? "",
+        destination: destination(fd),
       });
     }
     return result;
@@ -84,21 +82,7 @@ export function CheckoutForm({ catalog, reorder }: { catalog: CatalogProduct[]; 
             <FieldLabel htmlFor="checkout-phone">Số điện thoại</FieldLabel>
             <Input id="checkout-phone" name="phone" type="tel" inputMode="tel" required defaultValue={contact?.phone} />
           </Field>
-          <Field>
-            <FieldLabel htmlFor="checkout-address">Địa chỉ</FieldLabel>
-            <Input id="checkout-address" name="address" required defaultValue={contact?.address} />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="checkout-district">Quận/Huyện</FieldLabel>
-            <NativeSelect id="checkout-district" name="district" required defaultValue={contact?.district ?? ""} className="w-full">
-              <NativeSelectOption value="" disabled>
-                Chọn quận/huyện
-              </NativeSelectOption>
-              {DISTRICTS.map((d) => (
-                <NativeSelectOption key={d}>{d}</NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </Field>
+          <DestinationFields id="checkout" value={contact?.destination} />
           <Field>
             <FieldLabel htmlFor="checkout-note">Ghi chú</FieldLabel>
             <Textarea id="checkout-note" name="note" rows={2} />

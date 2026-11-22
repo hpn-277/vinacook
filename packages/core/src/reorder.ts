@@ -1,23 +1,27 @@
 import { itemLabel } from "./domain/catalog";
-import { DISTRICTS, type District } from "./domain/districts";
+import type { Country, Destination } from "./domain/destination";
 
 /** What the "Đặt lại" button needs: the customer, and each line with whether its pack is still on sale. */
 export type ReorderSource = {
   code: string;
   productionDate: string;
-  contact: { name: string; phone: string; address: string; district: District | "" };
+  contact: { name: string; phone: string; destination: Destination };
   lines: { packId: number; packQty: number; label: string; available: boolean }[];
 };
 
 export const REORDER_FIELDS =
-  "code, production_date, phone, address, district, customers(name), order_items(pack_id, pack_name, pack_qty, qty_kg, products(name, active), product_packs(active))";
+  "code, production_date, phone, country, region, district, postcode, address, company, customers(name), order_items(pack_id, pack_name, pack_qty, qty_kg, products(name, active), product_packs(active))";
 
 type ReorderRow = {
   code: string;
   production_date: string;
   phone: string;
-  address: string;
+  country: string;
+  region: string;
   district: string;
+  postcode: string | null;
+  address: string;
+  company: string | null;
   customers: { name: string } | null;
   order_items: {
     pack_id: number;
@@ -36,8 +40,14 @@ export function toReorderSource(o: ReorderRow): ReorderSource {
     contact: {
       name: o.customers?.name ?? "",
       phone: o.phone,
-      address: o.address,
-      district: DISTRICTS.find((d) => d === o.district) ?? "",
+      destination: {
+        country: o.country as Country,
+        region: o.region,
+        district: o.district,
+        postcode: o.postcode,
+        address: o.address,
+        company: o.company,
+      },
     },
     lines: o.order_items.map((i) => ({
       packId: i.pack_id,

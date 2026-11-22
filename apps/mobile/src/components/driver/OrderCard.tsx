@@ -1,3 +1,4 @@
+import { dialable, formatDestination } from "@noodle/core/domain/destination";
 import type { ReactNode } from "react";
 import { Linking, Text, View } from "react-native";
 import { itemLabel } from "@noodle/core/domain/catalog";
@@ -7,7 +8,7 @@ import type { DriverOrder } from "@noodle/core/queries/driver";
 import { Body, Button, Card, colors, Muted, Row } from "@/components/ui";
 
 export function OrderCard({ order: o, children }: { order: DriverOrder; children: ReactNode }) {
-  const destination = `${o.address}, ${o.district}, TP. Hồ Chí Minh`;
+  const destination = formatDestination(o);
   return (
     <Card testID={`order-${o.code}`}>
       <Row style={{ justifyContent: "space-between" }}>
@@ -18,7 +19,7 @@ export function OrderCard({ order: o, children }: { order: DriverOrder; children
       </Row>
       <Body style={{ fontWeight: "500", fontSize: 16 }}>{o.customers?.name}</Body>
       <Body>
-        {o.address}, <Text style={{ fontWeight: "700" }}>{o.district}</Text>
+        {destination}
       </Body>
       {o.note && <Muted>Ghi chú: {o.note}</Muted>}
       <Muted>
@@ -26,7 +27,7 @@ export function OrderCard({ order: o, children }: { order: DriverOrder; children
       </Muted>
       <View style={{ flexDirection: "row", gap: 8 }}>
         <View style={{ flex: 1 }}>
-          <Button variant="outline" label={`Gọi ${o.phone}`} testID={`call-${o.code}`} onPress={() => Linking.openURL(`tel:${o.phone}`)} />
+          <Button variant="outline" label={`Gọi ${o.phone}`} testID={`call-${o.code}`} onPress={() => Linking.openURL(`tel:${dialable(o.phone, o.country)}`)} />
         </View>
         <View style={{ flex: 1 }}>
           <Button

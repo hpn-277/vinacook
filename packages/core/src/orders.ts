@@ -2,7 +2,7 @@ import { z } from "zod";
 import { DomainError, unwrap } from "./action";
 import { db, type Enums, type Tables } from "./db";
 import type { CatalogProduct } from "./domain/catalog";
-import type { District } from "./domain/districts";
+import type { Destination } from "./domain/destination";
 import { priceLines } from "./domain/pricing";
 import { productionDate } from "./domain/time";
 
@@ -39,8 +39,7 @@ export async function loadCatalog(): Promise<CatalogProduct[]> {
 type PlaceOrderInput = {
   phone: string;
   name: string;
-  address: string;
-  district: District;
+  destination: Destination;
   note: string;
   items: OrderItemInput[];
   createdBy: Enums<"order_creator">;
@@ -75,8 +74,12 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlacedOrder> {
     await db().rpc("place_order", {
       p_phone: input.phone,
       p_name: input.name,
-      p_address: input.address,
-      p_district: input.district,
+      p_country: input.destination.country,
+      p_region: input.destination.region,
+      p_district: input.destination.district,
+      p_postcode: input.destination.postcode ?? undefined,
+      p_address: input.destination.address,
+      p_company: input.destination.company ?? undefined,
       p_note: input.note,
       p_items: priced.lines.map((l) => ({
         pack_id: l.packId,

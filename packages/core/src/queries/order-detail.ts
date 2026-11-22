@@ -1,5 +1,6 @@
 import { unwrap } from "../action";
 import { db } from "../db";
+import type { Country } from "../domain/destination";
 import type { OrderStatus } from "../domain/status";
 import { deliveryPhotoUrl } from "../files";
 
@@ -12,8 +13,14 @@ export type OrderDetailOrder = {
   payment_status: "paid" | "unpaid";
   total: number;
   phone: string;
-  address: string;
+  country: Country;
+  region: string;
   district: string;
+  postcode: string | null;
+  address: string;
+  company: string | null;
+  bl_no: string | null;
+  loading_port: string | null;
   note: string | null;
   fail_reason: string | null;
   return_reason: string | null;
@@ -52,7 +59,7 @@ export type OrderDetailOrder = {
 };
 
 // The head mirrors apps/web/components/AdminOrderCard's ADMIN_ORDER_SELECT, which the manager's order actions read.
-const DETAIL_SELECT = `id, code, status, payment_status, total, phone, address, district, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name)),
+const DETAIL_SELECT = `id, code, status, payment_status, total, phone, country, region, district, postcode, address, company, bl_no, loading_port, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name)),
   created_by, delivered_at, delivery_photo_path,
   creator:staff!orders_created_by_staff_id_fkey(name),
   driver_contact:staff!orders_driver_id_fkey(phone),

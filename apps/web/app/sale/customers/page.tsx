@@ -19,9 +19,7 @@ export default async function SaleCustomersPage() {
                 <CardContent className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <b>{c.name}</b> · <a href={`tel:${c.phone}`}>{c.phone}</a>
-                    <div className="text-muted-foreground">
-                      {c.default_address}, {c.default_district}
-                    </div>
+                    {c.address && <div className="text-muted-foreground">{c.address}</div>}
                     <div className="text-muted-foreground">
                       {c.orders} đơn · {formatVnd(c.total)}
                     </div>

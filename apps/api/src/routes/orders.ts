@@ -3,7 +3,7 @@ import { z } from "zod";
 import { check, DomainError, unwrap } from "@noodle/core/action";
 import { db } from "@noodle/core/db";
 import { CONTACT_EDITABLE, MANAGER_ORDER_MOVES, ORDER_STATUS_LABEL, ORDER_STATUSES } from "@noodle/core/domain/status";
-import { district, id, phone } from "@noodle/core/form";
+import { destination, id, phone } from "@noodle/core/form";
 import { transition } from "../lib/transition";
 import { role, valid } from "../http";
 
@@ -37,18 +37,31 @@ export const orders = new Hono()
   .patch(
     "/:id/contact",
     orderParam,
-    valid("json", z.object({ phone, address: z.string().trim().min(1, "Nhập địa chỉ").max(500), district })),
+    valid("json", z.object({ phone, destination })),
     async (c) => {
       const me = c.get("staff");
       const { id: orderId } = c.req.valid("param");
-      const contact = c.req.valid("json");
-      const order = unwrap(await db().from("orders").select("code, status, phone, address, district").eq("id", orderId).single());
+      const { phone: newPhone, destination: d } = c.req.valid("json");
+      const order = unwrap(
+        await db().from("orders").select("code, status, phone, country, region, district, postcode, address, company").eq("id", orderId).single(),
+      );
       if (!CONTACT_EDITABLE(order.status)) throw new DomainError(`Đơn ${ORDER_STATUS_LABEL[order.status]} không sửa được`);
-      const before = { phone: order.phone, address: order.address, district: order.district };
-      const after = { phone: contact.phone, address: contact.address, district: contact.district };
+      const { code: _code, status: _status, ...before } = order;
+      const after = { phone: newPhone, country: d.country, region: d.region, district: d.district, postcode: d.postcode, address: d.address, company: d.company };
       if (JSON.stringify(before) === JSON.stringify(after)) return c.json({ message: "Không có gì thay đổi" });
       check(await db().from("orders").update(after).eq("id", orderId).eq("status", order.status));
       check(await db().from("admin_events").insert({ staff_id: me.id, action: "edit_contact", detail: { code: order.code, before, after } }));
       return c.json({ message: "Đã lưu" });
+    },
+  )
+  /** B/L number and port/airport of loading, once the admin has booked the shipment. Blank clears. */
+  .patch(
+    "/:id/shipping",
+    orderParam,
+    valid("json", z.object({ bl_no: z.string().trim().max(100), loading_port: z.string().trim().max(200) })),
+    async (c) => {
+      const { bl_no, loading_port } = c.req.valid("json");
+      check(await db().from("orders").update({ bl_no: bl_no || null, loading_port: loading_port || null }).eq("id", c.req.valid("param").id));
+      return c.json({ message: "Đã lưu thông tin vận chuyển" });
     },
   );

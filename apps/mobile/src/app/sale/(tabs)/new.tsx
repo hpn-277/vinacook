@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
 import { cartLines, type Cart, type CatalogProduct } from "@noodle/core/domain/catalog";
-import { DISTRICTS, type District } from "@noodle/core/domain/districts";
+import { HCMC, type Destination } from "@noodle/core/domain/destination";
 import { formatKg, formatVnd } from "@noodle/core/domain/money";
 import { priceLines } from "@noodle/core/domain/pricing";
 import type { CustomerLookup } from "@noodle/core/queries/sale";
+import { DestinationFields } from "@/components/sale/DestinationFields";
 import { ProductRow } from "@/components/sale/OrderPicker";
 import { Body, Button, Card, Field, Loaded, Muted, Notice, Row, Screen, Title, colors, styles } from "@/components/ui";
 import { api, json } from "@/lib/api";
@@ -71,13 +72,13 @@ export default function NewStaffOrder() {
 
 function OrderForm({ phone: initialPhone, lookup, catalog }: { phone: string; lookup: CustomerLookup; catalog: CatalogProduct[] }) {
   const found = lookup?.found;
-  const defaults = { phone: initialPhone, name: found?.name ?? "", address: found?.default_address ?? "", district: found?.default_district ?? "", note: "" };
+  const blank: Destination = { country: "VN", region: HCMC, district: "", postcode: null, address: "", company: null };
+  const defaults = { phone: initialPhone, name: found?.name ?? "", destination: found?.destination ?? blank, note: "" };
   const [contact, setContact] = useState(defaults);
   const [cart, setCart] = useState<Cart>({});
   const [query, setQuery] = useState("");
   const [onlyPicked, setOnlyPicked] = useState(false);
-  const [pickingDistrict, setPickingDistrict] = useState(false);
-  const set = (k: keyof typeof defaults) => (v: string) => setContact((c) => ({ ...c, [k]: v }));
+  const set = (k: "phone" | "name" | "note") => (v: string) => setContact((c) => ({ ...c, [k]: v }));
   const setQty = (packId: number, qty: number) => setCart((c) => ({ ...c, [packId]: Math.max(0, Math.floor(qty) || 0) }));
 
   const order = priceLines(cartLines(catalog, cart));
@@ -91,7 +92,6 @@ function OrderForm({ phone: initialPhone, lookup, catalog }: { phone: string; lo
       api.shop["staff-orders"].$post({
         json: {
           ...contact,
-          district: contact.district as District,
           items: Object.entries(cart)
             .filter(([, qty]) => qty > 0)
             .map(([packId, qty]) => ({ pack_id: Number(packId), pack_qty: qty })),
@@ -108,36 +108,7 @@ function OrderForm({ phone: initialPhone, lookup, catalog }: { phone: string; lo
       <Card>
         <Field label="Số điện thoại" testID="order-phone" keyboardType="phone-pad" value={contact.phone} onChangeText={set("phone")} />
         <Field label="Họ tên" testID="order-name" value={contact.name} onChangeText={set("name")} />
-        <Field label="Địa chỉ" testID="order-address" value={contact.address} onChangeText={set("address")} />
-        <View style={{ gap: 6 }}>
-          <Text style={styles.label}>Quận/Huyện</Text>
-          <Pressable
-            testID="order-district"
-            accessibilityRole="button"
-            accessibilityLabel="Quận/Huyện"
-            onPress={() => setPickingDistrict((v) => !v)}
-            style={[styles.input, { justifyContent: "center" }]}
-          >
-            <Text style={{ fontSize: 16, color: contact.district ? colors.foreground : colors.mutedForeground }}>{contact.district || "Chọn quận/huyện"}</Text>
-          </Pressable>
-          {pickingDistrict && (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              {DISTRICTS.map((d) => (
-                <Button
-                  key={d}
-                  label={d}
-                  size="sm"
-                  variant={contact.district === d ? "default" : "outline"}
-                  testID={`district-${d}`}
-                  onPress={() => {
-                    set("district")(d);
-                    setPickingDistrict(false);
-                  }}
-                />
-              ))}
-            </View>
-          )}
-        </View>
+        <DestinationFields value={contact.destination} onChange={(destination) => setContact((c) => ({ ...c, destination }))} />
       </Card>
 
       <Text style={styles.label}>Sản phẩm</Text>

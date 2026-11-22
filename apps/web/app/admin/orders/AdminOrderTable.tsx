@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { deliveryArea } from "@noodle/core/domain/destination";
 import { NO_DRIVER } from "./row-filters";
 import { RowMenu } from "./RowMenu";
 import { Returned, type AdminOrder } from "@/components/AdminOrderCard";
@@ -21,7 +22,7 @@ export function AdminOrderTable({ orders, readOnly }: { orders: AdminOrder[]; re
       </TableHeader>
       <TableBody>
         {orders.map((o) => (
-          <TableRow key={o.id} data-order-code={o.code} data-district={o.district} data-driver={o.driver ? String(o.driver.id) : NO_DRIVER} className={`relative cursor-pointer ${o.status === "cancelled" ? "opacity-60" : ""}`}>
+          <TableRow key={o.id} data-order-code={o.code} data-district={deliveryArea(o)} data-driver={o.driver ? String(o.driver.id) : NO_DRIVER} className={`relative cursor-pointer ${o.status === "cancelled" ? "opacity-60" : ""}`}>
             <TableCell>
               <div className="flex items-start gap-2">
                 {!readOnly && o.status === "ready" && (
@@ -39,7 +40,7 @@ export function AdminOrderTable({ orders, readOnly }: { orders: AdminOrder[]; re
                     {o.customers?.name}
                   </Link>
                   <div className="text-xs text-muted-foreground">
-                    {o.phone} · {o.district}
+                    {o.phone} · {deliveryArea(o)}
                   </div>
                 </div>
               </div>

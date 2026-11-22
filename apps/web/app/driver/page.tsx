@@ -1,4 +1,5 @@
 import { MapPinIcon, PhoneIcon } from "lucide-react";
+import { dialable, formatDestination } from "@noodle/core/domain/destination";
 import type { ReactNode } from "react";
 import { ActionForm } from "@/components/ActionForm";
 import { StaffShell } from "@/components/StaffShell";
@@ -153,7 +154,7 @@ function Section({ title, count, empty, children }: { title: string; count: numb
 }
 
 function OrderCard({ order: o, children }: { order: DriverOrder; children: ReactNode }) {
-  const destination = `${o.address}, ${o.district}, TP. Hồ Chí Minh`;
+  const destination = formatDestination(o);
   return (
     <li>
       <Card data-order-code={o.code}>
@@ -164,9 +165,7 @@ function OrderCard({ order: o, children }: { order: DriverOrder; children: React
               <b className={o.payment_status === "paid" ? "text-green-700" : "text-primary"}>{collectLabel(o)}</b>
             </div>
             <div className="text-base font-medium">{o.customers?.name}</div>
-            <div>
-              {o.address}, <b>{o.district}</b>
-            </div>
+            <div>{destination}</div>
             {o.note && <div className="text-muted-foreground">Ghi chú: {o.note}</div>}
             <div className="text-muted-foreground">
               {o.order_items.map(itemLabel).join(", ")} · <span className="font-medium text-foreground">Tổng {formatKg(o.kg)}</span>
@@ -174,7 +173,7 @@ function OrderCard({ order: o, children }: { order: DriverOrder; children: React
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button asChild variant="outline" className="h-11">
-              <a href={`tel:${o.phone}`}>
+              <a href={`tel:${dialable(o.phone, o.country)}`}>
                 <PhoneIcon /> Gọi {o.phone}
               </a>
             </Button>

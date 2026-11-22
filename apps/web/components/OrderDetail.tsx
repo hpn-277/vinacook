@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { OrderActions, PaymentLabel, Returned } from "@/components/AdminOrderCard";
 import { EditContact } from "@/components/EditContact";
+import { ShippingInfo } from "@/components/ShippingInfo";
+import { dialable, formatDestination } from "@noodle/core/domain/destination";
 import { PaymentPanel } from "@/components/PaymentPanel";
 import { JobBadge, OrderBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,12 +93,12 @@ export async function OrderDetail({
           <dl className="text-sm">
             <Row label="Khách hàng">{order.customer?.name}</Row>
             <Row label="Số điện thoại">
-              <a href={`tel:${order.phone}`} className="text-primary">
+              <a href={`tel:${dialable(order.phone, order.country)}`} className="text-primary">
                 {order.phone}
               </a>
             </Row>
             <Row label="Địa chỉ giao">
-              {order.address}, {order.district}
+              {formatDestination(order)}
               {admin && CONTACT_EDITABLE(order.status) && (
                 <div className="mt-1">
                   <EditContact order={order} />
@@ -188,6 +190,7 @@ export async function OrderDetail({
 
       <div className="mt-4 grid gap-4">
         {office && <PaymentPanel order={order} />}
+        {office && <ShippingInfo order={order} editable={admin} />}
         <Section title="Hàng hóa & giá">
           <Table>
             <TableHeader>

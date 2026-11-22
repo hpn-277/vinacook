@@ -49,15 +49,17 @@ insert into customers (phone, name, default_address, default_district, sale_id) 
   ('0901000002', 'Anh Minh', '45 Cộng Hòa', 'Tân Bình', (select id from staff where ref_code = 'NVKD02')),
   ('0901000003', 'Cô Hoa', '8 Ba Tháng Hai', 'Quận 10', null);
 
+update customers set default_country = 'VN', default_region = 'TP. Hồ Chí Minh' where default_district is not null;
+
 -- History lives in the previous month so it never mixes into the current month's commission.
 -- 2 Cây Hủ tiếu dai vắt + 2 Cây Bún bò, each at its Cây 5 kg price.
-insert into orders (customer_id, sale_id, created_by, production_date, address, district, phone, status, payment_status, total, driver_id, departed_at, delivered_at, created_at)
-select c.id, c.sale_id, 'customer', (now() - interval '40 days')::date, c.default_address, c.default_district, c.phone,
+insert into orders (customer_id, sale_id, created_by, production_date, country, region, address, district, phone, status, payment_status, total, driver_id, departed_at, delivered_at, created_at)
+select c.id, c.sale_id, 'customer', (now() - interval '40 days')::date, c.default_country, c.default_region, c.default_address, c.default_district, c.phone,
   'delivered', 'paid', 0, (select id from staff where name = 'Tài xế 1'), now() - interval '40 days' - interval '1 hour', now() - interval '40 days', now() - interval '40 days'
 from customers c where c.phone in ('0901000001', '0901000002');
 
-insert into orders (customer_id, sale_id, created_by, production_date, address, district, phone, status, total, created_at)
-select c.id, c.sale_id, 'customer', (now() - interval '38 days')::date, c.default_address, c.default_district, c.phone,
+insert into orders (customer_id, sale_id, created_by, production_date, country, region, address, district, phone, status, total, created_at)
+select c.id, c.sale_id, 'customer', (now() - interval '38 days')::date, c.default_country, c.default_region, c.default_address, c.default_district, c.phone,
   'cancelled', 0, now() - interval '38 days'
 from customers c where c.phone = '0901000003';
 

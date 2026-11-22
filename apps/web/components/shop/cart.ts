@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { z } from "zod";
 import type { Cart } from "@noodle/core/domain/catalog";
-import { DISTRICTS } from "@noodle/core/domain/districts";
+import { COUNTRIES } from "@noodle/core/domain/destination";
 
 /** A JSON value in localStorage shared by every component on the page. Storage can throw (private mode), so it degrades to the fallback. */
 function localStore<T>(key: string, schema: z.ZodType<T>, fallback: T) {
@@ -56,8 +56,16 @@ export function setCart(cart: Cart) {
 const contactSchema = z.object({
   name: z.string(),
   phone: z.string(),
-  address: z.string(),
-  district: z.enum(DISTRICTS).or(z.literal("")),
+  destination: z
+    .object({
+      country: z.enum(COUNTRIES),
+      region: z.string(),
+      district: z.string(),
+      postcode: z.string().nullable(),
+      address: z.string(),
+      company: z.string().nullable(),
+    })
+    .nullable(),
 });
 export type Contact = z.infer<typeof contactSchema>;
 

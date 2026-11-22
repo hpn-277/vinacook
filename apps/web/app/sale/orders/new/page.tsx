@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { requireRole } from "@/lib/auth";
-import { DISTRICTS } from "@noodle/core/domain/districts";
+import { DestinationFields } from "@/components/DestinationFields";
 import { customerLookup, normalizePhone, orderForm } from "@noodle/core/queries/sale";
 
 export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sale/orders/new">) {
@@ -47,21 +46,7 @@ export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sa
                 <FieldLabel htmlFor="order-name">Họ tên</FieldLabel>
                 <Input id="order-name" name="name" required defaultValue={found?.name ?? ""} />
               </Field>
-              <Field>
-                <FieldLabel htmlFor="order-address">Địa chỉ</FieldLabel>
-                <Input id="order-address" name="address" required defaultValue={found?.default_address ?? ""} />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="order-district">Quận/Huyện</FieldLabel>
-                <NativeSelect id="order-district" name="district" required defaultValue={found?.default_district ?? ""} className="w-full">
-                  <NativeSelectOption value="" disabled>
-                    Chọn quận/huyện
-                  </NativeSelectOption>
-                  {DISTRICTS.map((d) => (
-                    <NativeSelectOption key={d}>{d}</NativeSelectOption>
-                  ))}
-                </NativeSelect>
-              </Field>
+              <DestinationFields id="order" value={found?.destination} />
             </FieldGroup>
           </CardContent>
         </Card>

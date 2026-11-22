@@ -1,3 +1,4 @@
+import { formatDestination } from "@noodle/core/domain/destination";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, type ReactNode } from "react";
@@ -77,7 +78,7 @@ export default function SaleOrderDetail() {
                 <Line label="Số điện thoại">
                   <Tel phone={order.phone} />
                 </Line>
-                <Line label="Địa chỉ giao">{`${order.address}, ${order.district}`}</Line>
+                <Line label="Địa chỉ giao">{formatDestination(order)}</Line>
                 {order.note && <Line label="Ghi chú">{order.note}</Line>}
                 <Line label="Khách từ">{customerSince ?? "—"}</Line>
                 <Line label="Tài xế">
