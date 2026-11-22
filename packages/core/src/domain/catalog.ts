@@ -1,13 +1,12 @@
-import { formatKg } from "./money";
+import { formatKg, formatVnd } from "./money";
 import type { LineInput } from "./pricing";
 
-export type CatalogPack = { id: number; name: string; kg_per_unit: number; image_url: string | null };
+export type CatalogPack = { id: number; name: string; kg_per_unit: number; price_per_kg: number; image_url: string | null };
 export type CatalogProduct = {
   id: number;
   name: string;
   description: string | null;
   image_url: string | null;
-  price_per_kg: number;
   packs: CatalogPack[];
 };
 
@@ -21,7 +20,7 @@ export function cartLines(catalog: CatalogProduct[], cart: Cart): CartLine[] {
   return catalog.flatMap((product) =>
     product.packs
       .filter((pack) => (cart[pack.id] ?? 0) > 0)
-      .map((pack) => ({ product, pack, packQty: cart[pack.id], kgPerUnit: pack.kg_per_unit, wholesalePerKg: product.price_per_kg })),
+      .map((pack) => ({ product, pack, packQty: cart[pack.id], kgPerUnit: pack.kg_per_unit, pricePerKg: pack.price_per_kg })),
   );
 }
 
@@ -55,6 +54,14 @@ export function packGroupLabels(packs: { name: string; kg_per_unit: number }[]):
 /** What one unit of a pack holds: "1 Thùng = 10 kg"; a plain Kg pack reads "1 kg". */
 export function packCaption(pack: { name: string; kg_per_unit: number }): string {
   return pack.name.toLowerCase() === "kg" ? formatKg(pack.kg_per_unit) : `1 ${pack.name} = ${formatKg(pack.kg_per_unit)}`;
+}
+
+/** "29.000đ/kg", or "29.000đ – 32.000đ/kg" when packs differ. */
+export function priceRangeLabel(prices: number[]): string {
+  if (prices.length === 0) return "";
+  const lo = Math.min(...prices);
+  const hi = Math.max(...prices);
+  return lo === hi ? `${formatVnd(lo)}/kg` : `${formatVnd(lo)} – ${formatVnd(hi)}/kg`;
 }
 
 export const IMAGE_REF_MAX = 500;

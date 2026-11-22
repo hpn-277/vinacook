@@ -1,6 +1,5 @@
 import { unwrap } from "../action";
 import { db } from "../db";
-import type { PriceTier } from "../domain/pricing";
 import type { OrderStatus } from "../domain/status";
 import { deliveryPhotoUrl } from "../files";
 
@@ -12,7 +11,6 @@ export type OrderDetailOrder = {
   status: OrderStatus;
   payment_status: "paid" | "unpaid";
   total: number;
-  price_tier: PriceTier;
   phone: string;
   address: string;
   district: string;
@@ -30,9 +28,6 @@ export type OrderDetailOrder = {
   created_by: "customer" | "sale" | "manager";
   delivered_at: string | null;
   delivery_photo_path: string | null;
-  retail_markup_pct: number;
-  wholesale_min_kg: number;
-  wholesale_min_total: number;
   creator: { name: string } | null;
   driver_contact: { phone: string | null } | null;
   customer: {
@@ -50,7 +45,6 @@ export type OrderDetailOrder = {
     pack_qty: number;
     qty_kg: number;
     price_per_kg: number;
-    wholesale_price_per_kg: number;
     line_total: number;
     product_id: number;
     products: { name: string } | null;
@@ -58,12 +52,12 @@ export type OrderDetailOrder = {
 };
 
 // The head mirrors apps/web/components/AdminOrderCard's ADMIN_ORDER_SELECT, which the manager's order actions read.
-const DETAIL_SELECT = `id, code, status, payment_status, total, price_tier, phone, address, district, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name)),
-  created_by, delivered_at, delivery_photo_path, retail_markup_pct, wholesale_min_kg, wholesale_min_total,
+const DETAIL_SELECT = `id, code, status, payment_status, total, phone, address, district, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name)),
+  created_by, delivered_at, delivery_photo_path,
   creator:staff!orders_created_by_staff_id_fkey(name),
   driver_contact:staff!orders_driver_id_fkey(phone),
   customer:customers(id, name, phone, default_address, default_district, created_at, owner:staff(name, ref_code, commission_pct)),
-  items:order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, wholesale_price_per_kg, line_total, product_id, products(name))`;
+  items:order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, product_id, products(name))`;
 
 const dateTime = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" });
 const dateOnly = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short" });
@@ -128,7 +122,6 @@ export async function orderDetail(code: string, viewer: OrderViewer) {
     customerSince: order.customer ? dateOnly.format(new Date(order.customer.created_at)) : null,
     photo: order.delivery_photo_path ? deliveryPhotoUrl(order.delivery_photo_path) : null,
     kg: order.items.reduce((s, i) => s + i.qty_kg, 0),
-    atWholesale: order.items.reduce((s, i) => s + Math.round(i.qty_kg * i.wholesale_price_per_kg), 0),
     commission: order.sale && owner?.commission_pct != null && order.status === "delivered" ? Math.round((order.total * owner.commission_pct) / 100) : null,
     timeline,
     jobs: viewer.role === "sale" ? [] : jobs,

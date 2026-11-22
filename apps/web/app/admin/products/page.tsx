@@ -7,17 +7,12 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProductStatusBadge } from "@/components/status-badge";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { unwrap } from "@noodle/core/action";
 import { requireRole } from "@/lib/auth";
 import { db } from "@noodle/core/db";
-import { packGroupLabels, packSize } from "@noodle/core/domain/catalog";
-import { formatVnd } from "@noodle/core/domain/money";
-import { retailPerKg } from "@noodle/core/domain/pricing";
+import { packGroupLabels, packSize, priceRangeLabel } from "@noodle/core/domain/catalog";
 import type { ProductStatus } from "@noodle/core/domain/status";
-import { getSettings } from "@noodle/core/orders";
 import { ProductDialog } from "./ProductDialog";
 import { RejectDialog } from "./RejectDialog";
 
@@ -35,10 +30,9 @@ export default async function ProductsPage({ searchParams }: PageProps<"/admin/p
   await requireRole("admin");
   const sp = await searchParams;
   const bucket = BUCKETS.find((b) => b === sp.status);
-  const [settings, products, packs, factories] = await Promise.all([
-    getSettings(),
+  const [products, packs, factories] = await Promise.all([
     db().from("products").select("*, factories(name)").order("id").then(unwrap),
-    db().from("product_packs").select("id, product_id, name, kg_per_unit, image_url, active").order("kg_per_unit").order("name").then(unwrap),
+    db().from("product_packs").select("id, product_id, name, kg_per_unit, price_per_kg, image_url, active").order("kg_per_unit").order("name").then(unwrap),
     db().from("factories").select("id, name, active").order("id").then(unwrap),
   ]);
 
@@ -65,43 +59,6 @@ export default async function ProductsPage({ searchParams }: PageProps<"/admin/p
   return (
     <div className="space-y-6">
       <PageTitle>Sản phẩm</PageTitle>
-
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle className="font-semibold">
-            <h2>Giá sỉ / giá lẻ</h2>
-          </CardTitle>
-          <CardDescription>
-            Giá lẻ = Giá sỉ × (1 + % chênh lệch), làm tròn 100đ. Đơn được giá sỉ (cả đơn) khi đủ số kg tối thiểu hoặc tổng tiền theo giá lẻ đủ mức tối thiểu.
-            Thay đổi chỉ áp dụng cho đơn mới.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ActionForm action="savePricing" className="grid gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))_auto] sm:items-end">
-            <Field>
-              <FieldLabel htmlFor="retail_markup_pct">% chênh lệch giá lẻ</FieldLabel>
-              <Input id="retail_markup_pct" name="retail_markup_pct" type="number" step="0.01" min={0} defaultValue={settings.retail_markup_pct} required />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="wholesale_min_kg">Giá sỉ từ (kg)</FieldLabel>
-              <Input id="wholesale_min_kg" name="wholesale_min_kg" type="number" step="0.01" min={0} defaultValue={settings.wholesale_min_kg} required />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="wholesale_min_total">hoặc từ (đ, tính theo giá lẻ)</FieldLabel>
-              <Input
-                id="wholesale_min_total"
-                name="wholesale_min_total"
-                type="number"
-                step={1000}
-                min={0}
-                defaultValue={settings.wholesale_min_total}
-                required
-              />
-            </Field>
-            <Button>Lưu</Button>
-          </ActionForm>
-        </CardContent>
-      </Card>
 
       <Card size="sm" id="san-pham">
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">
@@ -148,7 +105,7 @@ export default async function ProductsPage({ searchParams }: PageProps<"/admin/p
             <TableHeader>
               <TableRow>
                 <TableHead>Sản phẩm</TableHead>
-                <TableHead className="text-right">Giá sỉ / lẻ (kg)</TableHead>
+                <TableHead className="text-right">Giá</TableHead>
                 <TableHead>Quy cách</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead />
@@ -173,10 +130,7 @@ export default async function ProductsPage({ searchParams }: PageProps<"/admin/p
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums whitespace-nowrap">
-                    {formatVnd(p.price_per_kg)}
-                    <div className="text-xs text-muted-foreground">{formatVnd(retailPerKg(p.price_per_kg, settings.retail_markup_pct))}</div>
-                  </TableCell>
+                  <TableCell className="text-right tabular-nums whitespace-nowrap">{priceRangeLabel(own.filter((pk) => pk.active).map((pk) => pk.price_per_kg))}</TableCell>
                   <TableCell className="whitespace-normal">
                     <div className="flex max-w-64 flex-wrap gap-1">
                       {packGroupLabels(own.filter((pk) => pk.active)).map((label) => (
@@ -217,6 +171,7 @@ export default async function ProductsPage({ searchParams }: PageProps<"/admin/p
                           packs: own.map((pk) => ({
                             id: pk.id,
                             label: packSize(pk),
+                            price_per_kg: pk.price_per_kg,
                             image_url: pk.image_url,
                             active: pk.active,
                           })),

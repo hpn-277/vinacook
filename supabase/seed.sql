@@ -50,26 +50,22 @@ insert into customers (phone, name, default_address, default_district, sale_id) 
   ('0901000003', 'Cô Hoa', '8 Ba Tháng Hai', 'Quận 10', null);
 
 -- History lives in the previous month so it never mixes into the current month's commission.
--- 2 Cây Hủ tiếu dai vắt + 2 Cây Bún bò = 20 kg, under both wholesale thresholds, so both lines are retail (wholesale + 25%, rounded to 100đ).
-insert into orders (customer_id, sale_id, created_by, production_date, address, district, phone, status, payment_status, total, driver_id, departed_at, delivered_at, created_at,
-                    price_tier, retail_markup_pct, wholesale_min_kg, wholesale_min_total)
+-- 2 Cây Hủ tiếu dai vắt + 2 Cây Bún bò, each at its Cây 5 kg price.
+insert into orders (customer_id, sale_id, created_by, production_date, address, district, phone, status, payment_status, total, driver_id, departed_at, delivered_at, created_at)
 select c.id, c.sale_id, 'customer', (now() - interval '40 days')::date, c.default_address, c.default_district, c.phone,
-  'delivered', 'paid', 0, (select id from staff where name = 'Tài xế 1'), now() - interval '40 days' - interval '1 hour', now() - interval '40 days', now() - interval '40 days',
-  'le', 25, 50, 2000000
+  'delivered', 'paid', 0, (select id from staff where name = 'Tài xế 1'), now() - interval '40 days' - interval '1 hour', now() - interval '40 days', now() - interval '40 days'
 from customers c where c.phone in ('0901000001', '0901000002');
 
-insert into orders (customer_id, sale_id, created_by, production_date, address, district, phone, status, total, created_at,
-                    price_tier, retail_markup_pct, wholesale_min_kg, wholesale_min_total)
+insert into orders (customer_id, sale_id, created_by, production_date, address, district, phone, status, total, created_at)
 select c.id, c.sale_id, 'customer', (now() - interval '38 days')::date, c.default_address, c.default_district, c.phone,
-  'cancelled', 0, now() - interval '38 days', 'le', 25, 50, 2000000
+  'cancelled', 0, now() - interval '38 days'
 from customers c where c.phone = '0901000003';
 
-insert into order_items (order_id, product_id, pack_id, pack_name, kg_per_unit, pack_qty, wholesale_price_per_kg, price_per_kg, line_total)
-select o.id, p.id, pk.id, pk.name, pk.kg_per_unit, l.qty, p.price_per_kg, r.retail, l.qty * pk.kg_per_unit * r.retail
+insert into order_items (order_id, product_id, pack_id, pack_name, kg_per_unit, pack_qty, price_per_kg, line_total)
+select o.id, p.id, pk.id, pk.name, pk.kg_per_unit, l.qty, pk.price_per_kg, l.qty * pk.kg_per_unit * pk.price_per_kg
 from orders o
 cross join (values ('Hủ tiếu dai vắt Chu Hải', 'Cây', 5, 2), ('Bún bò Minh Anh', 'Cây', 5, 2)) as l(product, pack, kg, qty)
 join products p on p.name = l.product
-join product_packs pk on pk.product_id = p.id and pk.name = l.pack and pk.kg_per_unit = l.kg
-cross join lateral (select round(p.price_per_kg * 125 / 10000.0) * 100 as retail) r;
+join product_packs pk on pk.product_id = p.id and pk.name = l.pack and pk.kg_per_unit = l.kg;
 
 update orders o set total = (select sum(line_total) from order_items where order_id = o.id);

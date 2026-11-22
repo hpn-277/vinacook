@@ -65,10 +65,6 @@ export const mutations = {
   savePacks: (fd: FormData) => multipart(api.products[":id"].packs.$url({ param: param(fd, "product_id") }), "POST", fd),
   approveProduct: (fd: FormData) => api.products[":id"].approve.$post({ param: param(fd, "id") }),
   rejectProduct: (fd: FormData) => api.products[":id"].reject.$post({ param: param(fd, "id"), json: { reason: text(fd, "reason") } }),
-  savePricing: (fd: FormData) =>
-    api.settings.pricing.$put({
-      json: { retail_markup_pct: num(fd, "retail_markup_pct"), wholesale_min_kg: num(fd, "wholesale_min_kg"), wholesale_min_total: num(fd, "wholesale_min_total") },
-    }),
 
   saveFactory: (fd: FormData) => {
     const json = { name: text(fd, "name"), address: text(fd, "address"), phone: text(fd, "phone"), active: checked(fd, "active") };

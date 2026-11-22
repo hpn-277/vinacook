@@ -21,7 +21,7 @@ async function pickImage() {
 }
 
 type Draft = { name: string; price: string; description: string; image: string | null };
-const draftOf = (p?: FactoryProduct): Draft => ({ name: p?.name ?? "", price: p ? String(p.price_per_kg) : "", description: p?.description ?? "", image: null });
+const draftOf = (p?: FactoryProduct): Draft => ({ name: p?.name ?? "", price: p ? String(p.pack_prices[0] ?? "") : "", description: p?.description ?? "", image: null });
 
 /** Add (no product) or fix-and-resubmit (pending/rejected product); closes once the server accepts it. */
 export function ProductForm({ product }: { product?: FactoryProduct }) {
@@ -62,7 +62,7 @@ export function ProductForm({ product }: { product?: FactoryProduct }) {
           <Title>{title}</Title>
           <Muted>Quản lý duyệt xong thì khách mới thấy. Quy cách mặc định: Cây 5 kg, Thùng 5/10/15 kg, Bao 30 kg.</Muted>
           <Field label="Tên sản phẩm" testID="product-name" value={draft.name} onChangeText={(name) => setDraft({ ...draft, name })} />
-          <Field label="Giá sỉ đề xuất (đ/kg)" testID="product-price" keyboardType="number-pad" value={draft.price} onChangeText={(price) => setDraft({ ...draft, price })} />
+          <Field label="Giá đề xuất (đ/kg)" testID="product-price" keyboardType="number-pad" value={draft.price} onChangeText={(price) => setDraft({ ...draft, price })} />
           <Field
             label="Mô tả"
             testID="product-description"

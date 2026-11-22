@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Image, Linking, Pressable, Text, View } from "react-native";
 import { lineLabel } from "@noodle/core/domain/catalog";
 import { formatKg, formatVnd } from "@noodle/core/domain/money";
-import { OrderBadge, TierBadge } from "@/components/status";
+import { OrderBadge } from "@/components/status";
 import { Body, Card, Heading, Loaded, Muted, Row, Screen, colors } from "@/components/ui";
 import { api, fileUri, json } from "@/lib/api";
 import { accessToken } from "@/lib/session";
@@ -52,7 +52,7 @@ export default function SaleOrderDetail() {
         <Muted>‹ Tổng quan</Muted>
       </Pressable>
       <Loaded query={q}>
-        {({ order, creatorLabel, customerSince, photo, kg, atWholesale, commission, timeline, history }) => {
+        {({ order, creatorLabel, customerSince, photo, kg, commission, timeline, history }) => {
           const owner = order.customer?.owner;
           return (
             <>
@@ -60,7 +60,6 @@ export default function SaleOrderDetail() {
                 <Row style={{ flexWrap: "wrap" }}>
                   <Text style={{ fontSize: 22, fontWeight: "700", color: colors.foreground }}>{order.code}</Text>
                   <OrderBadge status={order.status} />
-                  <TierBadge tier={order.price_tier} />
                 </Row>
                 <Row style={{ justifyContent: "space-between" }}>
                   <Text testID="payment-status" style={{ color: order.payment_status === "paid" ? colors.success : colors.mutedForeground }}>
@@ -135,7 +134,7 @@ export default function SaleOrderDetail() {
                       <Body style={{ fontWeight: "600" }}>{formatVnd(i.line_total)}</Body>
                     </Row>
                     <Muted>
-                      {formatKg(i.qty_kg)} · Giá sỉ/kg {formatVnd(i.wholesale_price_per_kg)} · Giá áp dụng/kg {formatVnd(i.price_per_kg)}
+                      {formatKg(i.qty_kg)} · {formatVnd(i.price_per_kg)}/kg
                     </Muted>
                   </View>
                 ))}
@@ -143,10 +142,6 @@ export default function SaleOrderDetail() {
                   <Body style={{ fontWeight: "700" }}>Tổng · {formatKg(kg)}</Body>
                   <Body style={{ fontWeight: "700" }}>{formatVnd(order.total)}</Body>
                 </Row>
-                <Muted style={{ fontSize: 12 }}>
-                  {order.price_tier === "si" ? "Áp giá sỉ" : `Áp giá lẻ (sỉ + ${order.retail_markup_pct}%, nếu giá sỉ: ${formatVnd(atWholesale)})`}. Điều kiện giá sỉ lúc đặt: từ{" "}
-                  {formatKg(order.wholesale_min_kg)} hoặc từ {formatVnd(order.wholesale_min_total)}.
-                </Muted>
               </Card>
 
               <Card>

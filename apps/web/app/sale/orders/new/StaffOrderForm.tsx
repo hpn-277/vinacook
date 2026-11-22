@@ -3,7 +3,6 @@
 import { Search, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ActionForm } from "@/components/ActionForm";
-import { TierHint } from "@/components/PricingSummary";
 import { QtyStepper } from "@/components/QtyStepper";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,9 +10,9 @@ import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { cartLines, packSize, type Cart, type CatalogProduct } from "@noodle/core/domain/catalog";
+import { cartLines, packSize, priceRangeLabel, type Cart, type CatalogProduct } from "@noodle/core/domain/catalog";
 import { formatKg, formatVnd } from "@noodle/core/domain/money";
-import { priceLines, retailPerKg, type PricingTerms } from "@noodle/core/domain/pricing";
+import { packPrice, priceLines } from "@noodle/core/domain/pricing";
 
 /** "Mì Trứng" and "mi trung" match: lowercase, accents and đ stripped. */
 const fold = (s: string) =>
@@ -25,18 +24,17 @@ const fold = (s: string) =>
 
 type Props = {
   catalog: CatalogProduct[];
-  terms: PricingTerms;
   /** Customer fields, rendered server-side with the looked-up defaults. */
   children: ReactNode;
 };
 
-export function StaffOrderForm({ catalog, terms, children }: Props) {
+export function StaffOrderForm({ catalog, children }: Props) {
   const [cart, setCart] = useState<Cart>({});
   const [query, setQuery] = useState("");
   const [onlyPicked, setOnlyPicked] = useState(false);
   const setQty = (packId: number, qty: number) => setCart((c) => ({ ...c, [packId]: Math.max(0, Math.floor(qty) || 0) }));
 
-  const order = priceLines(cartLines(catalog, cart), terms);
+  const order = priceLines(cartLines(catalog, cart));
   const pickedIds = new Set(order.lines.map((l) => l.product.id));
   const q = fold(query.trim());
   const shown = catalog.filter((p) => (!onlyPicked || pickedIds.has(p.id)) && (!q || fold(p.name).includes(q)));
@@ -86,7 +84,7 @@ export function StaffOrderForm({ catalog, terms, children }: Props) {
             <ul className="grid gap-2 sm:grid-cols-2">
               {shown.map((p) => (
                 <li key={p.id}>
-                  <ProductRow product={p} retailMarkupPct={terms.retailMarkupPct} cart={cart} setQty={setQty} picked={pickedIds.has(p.id)} />
+                  <ProductRow product={p} cart={cart} setQty={setQty} picked={pickedIds.has(p.id)} />
                 </li>
               ))}
             </ul>
@@ -108,9 +106,6 @@ export function StaffOrderForm({ catalog, terms, children }: Props) {
               Tạo đơn
             </Button>
           </div>
-          <div className="border-t pt-2 text-sm">
-            <TierHint order={order} terms={terms} />
-          </div>
         </Card>
       </div>
     </ActionForm>
@@ -119,13 +114,11 @@ export function StaffOrderForm({ catalog, terms, children }: Props) {
 
 function ProductRow({
   product: p,
-  retailMarkupPct,
   cart,
   setQty,
   picked,
 }: {
   product: CatalogProduct;
-  retailMarkupPct: number;
   cart: Cart;
   setQty: (packId: number, qty: number) => void;
   picked: boolean;
@@ -141,9 +134,7 @@ function ProductRow({
         )}
         <div className="min-w-0">
           <div className="font-semibold">{p.name}</div>
-          <div className="text-xs text-muted-foreground">
-            Sỉ {formatVnd(p.price_per_kg)}/kg · Lẻ {formatVnd(retailPerKg(p.price_per_kg, retailMarkupPct))}/kg
-          </div>
+          <div className="text-xs text-muted-foreground">{priceRangeLabel(p.packs.map((pack) => pack.price_per_kg))}</div>
         </div>
       </div>
       <ul className="divide-y rounded-lg border">
@@ -155,6 +146,7 @@ function ProductRow({
                 <img src={pack.image_url} alt="" className="size-7 shrink-0 object-contain" />
               )}
               {packSize(pack)}
+              <span className="text-xs text-muted-foreground">{formatVnd(packPrice(pack.kg_per_unit, pack.price_per_kg))}</span>
             </span>
             <QtyStepper label={`${p.name} - ${packSize(pack)}`} value={cart[pack.id] ?? 0} onChange={(q) => setQty(pack.id, q)} />
           </li>

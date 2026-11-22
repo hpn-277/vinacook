@@ -9,7 +9,6 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import type { Database } from "@noodle/core/database.types";
 import { DISTRICTS } from "@noodle/core/domain/districts";
 import { formatVnd } from "@noodle/core/domain/money";
-import { retailPerKg } from "@noodle/core/domain/pricing";
 import { JOB_TRANSITIONS, ORDER_TRANSITIONS } from "@noodle/core/domain/status";
 import { addDays, type IsoDate } from "@noodle/core/domain/time";
 
@@ -95,14 +94,14 @@ async function login(browser: Browser, email: string, mobile = false) {
   return s;
 }
 
-/** items: "<product> - <pack>" -> pack quantity. Returns the order code and the shop's tier hint before checkout. */
+/** items: "<product> - <pack>" -> pack quantity. Returns the order code and the shop's cart total before checkout. */
 async function customerCheckout(page: Page, items: Record<string, number>, info: { name: string; phone: string; address: string; district: string }) {
   for (const [pack, qty] of Object.entries(items)) {
     await page.goto(`${BASE}/`);
     await page.locator(`[data-product="${pack.split(" - ")[0]}"]`).click();
     await page.getByLabel(`Số lượng ${pack}`, { exact: true }).fill(String(qty));
   }
-  const hint = await page.getByTestId("tier-hint").innerText();
+  const hint = await page.getByTestId("cart-total").innerText();
   await page.getByRole("link", { name: "Đặt hàng" }).click();
   await page.waitForURL("**/checkout");
   await page.getByLabel("Họ tên").fill(info.name);
@@ -171,10 +170,8 @@ async function main() {
     const A = placedA.code;
     const a0 = await order(A);
     eq(a0.sale_id, sale1, "order A snapshots sale1");
-    assert(placedA.hint.includes("giá sỉ") && placedA.hint.includes("50 kg"), `shop shows wholesale for exactly 50 kg: "${placedA.hint}"`);
-    eq(a0.price_tier, "si", "1 Bao + 5 Kg + 2 Thùng = exactly 50 kg gets wholesale (Sỉ)");
-    eq(a0.total, 30 * 25000 + 20 * 15000, "order A total at wholesale per-kg prices");
-    assert(placedA.message.includes("Giá sỉ") && placedA.message.includes(formatVnd(a0.total)), `confirmation shows tier and total: "${placedA.message}"`);
+    eq(placedA.hint, formatVnd(a0.total), "shop cart total matches the server-priced total");
+    assert(placedA.message.includes(formatVnd(a0.total)), `confirmation shows the total: "${placedA.message}"`);
     eq(
       (await items(A)).map((i) => `${i.products!.name}:${i.pack_qty} ${i.pack_name}=${i.qty_kg}kg@${i.price_per_kg}`),
       ["Mì trứng:5 Kg=5kg@25000", "Mì trứng:1 Bao=25kg@25000", "Bún tươi:2 Thùng=20kg@15000"],
@@ -196,8 +193,7 @@ async function main() {
     const B = /DH\d{6}/.exec(s2msg)![0];
     const b0 = await order(B);
     eq([b0.sale_id, b0.created_by, b0.created_by_staff_id], [sale1, "sale", sale2], "order B saved, commission stays with sale1");
-    eq([b0.price_tier, b0.total], ["le", 10 * retailPerKg(25000, 25)], "sale-entered 1 Thùng (10 kg) is priced retail by the server");
-    assert(s2msg.includes("Giá lẻ"), "sale sees the tier in the confirmation");
+    assert(s2msg.includes(formatVnd(b0.total)), "sale sees the total in the confirmation");
     const { data: cust2 } = await admin.from("customers").select("sale_id").eq("phone", "0909111222").single();
     eq(cust2!.sale_id, sale1, "customer owner not overwritten");
 
@@ -211,10 +207,7 @@ async function main() {
     const C = placedC.code;
     const c0 = await order(C);
     eq(c0.sale_id, null, "order C has no sale");
-    assert(placedC.hint.includes("Đặt thêm 35 kg"), `shop hints how far 15 kg is from wholesale: "${placedC.hint}"`);
-    eq(retailPerKg(25000, 25), 31300, "retail Mì trứng = 25.000 × 1.25 rounded to 100đ");
-    eq([c0.price_tier, c0.total], ["le", 15 * 31300], "15 kg order is retail at wholesale × 1.25");
-    eq((await items(C)).map((i) => i.price_per_kg), [31300, 31300], "every C line snapshots the retail per-kg price");
+    eq(placedC.hint, formatVnd(c0.total), "walk-in cart total matches the server-priced total");
 
     const D = a0.production_date as IsoDate;
     eq([b0.production_date, (await order(C)).production_date], [D, D], `all orders share production date ${D}`);
@@ -532,7 +525,7 @@ async function main() {
       (await items(A)).filter((i) => i.pack_id !== thungId).map((i) => `${i.pack_id}x${i.pack_qty}`),
       "reorder repeats A's packs and quantities minus the inactive one",
     );
-    eq([r0.price_tier, r0.total, r0.sale_id], ["le", 30 * 31300, sale1], "reorder is repriced server-side and stays with sale1");
+    eq(r0.sale_id, sale1, "reorder stays with sale1");
   } finally {
     await browser.close();
   }

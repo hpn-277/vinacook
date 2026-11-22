@@ -1,5 +1,4 @@
 import { Text, View } from "react-native";
-import type { PriceTier } from "@noodle/core/domain/pricing";
 import { JOB_STATUS_LABEL, ORDER_STATUS_LABEL, PRODUCT_STATUS_LABEL, type JobStatus, type OrderStatus, type ProductStatus } from "@noodle/core/domain/status";
 
 /** Same tones as the web app's components/status-badge.tsx (Tailwind *-100 background, *-900 text). */
@@ -15,10 +14,6 @@ const ORDER_TONE: Record<OrderStatus, [string, string]> = {
 };
 const JOB_TONE: Record<JobStatus, [string, string]> = { producing: ORDER_TONE.in_production, received: ORDER_TONE.ready };
 const PRODUCT_TONE: Record<ProductStatus, [string, string]> = { pending: ORDER_TONE.placed, approved: ORDER_TONE.delivered, rejected: ORDER_TONE.failed };
-const TIER: Record<PriceTier, { label: string; tone: [string, string] }> = {
-  si: { label: "Sỉ", tone: ["#D0FAE5", "#004F3B"] },
-  le: { label: "Lẻ", tone: ["#FFEDD4", "#7E2A0C"] },
-};
 
 function Pill({ label, tone }: { label: string; tone: [string, string] }) {
   return (
@@ -31,4 +26,3 @@ function Pill({ label, tone }: { label: string; tone: [string, string] }) {
 export const OrderBadge = ({ status }: { status: OrderStatus }) => <Pill label={ORDER_STATUS_LABEL[status]} tone={ORDER_TONE[status]} />;
 export const JobBadge = ({ status }: { status: JobStatus }) => <Pill label={JOB_STATUS_LABEL[status]} tone={JOB_TONE[status]} />;
 export const ProductStatusBadge = ({ status }: { status: ProductStatus }) => <Pill label={PRODUCT_STATUS_LABEL[status]} tone={PRODUCT_TONE[status]} />;
-export const TierBadge = ({ tier }: { tier: PriceTier }) => <Pill label={TIER[tier].label} tone={TIER[tier].tone} />;

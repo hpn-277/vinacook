@@ -241,12 +241,6 @@ async function main() {
     await until(async () => (await admin.from("products").select("status").eq("name", "Bún thử").single()).data?.status, (s) => s === "rejected", "rejected");
     assert(true, "reject with reason");
 
-    step("admin saves pricing (PUT /settings/pricing)");
-    await mgr.goto(`${BASE}/admin/products`);
-    await mgr.locator('[name="retail_markup_pct"]').fill("12");
-    await mgr.locator('form:has([name="retail_markup_pct"]) button').click();
-    await until(async () => (await admin.from("settings").select("retail_markup_pct").single()).data?.retail_markup_pct, (v) => Number(v) === 12, "markup 12");
-    assert(true, "pricing saved");
 
     step("admin adds a factory from Nhân viên (POST /factories)");
     await mgr.goto(`${BASE}/admin/staff`);
@@ -292,7 +286,7 @@ async function main() {
     await mgr.getByRole("button", { name: "Thêm sản phẩm" }).first().click();
     const pd = mgr.getByRole("dialog");
     await pd.locator('[name="name"]').fill("Mì thử");
-    await pd.locator('[name="price_per_kg"]').fill("18000");
+    for (const box of await pd.locator('[name^="std_price_"]').all()) await box.fill("18000");
     await pd.locator('[name="factory_id"]').selectOption({ index: 1 });
     await pd.getByRole("button", { name: "Thêm sản phẩm" }).click();
     const created = await until(async () => (await admin.from("products").select("id, status").eq("name", "Mì thử").maybeSingle()).data, (p) => p != null, "product created");
@@ -302,9 +296,11 @@ async function main() {
     await mgr.getByRole("button", { name: "Sửa Mì thử" }).click();
     await mgr.getByRole("dialog").locator('[name="new_name"]').fill("Thùng");
     await mgr.getByRole("dialog").locator('[name="new_kg"]').fill("12");
+    await mgr.getByRole("dialog").locator('[name="new_price"]').fill("19000");
     await mgr.getByRole("dialog").locator(`form:has([name="new_name"]) button[type="submit"]`).click();
-    await until(async () => (await admin.from("product_packs").select("id").eq("product_id", created!.id)).data?.length, (n) => n === packs.length + 1, "pack added");
-    assert(true, "pack added");
+    await until(async () => (await admin.from("product_packs").select("id, price_per_kg").eq("product_id", created!.id)).data, (rows) => rows?.length === packs.length + 1, "pack added");
+    const { data: added } = await admin.from("product_packs").select("price_per_kg").eq("product_id", created!.id).eq("kg_per_unit", 12).single();
+    assert(added?.price_per_kg === 19000, `new pack keeps its own price (${added?.price_per_kg})`);
 
     step("next day: close, reopen, close, receive, assign, driver hands back (POST /days/:date/reopen, /driver/orders/:id/return)");
     const late = await newPage(browser);

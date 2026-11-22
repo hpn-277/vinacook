@@ -1,7 +1,7 @@
 import { unwrap } from "../action";
 import { db } from "../db";
 import { localDate, parseIsoDate, type IsoDate } from "../domain/time";
-import { getSettings, loadCatalog, pricingTerms } from "../orders";
+import { loadCatalog } from "../orders";
 import { monthRange, today } from "../period";
 
 /** `?month=YYYY-MM`, falling back to the current month. */
@@ -12,7 +12,7 @@ export async function saleActiveOrders(saleId: number) {
   return unwrap(
     await db()
       .from("orders")
-      .select("id, code, production_date, status, total, price_tier, departed_at, customers(name, phone), driver:staff!orders_driver_id_fkey(name, phone), order_items(id, pack_name, pack_qty, qty_kg, products(name))")
+      .select("id, code, production_date, status, total, departed_at, customers(name, phone), driver:staff!orders_driver_id_fkey(name, phone), order_items(id, pack_name, pack_qty, qty_kg, products(name))")
       .eq("sale_id", saleId)
       .not("status", "in", "(delivered,cancelled)")
       .order("created_at", { ascending: false })
@@ -121,8 +121,7 @@ export async function customerLookup(phone: string, meId: number) {
 
 export type CustomerLookup = Awaited<ReturnType<typeof customerLookup>>;
 
-/** What the staff order form needs: the catalog on sale and today's pricing terms. */
+/** What the staff order form needs: the catalog on sale. */
 export async function orderForm() {
-  const [catalog, settings] = await Promise.all([loadCatalog(), getSettings()]);
-  return { catalog, terms: pricingTerms(settings) };
+  return { catalog: await loadCatalog() };
 }

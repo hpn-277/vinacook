@@ -1,8 +1,7 @@
 import { Image, Text, TextInput, View } from "react-native";
-import { packSize, type CatalogProduct, type Cart } from "@noodle/core/domain/catalog";
-import { formatKg, formatVnd } from "@noodle/core/domain/money";
-import { retailPerKg, type LineInput, type PricedOrder, type PricingTerms } from "@noodle/core/domain/pricing";
-import { TierBadge } from "@/components/status";
+import { packSize, priceRangeLabel, type CatalogProduct, type Cart } from "@noodle/core/domain/catalog";
+import { formatVnd } from "@noodle/core/domain/money";
+import { packPrice } from "@noodle/core/domain/pricing";
 import { Button, Card, Muted, Row, colors, styles } from "@/components/ui";
 import { fileUri } from "@/lib/api";
 
@@ -31,13 +30,11 @@ const raster = (url: string | null) => (url && !url.endsWith(".svg") ? fileUri(u
 
 export function ProductRow({
   product: p,
-  retailMarkupPct,
   cart,
   setQty,
   picked,
 }: {
   product: CatalogProduct;
-  retailMarkupPct: number;
   cart: Cart;
   setQty: (packId: number, qty: number) => void;
   picked: boolean;
@@ -55,41 +52,17 @@ export function ProductRow({
         )}
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: "600", fontSize: 15, color: colors.foreground }}>{p.name}</Text>
-          <Muted style={{ fontSize: 12 }}>
-            Sỉ {formatVnd(p.price_per_kg)}/kg · Lẻ {formatVnd(retailPerKg(p.price_per_kg, retailMarkupPct))}/kg
-          </Muted>
+          <Muted style={{ fontSize: 12 }}>{priceRangeLabel(p.packs.map((pack) => pack.price_per_kg))}</Muted>
         </View>
       </Row>
       {p.packs.map((pack) => (
         <Row key={pack.id} style={{ justifyContent: "space-between", borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6 }}>
-          <Text style={{ color: colors.foreground }}>{packSize(pack)}</Text>
+          <Text style={{ color: colors.foreground }}>
+            {packSize(pack)} <Muted style={{ fontSize: 12 }}>{formatVnd(packPrice(pack.kg_per_unit, pack.price_per_kg))}</Muted>
+          </Text>
           <QtyStepper id={pack.id} label={`${p.name} - ${packSize(pack)}`} value={cart[pack.id] ?? 0} onChange={(q) => setQty(pack.id, q)} />
         </Row>
       ))}
     </Card>
-  );
-}
-
-export function wholesaleRule(terms: PricingTerms): string {
-  return `Giá sỉ cho đơn từ ${formatKg(terms.wholesaleMinKg)} hoặc từ ${formatVnd(terms.wholesaleMinTotal)}`;
-}
-
-/** The web TierHint: which tier the cart gets and, while retail, how far it is from wholesale. */
-export function TierHint({ order, terms }: { order: PricedOrder<LineInput>; terms: PricingTerms }) {
-  if (order.lines.length === 0) return <Muted>{wholesaleRule(terms)}</Muted>;
-  if (!order.toWholesale)
-    return (
-      <View testID="tier-hint" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <TierBadge tier="si" />
-        <Text style={{ color: "#065F46", flex: 1 }}>Đơn được giá sỉ ({formatKg(order.totalKg)})</Text>
-      </View>
-    );
-  return (
-    <View testID="tier-hint" style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
-      <TierBadge tier="le" />
-      <Text style={{ color: "#7C2D12", flex: 1 }}>
-        Đặt thêm <Text style={{ fontWeight: "700" }}>{formatKg(order.toWholesale.kg)}</Text> hoặc thêm {formatVnd(order.toWholesale.vnd)} để được giá sỉ
-      </Text>
-    </View>
   );
 }

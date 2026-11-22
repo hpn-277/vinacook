@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { OrderActions, PaymentLabel, Returned } from "@/components/AdminOrderCard";
 import { EditContact } from "@/components/EditContact";
 import { PaymentPanel } from "@/components/PaymentPanel";
-import { JobBadge, OrderBadge, TierBadge } from "@/components/status-badge";
+import { JobBadge, OrderBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -58,7 +58,7 @@ export async function OrderDetail({
   const base = office ? "/admin/orders" : "/sale/orders";
   const detail = await orderDetail(code, viewer);
   if (!detail) notFound();
-  const { order, creatorLabel, customerSince, photo, kg, atWholesale, commission, timeline, jobs, history } = detail;
+  const { order, creatorLabel, customerSince, photo, kg, commission, timeline, jobs, history } = detail;
   const owner = order.customer?.owner;
 
   return (
@@ -75,7 +75,6 @@ export async function OrderDetail({
       >
         <h1 className="text-xl font-bold tracking-tight">{order.code}</h1>
         <OrderBadge status={order.status} />
-        <TierBadge tier={order.price_tier} />
         <PaymentLabel order={order} />
         <span className="ml-auto text-xl font-bold tabular-nums">
           {formatVnd(order.total)}
@@ -195,8 +194,7 @@ export async function OrderDetail({
               <TableRow>
                 <TableHead>Sản phẩm</TableHead>
                 <TableHead className="text-right">Kg</TableHead>
-                <TableHead className="text-right">Giá sỉ/kg</TableHead>
-                <TableHead className="text-right">Giá áp dụng/kg</TableHead>
+                <TableHead className="text-right">Giá/kg</TableHead>
                 <TableHead className="text-right">Thành tiền</TableHead>
               </TableRow>
             </TableHeader>
@@ -215,9 +213,6 @@ export async function OrderDetail({
                     {formatKg(i.qty_kg)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatVnd(i.wholesale_price_per_kg)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
                     {formatVnd(i.price_per_kg)}
                   </TableCell>
                   <TableCell className="text-right font-medium tabular-nums">
@@ -232,20 +227,13 @@ export async function OrderDetail({
                 <TableCell className="text-right tabular-nums">
                   {formatKg(kg)}
                 </TableCell>
-                <TableCell colSpan={2} />
+                <TableCell />
                 <TableCell className="text-right tabular-nums">
                   {formatVnd(order.total)}
                 </TableCell>
               </TableRow>
             </TableFooter>
           </Table>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {order.price_tier === "si"
-              ? "Áp giá sỉ"
-              : `Áp giá lẻ (sỉ + ${order.retail_markup_pct}%, nếu giá sỉ: ${formatVnd(atWholesale)})`}
-            . Điều kiện giá sỉ lúc đặt: từ {formatKg(order.wholesale_min_kg)}{" "}
-            hoặc từ {formatVnd(order.wholesale_min_total)}.
-          </p>
         </Section>
 
         <div className={office ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}>

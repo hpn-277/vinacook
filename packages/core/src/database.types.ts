@@ -99,14 +99,14 @@ isOneToOne: false
                   ]
                 },"order_items": {
                   Row: {
-                    "id": number,"kg_per_unit": number,"line_total": number,"order_id": number,"pack_id": number,"pack_name": string,"pack_qty": number,"price_per_kg": number,"product_id": number,"qty_kg": number,"wholesale_price_per_kg": number
+                    "id": number,"kg_per_unit": number,"line_total": number,"order_id": number,"pack_id": number,"pack_name": string,"pack_qty": number,"price_per_kg": number,"product_id": number,"qty_kg": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "id"?: never,"kg_per_unit": number,"line_total": number,"order_id": number,"pack_id": number,"pack_name": string,"pack_qty": number,"price_per_kg": number,"product_id": number,"qty_kg"?: never,"wholesale_price_per_kg": number
+                    "id"?: never,"kg_per_unit": number,"line_total": number,"order_id": number,"pack_id": number,"pack_name": string,"pack_qty": number,"price_per_kg": number,"product_id": number,"qty_kg"?: never
                   }
                   Update: {
-                    "id"?: never,"kg_per_unit"?: number,"line_total"?: number,"order_id"?: number,"pack_id"?: number,"pack_name"?: string,"pack_qty"?: number,"price_per_kg"?: number,"product_id"?: number,"qty_kg"?: never,"wholesale_price_per_kg"?: number
+                    "id"?: never,"kg_per_unit"?: number,"line_total"?: number,"order_id"?: number,"pack_id"?: number,"pack_name"?: string,"pack_qty"?: number,"price_per_kg"?: number,"product_id"?: number,"qty_kg"?: never
                   }
                   Relationships: [
                     {
@@ -131,14 +131,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "address": string,"code": string,"created_at": string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id": number | null,"customer_id": number,"delivered_at": string | null,"delivery_photo_path": string | null,"departed_at": string | null,"district": string,"driver_id": number | null,"fail_reason": string | null,"id": number,"note": string | null,"paid_at": string | null,"paid_by": number | null,"payment_status": Database["public"]['Enums']["payment_status"],"phone": string,"price_tier": Database["public"]['Enums']["price_tier"],"production_date": string,"retail_markup_pct": number,"return_reason": string | null,"returned_by": number | null,"sale_id": number | null,"status": Database["public"]['Enums']["order_status"],"total": number,"wholesale_min_kg": number,"wholesale_min_total": number
+                    "address": string,"code": string,"created_at": string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id": number | null,"customer_id": number,"delivered_at": string | null,"delivery_photo_path": string | null,"departed_at": string | null,"district": string,"driver_id": number | null,"fail_reason": string | null,"id": number,"note": string | null,"paid_at": string | null,"paid_by": number | null,"payment_status": Database["public"]['Enums']["payment_status"],"phone": string,"production_date": string,"return_reason": string | null,"returned_by": number | null,"sale_id": number | null,"status": Database["public"]['Enums']["order_status"],"total": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "address": string,"code"?: string,"created_at"?: string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id": number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district": string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone": string,"price_tier": Database["public"]['Enums']["price_tier"],"production_date": string,"retail_markup_pct": number,"return_reason"?: string | null,"returned_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total": number,"wholesale_min_kg": number,"wholesale_min_total": number
+                    "address": string,"code"?: string,"created_at"?: string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id": number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district": string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone": string,"production_date": string,"return_reason"?: string | null,"returned_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total": number
                   }
                   Update: {
-                    "address"?: string,"code"?: string,"created_at"?: string,"created_by"?: Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id"?: number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district"?: string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone"?: string,"price_tier"?: Database["public"]['Enums']["price_tier"],"production_date"?: string,"retail_markup_pct"?: number,"return_reason"?: string | null,"returned_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total"?: number,"wholesale_min_kg"?: number,"wholesale_min_total"?: number
+                    "address"?: string,"code"?: string,"created_at"?: string,"created_by"?: Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id"?: number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district"?: string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone"?: string,"production_date"?: string,"return_reason"?: string | null,"returned_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total"?: number
                   }
                   Relationships: [
                     {
@@ -213,14 +213,14 @@ isOneToOne: false
                   ]
                 },"product_packs": {
                   Row: {
-                    "active": boolean,"id": number,"image_url": string | null,"kg_per_unit": number,"name": string,"product_id": number
+                    "active": boolean,"id": number,"image_url": string | null,"kg_per_unit": number,"name": string,"price_per_kg": number,"product_id": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"id"?: never,"image_url"?: string | null,"kg_per_unit": number,"name": string,"product_id": number
+                    "active"?: boolean,"id"?: never,"image_url"?: string | null,"kg_per_unit": number,"name": string,"price_per_kg": number,"product_id": number
                   }
                   Update: {
-                    "active"?: boolean,"id"?: never,"image_url"?: string | null,"kg_per_unit"?: number,"name"?: string,"product_id"?: number
+                    "active"?: boolean,"id"?: never,"image_url"?: string | null,"kg_per_unit"?: number,"name"?: string,"price_per_kg"?: number,"product_id"?: number
                   }
                   Relationships: [
                     {
@@ -279,14 +279,14 @@ isOneToOne: false
                   ]
                 },"products": {
                   Row: {
-                    "active": boolean,"description": string | null,"factory_id": number,"id": number,"image_url": string | null,"name": string,"price_per_kg": number,"reject_reason": string | null,"status": Database["public"]['Enums']["product_status"],"submitted_by": number | null
+                    "active": boolean,"description": string | null,"factory_id": number,"id": number,"image_url": string | null,"name": string,"reject_reason": string | null,"status": Database["public"]['Enums']["product_status"],"submitted_by": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"description"?: string | null,"factory_id": number,"id"?: never,"image_url"?: string | null,"name": string,"price_per_kg": number,"reject_reason"?: string | null,"status"?: Database["public"]['Enums']["product_status"],"submitted_by"?: number | null
+                    "active"?: boolean,"description"?: string | null,"factory_id": number,"id"?: never,"image_url"?: string | null,"name": string,"reject_reason"?: string | null,"status"?: Database["public"]['Enums']["product_status"],"submitted_by"?: number | null
                   }
                   Update: {
-                    "active"?: boolean,"description"?: string | null,"factory_id"?: number,"id"?: never,"image_url"?: string | null,"name"?: string,"price_per_kg"?: number,"reject_reason"?: string | null,"status"?: Database["public"]['Enums']["product_status"],"submitted_by"?: number | null
+                    "active"?: boolean,"description"?: string | null,"factory_id"?: number,"id"?: never,"image_url"?: string | null,"name"?: string,"reject_reason"?: string | null,"status"?: Database["public"]['Enums']["product_status"],"submitted_by"?: number | null
                   }
                   Relationships: [
                     {
@@ -305,14 +305,14 @@ isOneToOne: false
                   ]
                 },"settings": {
                   Row: {
-                    "cutoff_time": string,"id": boolean,"retail_markup_pct": number,"timezone": string,"wholesale_min_kg": number,"wholesale_min_total": number
+                    "cutoff_time": string,"id": boolean,"timezone": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "cutoff_time"?: string,"id"?: boolean,"retail_markup_pct"?: number,"timezone"?: string,"wholesale_min_kg"?: number,"wholesale_min_total"?: number
+                    "cutoff_time"?: string,"id"?: boolean,"timezone"?: string
                   }
                   Update: {
-                    "cutoff_time"?: string,"id"?: boolean,"retail_markup_pct"?: number,"timezone"?: string,"wholesale_min_kg"?: number,"wholesale_min_total"?: number
+                    "cutoff_time"?: string,"id"?: boolean,"timezone"?: string
                   }
                   Relationships: [
                     
@@ -374,7 +374,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "place_order":
-{ Args: { "p_address": string,"p_claim_sale_id"?: number,"p_created_by": Database["public"]['Enums']["order_creator"],"p_created_by_staff_id"?: number,"p_district": string,"p_items": Json,"p_name": string,"p_note": string,"p_phone": string,"p_price_tier": Database["public"]['Enums']["price_tier"],"p_production_date": string,"p_retail_markup_pct": number,"p_wholesale_min_kg": number,"p_wholesale_min_total": number }; Returns: Json
+{ Args: { "p_address": string,"p_claim_sale_id"?: number,"p_created_by": Database["public"]['Enums']["order_creator"],"p_created_by_staff_id"?: number,"p_district": string,"p_items": Json,"p_name": string,"p_note": string,"p_phone": string,"p_production_date": string }; Returns: Json
                            },
 "receive_factories":
 { Args: { "p_date": string,"p_factory_ids": (number)[] }; Returns: number
@@ -390,7 +390,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "day_status": "open"|"closed","job_status": "producing"|"received","order_creator": "customer"|"sale"|"manager","order_status": "placed"|"in_production"|"ready"|"assigned"|"out_for_delivery"|"delivered"|"failed"|"cancelled","payment_action": "paid"|"unpaid","payment_status": "unpaid"|"paid","price_tier": "si"|"le","product_status": "pending"|"approved"|"rejected","staff_role": "admin"|"manager"|"sale"|"factory"|"driver"
+            "day_status": "open"|"closed","job_status": "producing"|"received","order_creator": "customer"|"sale"|"manager","order_status": "placed"|"in_production"|"ready"|"assigned"|"out_for_delivery"|"delivered"|"failed"|"cancelled","payment_action": "paid"|"unpaid","payment_status": "unpaid"|"paid","product_status": "pending"|"approved"|"rejected","staff_role": "admin"|"manager"|"sale"|"factory"|"driver"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -510,7 +510,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "day_status": ["open", "closed"],"job_status": ["producing", "received"],"order_creator": ["customer", "sale", "manager"],"order_status": ["placed", "in_production", "ready", "assigned", "out_for_delivery", "delivered", "failed", "cancelled"],"payment_action": ["paid", "unpaid"],"payment_status": ["unpaid", "paid"],"price_tier": ["si", "le"],"product_status": ["pending", "approved", "rejected"],"staff_role": ["admin", "manager", "sale", "factory", "driver"]
+            "day_status": ["open", "closed"],"job_status": ["producing", "received"],"order_creator": ["customer", "sale", "manager"],"order_status": ["placed", "in_production", "ready", "assigned", "out_for_delivery", "delivered", "failed", "cancelled"],"payment_action": ["paid", "unpaid"],"payment_status": ["unpaid", "paid"],"product_status": ["pending", "approved", "rejected"],"staff_role": ["admin", "manager", "sale", "factory", "driver"]
           }
         }
 } as const

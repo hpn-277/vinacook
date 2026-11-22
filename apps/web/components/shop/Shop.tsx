@@ -2,26 +2,23 @@
 
 import Link from "next/link";
 import { setCart, useCart } from "@/components/shop/cart";
-import { TierHint } from "@/components/PricingSummary";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cartLines, type CatalogProduct } from "@noodle/core/domain/catalog";
 import { formatKg, formatVnd } from "@noodle/core/domain/money";
-import { priceLines, type LineInput, type PricedOrder, type PriceTier, type PricingTerms } from "@noodle/core/domain/pricing";
+import { priceLines, type LineInput, type PricedOrder } from "@noodle/core/domain/pricing";
 import { cn } from "@/lib/utils";
 
-/** The cart priced against the live catalog, plus `tone` to highlight the price tier the order currently lands in. */
-export function useShopCart(catalog: CatalogProduct[], terms: PricingTerms) {
+/** The cart priced against the live catalog. */
+export function useShopCart(catalog: CatalogProduct[]) {
   const cart = useCart();
-  const order = priceLines(cartLines(catalog, cart), terms);
+  const order = priceLines(cartLines(catalog, cart));
   const setQty = (packId: number, qty: number) => setCart({ ...cart, [packId]: Math.max(0, Math.floor(qty) || 0) });
-  const tier = order.lines.length ? order.tier : null;
-  const tone = (t: PriceTier) => (tier === t ? "font-semibold text-foreground" : "text-muted-foreground");
-  return { cart, order, setQty, tone };
+  return { cart, order, setQty };
 }
 
-export function Shop({ catalog, terms }: { catalog: CatalogProduct[]; terms: PricingTerms }) {
-  const { cart, order } = useShopCart(catalog, terms);
+export function Shop({ catalog }: { catalog: CatalogProduct[] }) {
+  const { cart, order } = useShopCart(catalog);
   return (
     <>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -48,7 +45,7 @@ export function Shop({ catalog, terms }: { catalog: CatalogProduct[]; terms: Pri
           );
         })}
       </ul>
-      <CartBar order={order} terms={terms} />
+      <CartBar order={order} />
     </>
   );
 }
@@ -62,7 +59,7 @@ export function ProductImage({ product: p, className }: { product: CatalogProduc
   return <img src={p.image_url} alt={p.name} className={cn(frame, "bg-muted object-cover")} />;
 }
 
-export function CartBar({ order, terms }: { order: PricedOrder<LineInput>; terms: PricingTerms }) {
+export function CartBar({ order }: { order: PricedOrder<LineInput> }) {
   return (
     <Card size="sm" className="sticky bottom-3 mt-4 gap-2 px-3 shadow-lg">
       <div className="flex items-center justify-between gap-3">
@@ -77,9 +74,6 @@ export function CartBar({ order, terms }: { order: PricedOrder<LineInput>; terms
             Đặt hàng
           </Link>
         </Button>
-      </div>
-      <div className="border-t pt-2 text-sm">
-        <TierHint order={order} terms={terms} />
       </div>
     </Card>
   );

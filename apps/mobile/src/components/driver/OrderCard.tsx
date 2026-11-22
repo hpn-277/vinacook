@@ -4,7 +4,6 @@ import { itemLabel } from "@noodle/core/domain/catalog";
 import { collectLabel } from "@noodle/core/domain/delivery";
 import { formatKg } from "@noodle/core/domain/money";
 import type { DriverOrder } from "@noodle/core/queries/driver";
-import { TierBadge } from "@/components/status";
 import { Body, Button, Card, colors, Muted, Row } from "@/components/ui";
 
 export function OrderCard({ order: o, children }: { order: DriverOrder; children: ReactNode }) {
@@ -12,10 +11,7 @@ export function OrderCard({ order: o, children }: { order: DriverOrder; children
   return (
     <Card testID={`order-${o.code}`}>
       <Row style={{ justifyContent: "space-between" }}>
-        <Row>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>{o.code}</Text>
-          <TierBadge tier={o.price_tier} />
-        </Row>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>{o.code}</Text>
         <Text testID={`collect-${o.code}`} style={{ fontWeight: "700", color: o.payment_status === "paid" ? colors.success : colors.primary }}>
           {collectLabel(o)}
         </Text>

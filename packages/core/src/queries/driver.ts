@@ -6,7 +6,7 @@ import { deliveryPhotoUrl } from "../files";
 import { dayRange, today } from "../period";
 
 const SELECT =
-  "id, code, status, phone, address, district, note, total, payment_status, price_tier, delivered_at, delivery_photo_path, customers(name), order_items(id, pack_name, pack_qty, qty_kg, products(name))";
+  "id, code, status, phone, address, district, note, total, payment_status, delivered_at, delivery_photo_path, customers(name), order_items(id, pack_name, pack_qty, qty_kg, products(name))";
 
 const driverOrders = (driverId: number) => db().from("orders").select(SELECT).eq("driver_id", driverId).order("id", { referencedTable: "order_items" });
 

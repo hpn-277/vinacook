@@ -81,7 +81,8 @@ export async function factoryMonth(factoryId: number, month?: string) {
 export type FactoryProduct = {
   id: number;
   name: string;
-  price_per_kg: number;
+  /** đ/kg of each pack; a factory proposes one price for all packs, the admin may then set each pack apart. */
+  pack_prices: number[];
   description: string | null;
   image_url: string | null;
   status: ProductStatus;
@@ -90,11 +91,12 @@ export type FactoryProduct = {
 };
 
 export async function factoryProducts(factoryId: number): Promise<FactoryProduct[]> {
-  return unwrap(
+  const rows = unwrap(
     await db()
       .from("products")
-      .select("id, name, price_per_kg, description, image_url, status, reject_reason, active")
+      .select("id, name, description, image_url, status, reject_reason, active, product_packs(price_per_kg)")
       .eq("factory_id", factoryId)
       .order("id", { ascending: false }),
   );
+  return rows.map(({ product_packs, ...p }) => ({ ...p, pack_prices: product_packs.map((pk) => pk.price_per_kg) }));
 }

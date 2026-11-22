@@ -17,13 +17,12 @@ import { STANDARD_PACKS, packSize } from "@noodle/core/domain/catalog";
 export type ManagedProduct = {
   id: number;
   name: string;
-  price_per_kg: number;
   factory_id: number;
   description: string | null;
   image_url: string | null;
   active: boolean;
   status: ProductStatus;
-  packs: { id: number; label: string; image_url: string | null; active: boolean }[];
+  packs: { id: number; label: string; price_per_kg: number; image_url: string | null; active: boolean }[];
 };
 
 /** Add (no product) or edit one product, including the picture of each of its packs. */
@@ -57,12 +56,7 @@ export function ProductDialog({ product: p, factories }: { product?: ManagedProd
               <FieldLabel htmlFor={`${form}-name`}>Tên sản phẩm</FieldLabel>
               <Input id={`${form}-name`} name="name" defaultValue={p?.name} required />
             </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor={`${form}-price`}>Giá sỉ (đ/kg)</FieldLabel>
-                <Input id={`${form}-price`} name="price_per_kg" type="number" min={1} defaultValue={p?.price_per_kg} required />
-              </Field>
-              <Field>
+            <Field>
                 <FieldLabel htmlFor={`${form}-factory`}>Xưởng</FieldLabel>
                 <NativeSelect id={`${form}-factory`} name="factory_id" required defaultValue={p?.factory_id ?? ""} className="w-full">
                   <NativeSelectOption value="" disabled>
@@ -75,8 +69,7 @@ export function ProductDialog({ product: p, factories }: { product?: ManagedProd
                     </NativeSelectOption>
                   ))}
                 </NativeSelect>
-              </Field>
-            </div>
+            </Field>
             <Field>
               <FieldLabel htmlFor={`${form}-desc`}>Mô tả</FieldLabel>
               <Textarea id={`${form}-desc`} name="description" defaultValue={p?.description ?? ""} placeholder="Nguyên liệu, cách dùng, hạn dùng" maxLength={1000} rows={2} />
@@ -95,17 +88,18 @@ export function ProductDialog({ product: p, factories }: { product?: ManagedProd
             {!p && (
               <Field>
                 <FieldLabel>Quy cách bán</FieldLabel>
-                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                <div className="grid gap-2">
                   {STANDARD_PACKS.map((pk, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <Checkbox id={`${form}-std-${i}`} name={`std_${i}`} defaultChecked />
-                      <label htmlFor={`${form}-std-${i}`} className="text-sm">
+                      <label htmlFor={`${form}-std-${i}`} className="w-28 text-sm">
                         {packSize(pk)}
                       </label>
+                      <PriceInput name={`std_price_${i}`} label={`Giá ${packSize(pk)}`} />
                     </div>
                   ))}
                 </div>
-                <FieldDescription>Thêm quy cách khác sau khi tạo, trong nút Sửa.</FieldDescription>
+                <FieldDescription>Giá mỗi kg theo từng quy cách. Thêm quy cách khác sau khi tạo, trong nút Sửa.</FieldDescription>
               </Field>
             )}
             {(!p || p.status === "approved") && (
@@ -126,7 +120,9 @@ export function ProductDialog({ product: p, factories }: { product?: ManagedProd
               <FieldGroup className="gap-3">
                 <div>
                   <h3 className="text-sm font-medium">Quy cách bán</h3>
-                  <p className="text-xs text-muted-foreground">Tick quy cách khách được chọn. Bỏ tick thì quy cách ẩn khỏi trang đặt hàng; đơn cũ không đổi.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Tick quy cách khách được chọn và nhập giá mỗi kg. Bỏ tick thì quy cách ẩn khỏi trang đặt hàng; đơn cũ không đổi.
+                  </p>
                 </div>
                 {p.packs.map((pk) => (
                   <div key={pk.id} className="flex flex-wrap items-center gap-2">
@@ -140,6 +136,7 @@ export function ProductDialog({ product: p, factories }: { product?: ManagedProd
                     <label htmlFor={`active-${pk.id}`} className="w-28 text-sm">
                       {pk.label}
                     </label>
+                    <PriceInput name={`price_${pk.id}`} label={`Giá ${p.name} - ${pk.label}`} defaultValue={pk.price_per_kg} />
                     <div className="min-w-0 flex-1">
                       <ImageFileInput form={`packs-${p.id}`} name={`image_${pk.id}`} label={`Tải ảnh ${p.name} - ${pk.label}`} />
                     </div>
@@ -153,6 +150,10 @@ export function ProductDialog({ product: p, factories }: { product?: ManagedProd
                   <Field className="w-24">
                     <FieldLabel htmlFor={`new-kg-${p.id}`}>Kg</FieldLabel>
                     <Input id={`new-kg-${p.id}`} name="new_kg" type="number" step="0.1" min={0.1} placeholder="20" />
+                  </Field>
+                  <Field className="w-32">
+                    <FieldLabel htmlFor={`new-price-${p.id}`}>Giá (đ/kg)</FieldLabel>
+                    <Input id={`new-price-${p.id}`} name="new_price" type="number" min={1} placeholder="29000" />
                   </Field>
                   <datalist id="pack-names">
                     {["Cây", "Thùng", "Bao", "Túi"].map((n) => (
@@ -169,5 +170,14 @@ export function ProductDialog({ product: p, factories }: { product?: ManagedProd
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PriceInput({ name, label, defaultValue }: { name: string; label: string; defaultValue?: number }) {
+  return (
+    <div className="relative w-32">
+      <Input name={name} type="number" min={1} defaultValue={defaultValue} placeholder="Giá" aria-label={label} required className="pr-12" />
+      <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-muted-foreground">đ/kg</span>
+    </div>
   );
 }

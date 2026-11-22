@@ -2,7 +2,7 @@ import { TruckIcon } from "lucide-react";
 import { PageTitle } from "@/components/page-title";
 import { PublicShell } from "@/components/shop/PublicShell";
 import { ReorderButton } from "@/components/shop/Reorder";
-import { OrderBadge, TierBadge } from "@/components/status-badge";
+import { OrderBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ export default async function OrderLookupPage({ searchParams }: PageProps<"/orde
     ? unwrap(
         await db()
           .from("orders")
-          .select(`id, status, payment_status, total, price_tier, driver:staff!orders_driver_id_fkey(name, phone), ${REORDER_FIELDS}`)
+          .select(`id, status, payment_status, total, driver:staff!orders_driver_id_fkey(name, phone), ${REORDER_FIELDS}`)
           .eq("phone", phone)
           .order("created_at", { ascending: false })
           .order("id", { referencedTable: "order_items" })
@@ -44,7 +44,6 @@ export default async function OrderLookupPage({ searchParams }: PageProps<"/orde
                 <CardContent className="space-y-2">
                   <div className="flex items-center gap-2">
                     <b className="mr-auto">{o.code}</b>
-                    <TierBadge tier={o.price_tier} />
                     <OrderBadge status={o.status} />
                   </div>
                   {o.status === "out_for_delivery" && (

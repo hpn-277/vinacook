@@ -5,9 +5,9 @@ import { Pressable, Text, TextInput, View } from "react-native";
 import { cartLines, type Cart, type CatalogProduct } from "@noodle/core/domain/catalog";
 import { DISTRICTS, type District } from "@noodle/core/domain/districts";
 import { formatKg, formatVnd } from "@noodle/core/domain/money";
-import { priceLines, type PricingTerms } from "@noodle/core/domain/pricing";
+import { priceLines } from "@noodle/core/domain/pricing";
 import type { CustomerLookup } from "@noodle/core/queries/sale";
-import { ProductRow, TierHint } from "@/components/sale/OrderPicker";
+import { ProductRow } from "@/components/sale/OrderPicker";
 import { Body, Button, Card, Field, Loaded, Muted, Notice, Row, Screen, Title, colors, styles } from "@/components/ui";
 import { api, json } from "@/lib/api";
 import { useAction } from "@/lib/mutation";
@@ -64,12 +64,12 @@ export default function NewStaffOrder() {
           )}
         </Text>
       )}
-      <Loaded query={q}>{(d) => <OrderForm key={phone} phone={phone} lookup={d.lookup} catalog={d.catalog} terms={d.terms} />}</Loaded>
+      <Loaded query={q}>{(d) => <OrderForm key={phone} phone={phone} lookup={d.lookup} catalog={d.catalog} />}</Loaded>
     </Screen>
   );
 }
 
-function OrderForm({ phone: initialPhone, lookup, catalog, terms }: { phone: string; lookup: CustomerLookup; catalog: CatalogProduct[]; terms: PricingTerms }) {
+function OrderForm({ phone: initialPhone, lookup, catalog }: { phone: string; lookup: CustomerLookup; catalog: CatalogProduct[] }) {
   const found = lookup?.found;
   const defaults = { phone: initialPhone, name: found?.name ?? "", address: found?.default_address ?? "", district: found?.default_district ?? "", note: "" };
   const [contact, setContact] = useState(defaults);
@@ -80,7 +80,7 @@ function OrderForm({ phone: initialPhone, lookup, catalog, terms }: { phone: str
   const set = (k: keyof typeof defaults) => (v: string) => setContact((c) => ({ ...c, [k]: v }));
   const setQty = (packId: number, qty: number) => setCart((c) => ({ ...c, [packId]: Math.max(0, Math.floor(qty) || 0) }));
 
-  const order = priceLines(cartLines(catalog, cart), terms);
+  const order = priceLines(cartLines(catalog, cart));
   const pickedIds = new Set(order.lines.map((l) => l.product.id));
   const q = fold(query.trim());
   const shown = catalog.filter((p) => (!onlyPicked || pickedIds.has(p.id)) && (!q || fold(p.name).includes(q)));
@@ -160,7 +160,7 @@ function OrderForm({ phone: initialPhone, lookup, catalog, terms }: { phone: str
       {shown.length === 0 ? (
         <Muted style={{ textAlign: "center", paddingVertical: 24 }}>{onlyPicked && !q ? "Chưa chọn sản phẩm nào" : "Không tìm thấy sản phẩm"}</Muted>
       ) : (
-        shown.map((p) => <ProductRow key={p.id} product={p} retailMarkupPct={terms.retailMarkupPct} cart={cart} setQty={setQty} picked={pickedIds.has(p.id)} />)
+        shown.map((p) => <ProductRow key={p.id} product={p} cart={cart} setQty={setQty} picked={pickedIds.has(p.id)} />)
       )}
 
       <Field label="Ghi chú" testID="order-note" multiline numberOfLines={2} value={contact.note} onChangeText={set("note")} />
@@ -175,9 +175,6 @@ function OrderForm({ phone: initialPhone, lookup, catalog, terms }: { phone: str
           </View>
           <Button label="Tạo đơn" size="lg" testID="place-order" disabled={order.lines.length === 0} pending={place.pending} onPress={() => place.run()} />
         </Row>
-        <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8 }}>
-          <TierHint order={order} terms={terms} />
-        </View>
       </Card>
       <Notice result={place.result} />
     </View>

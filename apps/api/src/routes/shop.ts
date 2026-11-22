@@ -4,7 +4,6 @@ import { z } from "zod";
 import { pgFailure } from "@noodle/core/action";
 import { db } from "@noodle/core/db";
 import { formatVnd } from "@noodle/core/domain/money";
-import { TIER_LABEL } from "@noodle/core/domain/pricing";
 import { district, phone } from "@noodle/core/form";
 import { orderItems, placeOrder, saleIdForRefCode } from "@noodle/core/orders";
 import { REF_COOKIE } from "@noodle/core/ref";
@@ -29,7 +28,7 @@ export const shop = new Hono()
       createdByStaffId: null,
       claimSaleId: await saleIdForRefCode(getCookie(c, REF_COOKIE)),
     });
-    return c.json({ message: `Đã đặt đơn ${order.code} · ${TIER_LABEL[order.tier]} · Tổng ${formatVnd(order.total)}. Ngày sản xuất: ${order.production_date}.` });
+    return c.json({ message: `Đã đặt đơn ${order.code} · Tổng ${formatVnd(order.total)}. Ngày sản xuất: ${order.production_date}.` });
   })
   /** Public. The newest order for a phone the browser remembered; same exposure as the /orders lookup. */
   .get("/last-order", valid("query", z.object({ phone: z.string().default("") })), async (c) => {
@@ -55,6 +54,6 @@ export const shop = new Hono()
       createdByStaffId: me.id,
       claimSaleId: me.role === "sale" ? me.id : null,
     });
-    const base = `Đã tạo đơn ${order.code} · ${TIER_LABEL[order.tier]} · Tổng ${formatVnd(order.total)}, ngày sản xuất ${order.production_date}.`;
+    const base = `Đã tạo đơn ${order.code} · Tổng ${formatVnd(order.total)}, ngày sản xuất ${order.production_date}.`;
     return c.json({ message: order.claimed_by_other ? `${base} Lưu ý: khách này thuộc nhân viên khác, đơn tính cho nhân viên đó.` : base });
   });

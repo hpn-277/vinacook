@@ -1,14 +1,12 @@
 import { PublicShell } from "@/components/shop/PublicShell";
-import { wholesaleRule } from "@/components/PricingSummary";
 import { LastOrderCard } from "@/components/shop/Reorder";
 import { Shop } from "@/components/shop/Shop";
 import { PageTitle } from "@/components/page-title";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getSettings, loadCatalog, pricingTerms } from "@noodle/core/orders";
+import { getSettings, loadCatalog } from "@noodle/core/orders";
 
 export async function ShopPage({ referrer }: { referrer?: { name: string; code: string } | null }) {
   const [catalog, settings] = await Promise.all([loadCatalog(), getSettings()]);
-  const terms = pricingTerms(settings);
   return (
     <PublicShell>
       <PageTitle>Mì, bún, phở tươi mỗi ngày</PageTitle>
@@ -20,11 +18,11 @@ export async function ShopPage({ referrer }: { referrer?: { name: string; code: 
         </Alert>
       )}
       <p className="mb-4 text-sm text-muted-foreground">
-        Chọn sản phẩm để xem quy cách và đặt hàng. {wholesaleRule(terms)}, áp dụng cho cả đơn. Đặt trước {settings.cutoff_time.slice(0, 5)} giao trong ngày sản
+        Chọn sản phẩm để xem quy cách và đặt hàng. Đặt trước {settings.cutoff_time.slice(0, 5)} giao trong ngày sản
         xuất hôm nay.
       </p>
       <LastOrderCard />
-      <Shop catalog={catalog} terms={terms} />
+      <Shop catalog={catalog} />
     </PublicShell>
   );
 }

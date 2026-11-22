@@ -15,7 +15,7 @@ export const sale = new Hono()
     return c.json({ month, active, report });
   })
   .get("/customers", async (c) => c.json(await saleCustomers(c.get("staff").id)))
-  /** Catalog and pricing terms, plus the customer for `?phone=` (null when no phone was given). */
+  /** Catalog, plus the customer for `?phone=` (null when no phone was given). */
   .get("/order-form", valid("query", z.object({ phone: z.string().optional() })), async (c) => {
     const [form, lookup] = await Promise.all([orderForm(), customerLookup(normalizePhone(c.req.valid("query").phone), c.get("staff").id)]);
     return c.json({ ...form, lookup });

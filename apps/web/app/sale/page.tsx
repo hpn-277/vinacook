@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AutoSubmitForm } from "@/components/AutoSubmitForm";
 import { PageTitle } from "@/components/page-title";
 import { SaleMonthReport } from "@/components/SaleMonthReport";
-import { OrderBadge, TierBadge } from "@/components/status-badge";
+import { OrderBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -73,10 +73,7 @@ export default async function SaleDashboard({ searchParams }: PageProps<"/sale">
                       <div className="text-xs text-muted-foreground">{o.customers?.phone}</div>
                     </TableCell>
                     <TableCell className="max-w-64 min-w-40 text-xs whitespace-normal">{o.order_items.map(itemLabel).join(", ")}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="tabular-nums">{formatVnd(o.total)}</div>
-                      <TierBadge tier={o.price_tier} />
-                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{formatVnd(o.total)}</TableCell>
                     <TableCell>
                       <OrderBadge status={o.status} />
                       {o.driver ? (

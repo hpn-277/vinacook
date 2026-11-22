@@ -1,6 +1,5 @@
 import { ActionForm } from "@/components/ActionForm";
 import { Button } from "@/components/ui/button";
-import type { PriceTier } from "@noodle/core/domain/pricing";
 import { cn } from "@/lib/utils";
 import { MANAGER_ORDER_MOVES, moveLabel, type OrderStatus } from "@noodle/core/domain/status";
 
@@ -10,7 +9,6 @@ export type AdminOrder = {
   status: OrderStatus;
   payment_status: "paid" | "unpaid";
   total: number;
-  price_tier: PriceTier;
   phone: string;
   address: string;
   district: string;
@@ -36,7 +34,7 @@ export type AdminOrder = {
 };
 
 export const ADMIN_ORDER_SELECT =
-  "id, code, status, payment_status, total, price_tier, phone, address, district, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name))";
+  "id, code, status, payment_status, total, phone, address, district, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name))";
 
 export function OrderActions({ order, size }: { order: AdminOrder; size?: "sm" }) {
   return (MANAGER_ORDER_MOVES[order.status] ?? []).map((to) => (

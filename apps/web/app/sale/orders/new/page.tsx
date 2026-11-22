@@ -12,7 +12,7 @@ import { customerLookup, normalizePhone, orderForm } from "@noodle/core/queries/
 export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sale/orders/new">) {
   const me = await requireRole("sale", "admin");
   const phone = normalizePhone((await searchParams).phone);
-  const [{ catalog, terms }, lookup] = await Promise.all([orderForm(), customerLookup(phone, me.id)]);
+  const [{ catalog }, lookup] = await Promise.all([orderForm(), customerLookup(phone, me.id)]);
   const found = lookup?.found ?? null;
   const ownedByOther = lookup?.ownedByOther ?? false;
 
@@ -35,7 +35,7 @@ export default async function NewStaffOrderPage({ searchParams }: PageProps<"/sa
           )}
         </p>
       )}
-      <StaffOrderForm catalog={catalog} terms={terms} key={phone}>
+      <StaffOrderForm catalog={catalog} key={phone}>
         <Card>
           <CardContent>
             <FieldGroup className="gap-4">

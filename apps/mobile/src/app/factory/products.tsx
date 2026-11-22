@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Image, Text, View } from "react-native";
-import { formatVnd } from "@noodle/core/domain/money";
+import { priceRangeLabel } from "@noodle/core/domain/catalog";
 import { ProductForm } from "@/components/factory/ProductForm";
 import { ProductStatusBadge } from "@/components/status";
 import { Body, Card, colors, Loaded, Muted, Row, Screen, Title } from "@/components/ui";
@@ -30,7 +30,7 @@ export default function FactoryProducts() {
                   <View style={{ flex: 1, gap: 4 }}>
                     <Body style={{ fontWeight: "600" }}>{p.name}</Body>
                     {p.description && <Muted>{p.description}</Muted>}
-                    <Body>Giá sỉ/kg: {formatVnd(p.price_per_kg)}</Body>
+                    <Body>Giá: {priceRangeLabel(p.pack_prices)}</Body>
                     <View testID={`product-status-${p.id}`}>
                       <ProductStatusBadge status={p.status} />
                     </View>

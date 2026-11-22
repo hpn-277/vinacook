@@ -8,7 +8,7 @@ import { factoryDays, factoryMonth, factoryProducts } from "@noodle/core/queries
 import { role, valid, type ApiEnv, type Bucket } from "../http";
 import { uploadProductImage } from "../lib/product-images";
 
-/** multipart/form-data: the fields plus an optional `image_file`. */
+/** multipart/form-data: the fields plus an optional `image_file`. `price_per_kg` is proposed for every pack. */
 const productForm = z.object({
   name: z.string().trim().min(1, "Nhập tên sản phẩm").max(100),
   price_per_kg: z.coerce.number().int("Giá phải là số nguyên").positive("Giá phải > 0"),
@@ -17,7 +17,7 @@ const productForm = z.object({
 });
 
 /** The picture is only ever an upload to R2; editing without picking a new file keeps the current one. */
-async function productRow(bucket: Bucket, { image_file, ...fields }: z.infer<typeof productForm>) {
+async function productRow(bucket: Bucket, { image_file, price_per_kg: _price, ...fields }: z.infer<typeof productForm>) {
   const imageUrl = await uploadProductImage(bucket, image_file ?? null);
   return imageUrl ? { ...fields, image_url: imageUrl } : fields;
 }
@@ -37,7 +37,8 @@ export const factory = new Hono<ApiEnv>()
         .select("id")
         .single(),
     );
-    check(await db().from("product_packs").insert(STANDARD_PACKS.map((pk) => ({ ...pk, product_id: created.id }))));
+    const price = c.req.valid("form").price_per_kg;
+    check(await db().from("product_packs").insert(STANDARD_PACKS.map((pk) => ({ ...pk, product_id: created.id, price_per_kg: price }))));
     return c.json({ message: "Đã gửi sản phẩm, chờ quản lý duyệt" });
   })
   /** Only its own products still under review or sent back; an approved product is the admin's to change. */
@@ -52,5 +53,6 @@ export const factory = new Hono<ApiEnv>()
         .select("id"),
     );
     if (updated.length === 0) throw new DomainError("Sản phẩm đã được duyệt hoặc không thuộc xưởng của bạn");
+    check(await db().from("product_packs").update({ price_per_kg: c.req.valid("form").price_per_kg }).eq("product_id", updated[0].id));
     return c.json({ message: "Đã gửi lại để quản lý duyệt" });
   });

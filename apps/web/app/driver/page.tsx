@@ -2,7 +2,6 @@ import { MapPinIcon, PhoneIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { ActionForm } from "@/components/ActionForm";
 import { StaffShell } from "@/components/StaffShell";
-import { TierBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -161,10 +160,7 @@ function OrderCard({ order: o, children }: { order: DriverOrder; children: React
         <CardContent className="space-y-3">
           <div className="space-y-1">
             <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2 text-base">
-                <b>{o.code}</b>
-                <TierBadge tier={o.price_tier} />
-              </span>
+              <b className="text-base">{o.code}</b>
               <b className={o.payment_status === "paid" ? "text-green-700" : "text-primary"}>{collectLabel(o)}</b>
             </div>
             <div className="text-base font-medium">{o.customers?.name}</div>

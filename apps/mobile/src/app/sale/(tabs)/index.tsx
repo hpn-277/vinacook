@@ -5,7 +5,7 @@ import { Pressable, Text, View } from "react-native";
 import { itemLabel } from "@noodle/core/domain/catalog";
 import { formatVnd } from "@noodle/core/domain/money";
 import { MonthReport } from "@/components/sale/MonthReport";
-import { OrderBadge, TierBadge } from "@/components/status";
+import { OrderBadge } from "@/components/status";
 import { Body, Button, Card, Heading, Loaded, Muted, Row, Screen, Title, colors } from "@/components/ui";
 import { api, json } from "@/lib/api";
 import { API_URL } from "@/lib/config";
@@ -52,10 +52,7 @@ export default function SaleDashboard() {
                   >
                     <Row style={{ justifyContent: "space-between" }}>
                       <Body style={{ fontWeight: "700", color: colors.primary }}>{o.code}</Body>
-                      <Row>
-                        <Body>{formatVnd(o.total)}</Body>
-                        <TierBadge tier={o.price_tier} />
-                      </Row>
+                      <Body>{formatVnd(o.total)}</Body>
                     </Row>
                     <Muted>Ngày SX {o.production_date}</Muted>
                     <Body>

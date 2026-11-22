@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { rememberContact, setCart, useCart, useContact } from "@/components/shop/cart";
-import { TierHint } from "@/components/PricingSummary";
 import { submit, type MutationResult } from "@/lib/mutations";
-import { TierBadge } from "@/components/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,22 +14,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { cartLines, lineLabel, type CartLine, type CatalogProduct } from "@noodle/core/domain/catalog";
 import { DISTRICTS } from "@noodle/core/domain/districts";
 import { formatVnd } from "@noodle/core/domain/money";
-import { priceLines, type PricedOrder, type PricingTerms } from "@noodle/core/domain/pricing";
+import { priceLines, type PricedOrder } from "@noodle/core/domain/pricing";
 
 type Reorder = { code: string; skipped: string[] } | null;
 
-export function CheckoutForm({
-  catalog,
-  terms,
-  reorder,
-}: {
-  catalog: CatalogProduct[];
-  terms: PricingTerms;
-  reorder: Reorder;
-}) {
+export function CheckoutForm({ catalog, reorder }: { catalog: CatalogProduct[]; reorder: Reorder }) {
   const cart = useCart();
   const contact = useContact();
-  const order = priceLines(cartLines(catalog, cart), terms);
+  const order = priceLines(cartLines(catalog, cart));
   const [placed, setPlaced] = useState<PricedOrder<CartLine> | null>(null);
   const [state, formAction, pending] = useActionState(async (_prev: MutationResult, fd: FormData): Promise<MutationResult> => {
     const result = await submit("placeCustomerOrder", fd);
@@ -83,9 +73,6 @@ export function CheckoutForm({
     <form action={formAction} className="space-y-4">
       {reorder && <ReorderNotice reorder={reorder} />}
       <OrderLines order={order} />
-      <div className="text-sm">
-        <TierHint order={order} terms={terms} />
-      </div>
       <input type="hidden" name="items" value={JSON.stringify(order.lines.map((l) => ({ pack_id: l.pack.id, pack_qty: l.packQty })))} />
       <fieldset disabled={pending} key={contact ? JSON.stringify(contact) : "new"}>
         <FieldGroup className="gap-4">
@@ -157,9 +144,7 @@ function OrderLines({ order }: { order: PricedOrder<CartLine> }) {
             </li>
           ))}
           <li className="flex items-center justify-between gap-2 pt-2 text-base font-semibold">
-            <span className="flex items-center gap-2">
-              Tổng <TierBadge tier={order.tier} />
-            </span>
+            <span>Tổng</span>
             <span data-testid="checkout-total">{formatVnd(order.total)}</span>
           </li>
         </ul>

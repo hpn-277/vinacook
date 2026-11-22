@@ -3,7 +3,7 @@ import { ProductStatusBadge } from "@/components/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
-import { formatVnd } from "@noodle/core/domain/money";
+import { priceRangeLabel } from "@noodle/core/domain/catalog";
 import { factoryProducts } from "@noodle/core/queries/factory";
 import { ProductDialog } from "./ProductDialog";
 
@@ -26,7 +26,7 @@ export default async function FactoryProductsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Sản phẩm</TableHead>
-                  <TableHead className="text-right">Giá sỉ/kg</TableHead>
+                  <TableHead className="text-right">Giá</TableHead>
                   <TableHead>Trạng thái</TableHead>
                   <TableHead />
                 </TableRow>
@@ -50,7 +50,7 @@ export default async function FactoryProductsPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{formatVnd(p.price_per_kg)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{priceRangeLabel(p.pack_prices)}</TableCell>
                     <TableCell className="whitespace-normal">
                       <ProductStatusBadge status={p.status} />
                       {p.status === "approved" && !p.active && <div className="mt-1 text-xs text-muted-foreground">Tạm ngừng bán</div>}

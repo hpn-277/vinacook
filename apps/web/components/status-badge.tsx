@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import type { PriceTier } from "@noodle/core/domain/pricing";
 import { JOB_STATUS_LABEL, ORDER_STATUS_LABEL, PRODUCT_STATUS_LABEL, type JobStatus, type OrderStatus, type ProductStatus } from "@noodle/core/domain/status";
 
 const ORDER_TONE: Record<OrderStatus, string> = {
@@ -34,17 +33,4 @@ const PRODUCT_TONE: Record<ProductStatus, string> = {
 
 export function ProductStatusBadge({ status }: { status: ProductStatus }) {
   return <Badge className={PRODUCT_TONE[status]}>{PRODUCT_STATUS_LABEL[status]}</Badge>;
-}
-
-const TIER: Record<PriceTier, { label: string; tone: string }> = {
-  si: { label: "Sỉ", tone: "bg-emerald-100 text-emerald-900" },
-  le: { label: "Lẻ", tone: "bg-orange-100 text-orange-900" },
-};
-
-export function TierBadge({ tier }: { tier: PriceTier }) {
-  return (
-    <Badge className={TIER[tier].tone} data-tier={tier}>
-      {TIER[tier].label}
-    </Badge>
-  );
 }

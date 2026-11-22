@@ -10,7 +10,7 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-export type FactoryProduct = { id: number; name: string; price_per_kg: number; description: string | null; image_url: string | null };
+export type FactoryProduct = { id: number; name: string; pack_prices: number[]; description: string | null; image_url: string | null };
 
 /** Add (no product) or fix-and-resubmit (pending/rejected product); closes once the server accepts it. */
 export function ProductDialog({ product }: { product?: FactoryProduct }) {
@@ -44,8 +44,8 @@ export function ProductDialog({ product }: { product?: FactoryProduct }) {
               <Input id={`${form}-name`} name="name" defaultValue={product?.name} required />
             </Field>
             <Field>
-              <FieldLabel htmlFor={`${form}-price`}>Giá sỉ đề xuất (đ/kg)</FieldLabel>
-              <Input id={`${form}-price`} name="price_per_kg" type="number" min={1} defaultValue={product?.price_per_kg} required />
+              <FieldLabel htmlFor={`${form}-price`}>Giá đề xuất (đ/kg)</FieldLabel>
+              <Input id={`${form}-price`} name="price_per_kg" type="number" min={1} defaultValue={product?.pack_prices[0]} required />
             </Field>
             <Field>
               <FieldLabel htmlFor={`${form}-desc`}>Mô tả</FieldLabel>

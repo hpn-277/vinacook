@@ -5,14 +5,13 @@ import Link from "next/link";
 import { QtyStepper } from "@/components/QtyStepper";
 import { CartBar, ProductImage, useShopCart } from "@/components/shop/Shop";
 import { Card } from "@/components/ui/card";
-import { packCaption, packSize, type CatalogProduct } from "@noodle/core/domain/catalog";
+import { packCaption, packSize, priceRangeLabel, type CatalogProduct } from "@noodle/core/domain/catalog";
 import { formatVnd } from "@noodle/core/domain/money";
-import { packPrice, retailPerKg, type PricingTerms } from "@noodle/core/domain/pricing";
+import { packPrice } from "@noodle/core/domain/pricing";
 
 /** `catalog` prices the whole cart, which may hold other products too. */
-export function ProductView({ product: p, catalog, terms }: { product: CatalogProduct; catalog: CatalogProduct[]; terms: PricingTerms }) {
-  const { cart, order, setQty, tone } = useShopCart(catalog, terms);
-  const retail = retailPerKg(p.price_per_kg, terms.retailMarkupPct);
+export function ProductView({ product: p, catalog }: { product: CatalogProduct; catalog: CatalogProduct[] }) {
+  const { cart, order, setQty } = useShopCart(catalog);
   return (
     <>
       <Link href="/" className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
@@ -23,11 +22,7 @@ export function ProductView({ product: p, catalog, terms }: { product: CatalogPr
         <ProductImage product={p} className="aspect-4/3" />
         <div>
           <h1 className="text-xl font-bold tracking-tight">{p.name}</h1>
-          <div className="mt-1 text-sm">
-            <span className={tone("si")}>Sỉ {formatVnd(p.price_per_kg)}/kg</span>
-            <span className="text-muted-foreground"> · </span>
-            <span className={tone("le")}>Lẻ {formatVnd(retail)}/kg</span>
-          </div>
+          <div className="mt-1 text-sm text-muted-foreground">{priceRangeLabel(p.packs.map((pack) => pack.price_per_kg))}</div>
           {p.description && <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{p.description}</p>}
         </div>
       </div>
@@ -44,10 +39,9 @@ export function ProductView({ product: p, catalog, terms }: { product: CatalogPr
                 )}
                 <div className="min-w-0 flex-1 leading-tight">
                   <div className="font-medium">{packCaption(pack)}</div>
-                  <div className="mt-0.5 text-xs">
-                    <span className={tone("si")}>Sỉ {formatVnd(packPrice(pack.kg_per_unit, p.price_per_kg))}</span>
-                    <span className="text-muted-foreground"> · </span>
-                    <span className={tone("le")}>Lẻ {formatVnd(packPrice(pack.kg_per_unit, retail))}</span>
+                  <div className="mt-0.5 text-sm font-semibold" data-testid="pack-price">
+                    {formatVnd(packPrice(pack.kg_per_unit, pack.price_per_kg))}
+                    <span className="ml-1 text-xs font-normal text-muted-foreground">({formatVnd(pack.price_per_kg)}/kg)</span>
                   </div>
                 </div>
                 <QtyStepper label={`${p.name} - ${packSize(pack)}`} value={qty} onChange={(q) => setQty(pack.id, q)} />
@@ -56,7 +50,7 @@ export function ProductView({ product: p, catalog, terms }: { product: CatalogPr
           );
         })}
       </ul>
-      <CartBar order={order} terms={terms} />
+      <CartBar order={order} />
     </>
   );
 }
