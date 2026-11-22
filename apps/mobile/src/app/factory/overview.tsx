@@ -34,9 +34,9 @@ export default function FactoryOverview() {
       <Loaded query={query}>
         {(m) => (
           <>
-            <Tile testID="factory-produced" label="Đã sản xuất" value={formatKg(m.producedKg)} note={`${m.producedCount} lệnh đã giao cho công ty`} />
+            <Tile testID="factory-produced" label="Đã sản xuất" value={formatKg(m.producedKg)} note={`${m.producedCount} mặt hàng đã giao cho công ty`} />
             <Tile testID="factory-in-progress" label="Đang sản xuất" value={formatKg(m.inProgressKg)} note={m.inProgressKg ? "Chờ quản lý nhận hàng" : "Không có"} />
-            <Tile testID="factory-day-count" label="Số ngày có lệnh" value={String(m.days.length)} note={`Tháng ${m.month}`} />
+            <Tile testID="factory-day-count" label="Số ngày có đơn" value={String(m.days.length)} note={`Tháng ${m.month}`} />
 
             <Card>
               <Heading>Theo sản phẩm</Heading>
@@ -62,7 +62,7 @@ export default function FactoryOverview() {
             <Card>
               <Heading>Theo ngày</Heading>
               {m.days.length === 0 ? (
-                <Muted>Không có lệnh trong tháng.</Muted>
+                <Muted>Không có đơn trong tháng.</Muted>
               ) : (
                 m.days.map((d) => (
                   <Row key={d.date} style={{ alignItems: "flex-start", justifyContent: "space-between" }}>

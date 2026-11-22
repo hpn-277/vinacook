@@ -52,28 +52,22 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
       {admin && (
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Button asChild>
-          <Link href={`/admin/production/${date}`}>{day.data?.status === "closed" ? "Xem lệnh sản xuất" : "Chốt sản xuất ngày này"}</Link>
+          <Link href={`/admin/production/${date}`}>{day.data?.status !== "closed" ? "Gửi đơn cho xưởng" : (counts.get("in_production") ?? 0) > 0 ? "Nhận hàng từ xưởng" : "Xem hàng đã đặt xưởng"}</Link>
         </Button>
         {day.data?.status === "closed" &&
           (dispatched === 0 ? (
             <ActionForm
               action="reopenDay"
-              confirm={`Mở lại ngày ${date}? Xoá lệnh sản xuất của ngày và đưa ${reopenable} đơn về "Chờ xử lý".`}
+              confirm={`Rút lại đơn đã gửi xưởng ngày ${date}? ${reopenable} đơn sẽ quay về "Chờ xử lý".`}
             >
               <input type="hidden" name="date" value={date} />
-              <Button variant="outline">Mở lại ngày</Button>
+              <Button variant="outline">Rút lại đơn xưởng</Button>
             </ActionForm>
           ) : (
-            <Button variant="outline" disabled title="Hủy phân công các đơn đã giao cho tài xế trước khi mở lại ngày">
-              Mở lại ngày
+            <Button variant="outline" disabled title="Hủy phân công các đơn đã giao cho tài xế trước khi rút lại đơn xưởng">
+              Rút lại đơn xưởng
             </Button>
           ))}
-        {(counts.get("in_production") ?? 0) > 0 && (
-          <ActionForm action="receiveDay" confirm={`Xác nhận đã nhận đủ hàng ngày ${date}?`}>
-            <input type="hidden" name="date" value={date} />
-            <Button>Xác nhận đã nhận hàng</Button>
-          </ActionForm>
-        )}
       </div>
       )}
       {admin && readyCount > 0 && (

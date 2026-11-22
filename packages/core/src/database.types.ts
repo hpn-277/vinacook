@@ -376,8 +376,8 @@ isOneToOne: false
 "place_order":
 { Args: { "p_address": string,"p_claim_sale_id"?: number,"p_created_by": Database["public"]['Enums']["order_creator"],"p_created_by_staff_id"?: number,"p_district": string,"p_items": Json,"p_name": string,"p_note": string,"p_phone": string,"p_price_tier": Database["public"]['Enums']["price_tier"],"p_production_date": string,"p_retail_markup_pct": number,"p_wholesale_min_kg": number,"p_wholesale_min_total": number }; Returns: Json
                            },
-"receive_day":
-{ Args: { "p_date": string }; Returns: number
+"receive_factories":
+{ Args: { "p_date": string,"p_factory_ids": (number)[] }; Returns: number
                            },
 "recompute_order_total":
 { Args: { "p_order_id": number }; Returns: undefined

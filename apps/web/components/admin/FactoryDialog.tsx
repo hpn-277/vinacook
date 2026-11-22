@@ -54,7 +54,7 @@ export function FactoryDialog({ factory: f }: { factory?: Factory }) {
               <Checkbox id={`${form}-active`} name="active" defaultChecked={f?.active ?? true} />
               <FieldLabel htmlFor={`${form}-active`}>Đang hoạt động</FieldLabel>
             </Field>
-            <FieldDescription className="-mt-2">Xưởng ngừng hoạt động thì không chốt được ngày có sản phẩm của xưởng đó.</FieldDescription>
+            <FieldDescription className="-mt-2">Xưởng ngừng hoạt động thì không gửi đơn được cho ngày có sản phẩm của xưởng đó.</FieldDescription>
             <Button type="submit">{f ? "Lưu" : "Thêm xưởng"}</Button>
           </FieldGroup>
         </ActionForm>

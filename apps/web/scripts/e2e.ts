@@ -67,6 +67,17 @@ async function rowAction(page: Page, code: string, item: string | RegExp) {
   await page.getByRole("menuitem", { name: item }).click();
 }
 
+/** On the production page, ticks every factory still to receive and confirms them in one go. */
+async function receiveAllFactories(page: Page) {
+  const summary = page.getByTestId("sent-summary");
+  const selectAll = summary.getByRole("checkbox", { name: "Chọn tất cả xưởng chưa nhận hàng" });
+  if ((await selectAll.count()) === 0) return;
+  await selectAll.click();
+  await summary.getByRole("button", { name: /Xác nhận đã nhận hàng/ }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
+  await selectAll.waitFor({ state: "detached" });
+}
+
 async function newPage(browser: Browser, mobile = false): Promise<{ ctx: BrowserContext; page: Page }> {
   const ctx = await browser.newContext(mobile ? MOBILE : { viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
@@ -220,9 +231,9 @@ async function main() {
     assert(cardA.includes("Mì trứng · 1 Bao (25 kg)") && cardA.includes("Sỉ"), "admin card shows packs and the Sỉ badge");
     assert(cardA.includes("Đặt ") && !cardA.includes("Chờ xử lý"), "placed order shows booking time, no status badge");
     eq(await adm.page.getByRole("button", { name: /Duyệt/ }).count(), 0, "no approve buttons anywhere");
-    eq(await adm.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).count(), 0, "no receive button on an open day");
-    const openReceive = await admin.rpc("receive_day", { p_date: D });
-    assert(openReceive.error?.message.includes("chưa chốt"), `receive_day refused on an open day: ${openReceive.error?.message}`);
+    eq(await adm.page.getByRole("link", { name: "Nhận hàng từ xưởng" }).count(), 0, "no receive link on an open day");
+    const openReceive = await admin.rpc("receive_factories", { p_date: D, p_factory_ids: [1] });
+    assert(openReceive.error?.message.includes("chưa gửi đơn"), `receive_factories refused on an open day: ${openReceive.error?.message}`);
 
     await rowAction(adm.page, S, "Hủy");
     const cancelDialog = adm.page.getByRole("alertdialog");
@@ -233,7 +244,7 @@ async function main() {
     step("admin closes the day splitting Mì trứng across two factories");
     await adm.page.goto(`${BASE}/admin/production/${D}`);
     eq(await adm.page.locator('[data-product="Mì quảng"]').count(), 0, "cancelled order is not in the allocation");
-    const submit = adm.page.getByRole("button", { name: "Chốt ngày và gửi xưởng" });
+    const submit = adm.page.getByRole("button", { name: "Gửi đơn cho xưởng" });
     assert(await submit.isEnabled(), "default allocation (all to first factory) is complete");
     await adm.page.getByLabel("Mì trứng - Xưởng Bình Tân").fill("30");
     assert(await submit.isDisabled(), "send disabled while Mì trứng is under-allocated");
@@ -241,7 +252,7 @@ async function main() {
     assert(await submit.isEnabled(), "send enabled once 30 + 25 = 55 kg (1 Bao + 5 Kg + 1 Thùng + 1 Thùng + 5 Kg)");
     await adm.page.getByLabel("Bún tươi - Xưởng Hóc Môn").fill("0");
     await submit.click();
-    await adm.page.getByRole("heading", { name: "Lệnh sản xuất" }).waitFor();
+    await adm.page.getByRole("heading", { name: /Đã gửi cho xưởng/ }).waitFor();
     const { data: jobs0 } = await admin.from("production_jobs").select("id, qty_kg, status, products(name), factories(name)").eq("date", D).order("id");
     eq(
       jobs0!.map((j) => `${j.products!.name}@${j.factories!.name}=${j.qty_kg}:${j.status}`).sort(),
@@ -254,7 +265,7 @@ async function main() {
 
     step("close day is idempotent");
     const again = await admin.rpc("close_production_day", { p_date: D, p_alloc: [{ product_id: 1, factory_id: 1, qty_kg: 55 }] });
-    assert(again.error?.message.includes("đã chốt"), `second close refused: ${again.error?.message}`);
+    assert(again.error?.message.includes("đã gửi cho xưởng"), `second close refused: ${again.error?.message}`);
     const { count: jobCount } = await admin.from("production_jobs").select("id", { count: "exact", head: true }).eq("date", D);
     eq(jobCount, 3, "no duplicate jobs");
 
@@ -286,20 +297,30 @@ async function main() {
     eq(await f2.page.locator(`[data-job-id="${f2Job}"]`).count(), 1, "factory2 sees its job");
     eq(await f2.page.locator(`[data-job-id="${f1Jobs[0]}"]`).count(), 0, "factory2 cannot see factory1's jobs");
 
-    step("admin confirms the whole day received");
+    step("admin receives goods factory by factory");
     await adm.page.goto(`${BASE}/admin/orders?date=${D}`);
-    eq(await adm.page.getByRole("button", { name: /Chờ xưởng/ }).count(), 0, "no waiting-for-factory state");
-    await adm.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
-    const receiveDialog = adm.page.getByRole("alertdialog");
-    assert((await receiveDialog.innerText()).includes(`Xác nhận đã nhận đủ hàng ngày ${D}?`), "receive asks for confirmation");
-    await receiveDialog.getByRole("button", { name: "Xác nhận" }).click();
+    await adm.page.getByRole("link", { name: "Nhận hàng từ xưởng" }).click();
+    await adm.page.waitForURL(`**/admin/production/${D}`);
+    const summary = adm.page.getByTestId("sent-summary");
+    const factoryBoxes = summary.getByRole("checkbox", { name: /^Chọn (?!tất cả)/ });
+    const factoryCount = await factoryBoxes.count();
+    assert(factoryCount >= 2, `one checkbox per factory (${factoryCount})`);
+    const confirmReceive = summary.getByRole("button", { name: /Xác nhận đã nhận hàng/ });
+    assert(await confirmReceive.isDisabled(), "confirm disabled until a factory is ticked");
+    await factoryBoxes.first().click();
+    assert(await confirmReceive.isEnabled(), "ticking a factory enables confirm");
+    await confirmReceive.click();
+    assert((await adm.page.getByRole("alertdialog").innerText()).includes("Đã nhận đủ hàng"), "receive asks for confirmation");
+    await adm.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
+    await until(async () => (await admin.from("production_jobs").select("status").eq("date", D).eq("status", "received")).data?.length ?? 0, (n) => n > 0, "first factory received");
+    const { data: halfJobs } = await admin.from("production_jobs").select("status").eq("date", D);
+    assert(halfJobs!.some((j) => j.status === "producing"), "other factories still producing after one receive");
+    await receiveAllFactories(adm.page);
     await until(() => orderStatus(A), (s) => s === "ready", "A ready");
-    eq([await orderStatus(B), await orderStatus(C)], ["ready", "ready"], "all orders of the day -> ready");
+    eq([await orderStatus(B), await orderStatus(C)], ["ready", "ready"], "all orders of the day -> ready once every factory delivered");
     const { data: receivedJobs } = await admin.from("production_jobs").select("status, qty_kg, received_kg").eq("date", D);
     assert(receivedJobs!.every((j) => j.status === "received" && j.received_kg === j.qty_kg), "every job received at its planned kg");
-    await adm.page.reload();
-    assert((await adm.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Đã nhận hàng"), "orders table labels ready orders Đã nhận hàng");
-    eq(await adm.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).count(), 0, "receive button gone once received");
+    eq(await factoryBoxes.count(), 0, "no factory left to tick once every factory delivered");
     await f1.page.reload();
     assert((await f1.page.locator(`[data-job-id="${f1Jobs[0]}"]`).innerText()).includes("Đã nhận hàng"), "factory1 sees its job received");
 
@@ -434,7 +455,7 @@ async function main() {
     eq(await mgr.page.getByRole("menuitem").allInnerTexts(), ["Đã thu"], "manager's row menu only marks paid");
     await mgr.page.keyboard.press("Escape");
     eq(await mgr.page.getByTestId("dispatch-bar").count(), 0, "no dispatch bar for the manager");
-    eq(await mgr.page.getByRole("link", { name: /Chốt sản xuất|Xem lệnh sản xuất/ }).count(), 0, "no production link for the manager");
+    eq(await mgr.page.getByRole("link", { name: /Gửi đơn cho xưởng|Xem hàng đã đặt xưởng/ }).count(), 0, "no production link for the manager");
     await mgr.page.goto(`${BASE}/admin/orders/${A}`);
     await mgr.page.goto(`${BASE}/admin/staff`);
     eq(await mgr.page.locator("main").getByRole("button").count(), 0, "staff page has no create, edit or resend for the manager");
@@ -443,20 +464,20 @@ async function main() {
     const refused = await mgr.page.request.post(`${BASE}/api/v1/orders/${a0.id}/move`, { data: { to: "cancelled" } });
     eq(refused.status(), 403, "API refuses order moves from the manager");
 
-    step("admin confirms A paid from Công nợ");
+    step("admin confirms A paid on the order page");
     const adminId = await staffId("admin@local");
-    await adm.page.goto(`${BASE}/finance`);
-    await adm.page.locator(`[data-order-code="${A}"]`).getByRole("checkbox").click();
-    await adm.page.getByTestId("settle-bar").getByLabel("Ghi chú thu tiền").fill("Tiền mặt");
-    await adm.page.getByRole("button", { name: /Xác nhận đã thu \(1 đơn/ }).click();
+    await adm.page.goto(`${BASE}/admin/orders/${A}`);
+    const payPanel = adm.page.getByTestId("payment-panel");
+    await payPanel.getByLabel("Ghi chú thu tiền").fill("Tiền mặt");
+    await payPanel.getByRole("button", { name: "Xác nhận đã thu" }).click();
     assert((await adm.page.getByRole("alertdialog").innerText()).includes(formatVnd(a0.total)), "confirm dialog shows the total");
     await adm.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
     await until(async () => (await order(A)).payment_status, (s) => s === "paid", "A paid");
     eq((await order(A)).paid_by, adminId, "A paid_by the admin");
     const { data: payEvents } = await admin.from("payment_events").select("action, amount, staff_id, note").eq("order_id", a0.id);
     eq(payEvents, [{ action: "paid", amount: a0.total, staff_id: adminId, note: "Tiền mặt" }], "one payment event logged");
-    await adm.page.goto(`${BASE}/finance/payments`);
-    assert((await adm.page.locator(`[data-order-code="${A}"]`).innerText()).includes("Quản trị"), "Lịch sử thu shows A collected by Quản trị");
+    await adm.page.reload();
+    assert((await payPanel.innerText()).includes("Quản trị"), "payment box shows A collected by Quản trị");
 
     step("commission");
     const expected = Math.round((a0.total * 5) / 100);

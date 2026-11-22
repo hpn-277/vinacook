@@ -275,10 +275,10 @@ export async function OrderDetail({
           </Section>
 
           {office && (
-            <Section title={`Lệnh sản xuất ngày ${order.production_date}`}>
+            <Section title={`Hàng đặt xưởng ngày ${order.production_date}`}>
               {jobs.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Chưa chốt sản xuất cho ngày này.
+                  Chưa gửi đơn cho xưởng ngày này.
                 </p>
               ) : (
                 <ul className="space-y-2 text-sm">
@@ -301,7 +301,7 @@ export async function OrderDetail({
                 </ul>
               )}
               <p className="mt-2 text-xs text-muted-foreground">
-                Lệnh gộp theo sản phẩm của cả ngày, gồm cả hàng của đơn khác.
+                Số kg gộp theo sản phẩm của cả ngày, gồm cả hàng của đơn khác.
               </p>
             </Section>
           )}

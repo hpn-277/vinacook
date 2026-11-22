@@ -9,8 +9,8 @@ export default function FactoryToday() {
   const query = useQuery({ queryKey: ["factory", "days"], queryFn: () => json(api.factory.days.$get()) });
   return (
     <Screen refreshing={query.isRefetching} onRefresh={query.refetch} testID="factory-today">
-      <Title>Lệnh sản xuất</Title>
-      <Muted>Trước khi quản lý chốt, xưởng thấy số kg dự kiến của cả ngày để chuẩn bị. Sau khi chốt, đây là lệnh chính thức của xưởng.</Muted>
+      <Title>Đơn đặt hàng</Title>
+      <Muted>Trước khi công ty gửi đơn, xưởng thấy số kg dự kiến của cả ngày để chuẩn bị. Sau khi gửi, đây là số hàng chính thức của xưởng.</Muted>
       <Loaded query={query}>
         {(days) =>
           days.map((d) => (
@@ -18,10 +18,10 @@ export default function FactoryToday() {
               <Row style={{ flexWrap: "wrap" }}>
                 <Heading>{d.label}</Heading>
                 <Muted>· {d.date}</Muted>
-                <Badge label={d.closed ? "Đã chốt" : "Dự kiến (chưa chốt)"} tone={d.closed ? "neutral" : "warning"} />
+                <Badge label={d.closed ? "Đã gửi" : "Dự kiến (chưa gửi)"} tone={d.closed ? "neutral" : "warning"} />
               </Row>
               {d.rows.length === 0 ? (
-                <Muted>{d.closed ? "Xưởng không có lệnh ngày này." : "Chưa có đơn."}</Muted>
+                <Muted>{d.closed ? "Xưởng không có đơn ngày này." : "Chưa có đơn."}</Muted>
               ) : (
                 <>
                   {d.rows.map((r) => (
@@ -39,7 +39,7 @@ export default function FactoryToday() {
                       {formatKg(d.rows.reduce((s, r) => s + r.kg, 0))}
                     </Body>
                   </Row>
-                  {!d.closed && <Muted>Tổng nhu cầu của cả ngày, chưa chia cho từng xưởng. Số kg có thể thay đổi đến khi chốt.</Muted>}
+                  {!d.closed && <Muted>Tổng nhu cầu của cả ngày, chưa chia cho từng xưởng. Số kg có thể thay đổi đến khi công ty gửi đơn.</Muted>}
                 </>
               )}
             </Card>

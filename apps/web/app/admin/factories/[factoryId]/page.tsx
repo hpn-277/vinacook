@@ -37,9 +37,9 @@ export default async function FactoryMonthPage({ params, searchParams }: PagePro
   const peak = days.reduce((m, [, js]) => Math.max(m, js.reduce((s, j) => s + jobKg(j), 0)), 0);
 
   const tiles = [
-    { label: "Đã sản xuất", value: formatKg(produced), note: `${jobs.filter((j) => j.status === "received").length} lệnh đã nhận` },
+    { label: "Đã sản xuất", value: formatKg(produced), note: `${jobs.filter((j) => j.status === "received").length} mặt hàng đã nhận` },
     { label: "Đang sản xuất", value: formatKg(producing), note: producing ? "Chờ quản lý nhận hàng" : "Không có" },
-    { label: "Ngày có lệnh", value: String(days.length), note: days.length ? `TB ${formatKg(Math.round(total / days.length))}/ngày` : "—" },
+    { label: "Ngày có đơn", value: String(days.length), note: days.length ? `TB ${formatKg(Math.round(total / days.length))}/ngày` : "—" },
     { label: "Ngày cao nhất", value: formatKg(peak), note: "Tổng kg một ngày" },
   ];
 
@@ -82,7 +82,7 @@ export default async function FactoryMonthPage({ params, searchParams }: PagePro
           </CardHeader>
           <CardContent>
             {jobs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Không có lệnh trong tháng.</p>
+              <p className="text-sm text-muted-foreground">Không có đơn trong tháng.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -103,7 +103,7 @@ export default async function FactoryMonthPage({ params, searchParams }: PagePro
                             <Link href={`/admin/production/${d}`} className="hover:underline">
                               {dm(d)}
                             </Link>{" "}
-                            <span className="font-normal text-muted-foreground">· {js.length} lệnh</span>
+                            <span className="font-normal text-muted-foreground">· {js.length} mặt hàng</span>
                           </TableCell>
                           <TableCell className="text-right tabular-nums">{formatKg(js.reduce((s, j) => s + j.qty_kg, 0))}</TableCell>
                           <TableCell className="text-right tabular-nums">{formatKg(dayKg)}</TableCell>
@@ -127,7 +127,7 @@ export default async function FactoryMonthPage({ params, searchParams }: PagePro
                 </TableBody>
                 <TableFooter>
                   <TableRow>
-                    <TableCell>Tổng · {jobs.length} lệnh</TableCell>
+                    <TableCell>Tổng · {jobs.length} mặt hàng</TableCell>
                     <TableCell className="text-right tabular-nums">{formatKg(jobs.reduce((s, j) => s + j.qty_kg, 0))}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatKg(produced)}</TableCell>
                     <TableCell />

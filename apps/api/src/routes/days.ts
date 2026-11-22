@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { check, DomainError, unwrap } from "@noodle/core/action";
 import { db } from "@noodle/core/db";
+import { id } from "@noodle/core/form";
 import { ORDER_STATUS_LABEL } from "@noodle/core/domain/status";
 import { transition } from "../lib/transition";
 import { role, valid } from "../http";
@@ -15,11 +16,14 @@ export const days = new Hono()
   /** Each product's kg goes to the factory it belongs to (trang Sản phẩm). */
   .post("/:date/close", dateParam, async (c) => {
     check(await db().rpc("close_production_day", { p_date: c.req.valid("param").date }));
-    return c.json({ message: "Đã chốt ngày và gửi lệnh sản xuất cho xưởng" });
+    return c.json({ message: "Đã gửi đơn cho các xưởng" });
   })
-  .post("/:date/receive", dateParam, async (c) => {
-    const jobs = unwrap(await db().rpc("receive_day", { p_date: c.req.valid("param").date }));
-    return c.json({ message: `Đã nhận hàng ${jobs} lệnh; đơn chuyển sang ${ORDER_STATUS_LABEL.ready}` });
+  /** Goods from one or more factories arrived; orders turn Đã nhận hàng once every factory in them has delivered. */
+  .post("/:date/receive", dateParam, valid("json", z.object({ factory_ids: z.array(id).min(1, "Chọn ít nhất 1 xưởng") })), async (c) => {
+    const { date } = c.req.valid("param");
+    const { factory_ids } = c.req.valid("json");
+    const ready = unwrap(await db().rpc("receive_factories", { p_date: date, p_factory_ids: factory_ids }));
+    return c.json({ message: `Đã nhận hàng ${factory_ids.length} xưởng; ${ready} đơn chuyển sang ${ORDER_STATUS_LABEL.ready}` });
   })
   /** "Hủy phân công tất cả": every order of the day still waiting to be loaded goes back to Đã nhận hàng. */
   .post("/:date/unassign", dateParam, async (c) => {
@@ -30,9 +34,9 @@ export const days = new Hono()
     await logUnassign(me.id, waiting.map((o) => o.code), null);
     return c.json({ message: `Đã hủy phân công ${waiting.length} đơn` });
   })
-  /** "Mở lại ngày": deletes the day's factory jobs and sends its orders back to Chờ xử lý (refused once any order has a driver). */
+  /** "Rút lại đơn xưởng": deletes the day's factory jobs and sends its orders back to Chờ xử lý (refused once any order has a driver). */
   .post("/:date/reopen", dateParam, async (c) => {
     const { date } = c.req.valid("param");
     const orders = unwrap(await db().rpc("reopen_production_day", { p_date: date, p_staff_id: c.get("staff").id }));
-    return c.json({ message: `Đã mở lại ngày ${date}: ${orders} đơn quay về Chờ xử lý` });
+    return c.json({ message: `Đã rút lại đơn xưởng ngày ${date}: ${orders} đơn quay về Chờ xử lý` });
   });

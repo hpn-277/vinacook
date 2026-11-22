@@ -103,11 +103,11 @@ export async function orderDetail(code: string, viewer: OrderViewer) {
   const received = jobs.filter((j) => j.status === "received").map((j) => j.updated_at);
   const timeline: TimelineStep[] = [
     { label: "Đặt hàng", at: when(order.created_at), note: CREATED_BY[order.created_by] + (order.creator ? ` (${order.creator.name})` : "") },
-    { label: "Chốt sản xuất", at: when(day.data?.closed_at), note: day.data?.status === "closed" ? "Đã gửi lệnh cho xưởng" : "Ngày chưa chốt" },
+    { label: "Gửi đơn cho xưởng", at: when(day.data?.closed_at), note: day.data?.status === "closed" ? "Đã gửi" : "Chưa gửi" },
     {
       label: "Nhận hàng từ xưởng",
       at: received.length ? when(received.sort().at(-1)) : null,
-      note: jobs.length ? `${received.length}/${jobs.length} lệnh đã nhận` : "Chưa có lệnh",
+      note: jobs.length ? `${received.length}/${jobs.length} mặt hàng đã nhận` : "Chưa gửi xưởng",
     },
     { label: "Giao cho tài xế", at: null, done: !!order.driver, note: order.driver ? order.driver.name : "Chưa phân công" },
     {

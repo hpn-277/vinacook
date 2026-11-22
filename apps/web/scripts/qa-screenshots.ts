@@ -157,8 +157,8 @@ async function main() {
     await mgr.page.getByLabel("Mì trứng - Xưởng Hóc Môn").fill("25");
     await mgr.page.getByLabel("Bún tươi - Xưởng Hóc Môn").fill("0");
     await shot(mgr.page, "admin-production-allocation-split");
-    await mgr.page.getByRole("button", { name: "Chốt ngày và gửi xưởng" }).click();
-    await mgr.page.getByRole("heading", { name: "Lệnh sản xuất" }).waitFor();
+    await mgr.page.getByRole("button", { name: "Gửi đơn cho xưởng" }).click();
+    await mgr.page.getByRole("heading", { name: /Đã gửi cho xưởng/ }).waitFor();
     await shot(mgr.page, "admin-production-closed-jobs");
 
     const f1 = await login(browser, "factory1@local", true);
@@ -168,14 +168,15 @@ async function main() {
     await f2.page.goto(`${BASE}/factory`);
     await shot(f2.page, "factory2-jobs-readonly");
 
-    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
-    await shot(mgr.page, "admin-orders-closed-receive-button");
-    await mgr.page.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
+    await mgr.page.goto(`${BASE}/admin/production/${D}`);
+    await shot(mgr.page, "admin-production-receive-checkboxes");
+    await mgr.page.getByTestId("sent-summary").getByRole("checkbox", { name: "Chọn tất cả xưởng chưa nhận hàng" }).click();
+    await mgr.page.getByTestId("sent-summary").getByRole("button", { name: /Xác nhận đã nhận hàng/ }).click();
     await mgr.page.getByRole("alertdialog").waitFor();
-    await shot(mgr.page, "admin-orders-receive-confirm");
+    await shot(mgr.page, "admin-production-receive-confirm");
     await mgr.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
     await until(() => orderStatus(A), (s) => s === "ready", "day received");
-    await mgr.page.reload();
+    await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     await shot(mgr.page, "admin-orders-received");
     await mgr.page.goto(`${BASE}/admin/orders/${A}`);
     await shot(mgr.page, "admin-order-detail-received");
@@ -269,14 +270,11 @@ async function main() {
     if ((await ro.page.getByRole("menuitem").allInnerTexts()).some((t) => !["Đã thu"].includes(t))) throw new Error("manager has order moves");
     await ro.page.keyboard.press("Escape");
 
-    await mgr.page.goto(`${BASE}/finance`);
-    await mgr.page.locator(`[data-order-code="${A}"]`).getByRole("checkbox").click();
-    await shot(mgr.page, "admin-debt-a-selected");
-    await mgr.page.getByRole("button", { name: /Xác nhận đã thu \(1 đơn/ }).click();
+    await mgr.page.goto(`${BASE}/admin/orders/${A}`);
+    await mgr.page.getByTestId("payment-panel").getByRole("button", { name: "Xác nhận đã thu" }).click();
     await mgr.page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
     await until(async () => (await order(A)).payment_status, (s) => s === "paid", "A paid");
-    await mgr.page.goto(`${BASE}/finance/payments`);
-    await shot(mgr.page, "admin-payment-history");
+    await shot(mgr.page, "admin-order-paid");
     await mgr.page.goto(`${BASE}/admin/orders?date=${D}`);
     await shot(mgr.page, "admin-orders-paid-read-only");
 

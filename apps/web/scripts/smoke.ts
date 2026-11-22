@@ -45,6 +45,17 @@ async function order(code: string) {
 const statusOf = (code: string) => order(code).then((o) => o.status);
 const waitStatus = (code: string, status: string) => until(() => statusOf(code), (s) => s === status, `${code} ${status}`);
 
+/** On the production page, ticks every factory still to receive and confirms them in one go. */
+async function receiveAllFactories(page: Page) {
+  const summary = page.getByTestId("sent-summary");
+  const selectAll = summary.getByRole("checkbox", { name: "Chọn tất cả xưởng chưa nhận hàng" });
+  if ((await selectAll.count()) === 0) return;
+  await selectAll.click();
+  await summary.getByRole("button", { name: /Xác nhận đã nhận hàng/ }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Xác nhận" }).click();
+  await selectAll.waitFor({ state: "detached" });
+}
+
 async function newPage(browser: Browser): Promise<Page> {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
@@ -139,15 +150,14 @@ async function main() {
 
     step("admin closes the day (POST /days/:date/close)");
     await mgr.goto(`${BASE}/admin/production/${D}`);
-    await mgr.getByRole("button", { name: "Chốt ngày và gửi lệnh sản xuất" }).click();
+    await mgr.getByRole("button", { name: "Gửi đơn cho xưởng" }).click();
     await confirm(mgr);
     await waitStatus(A, "in_production");
     assert((await statusOf(B)) === "in_production", "every placed order -> in_production");
 
-    step("admin receives the day (POST /days/:date/receive)");
-    await mgr.goto(`${BASE}/admin/orders?date=${D}`);
-    await mgr.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
-    await confirm(mgr);
+    step("admin receives each factory (POST /days/:date/receive)");
+    await mgr.goto(`${BASE}/admin/production/${D}`);
+    await receiveAllFactories(mgr);
     await waitStatus(A, "ready");
     assert((await statusOf(B)) === "ready", "orders -> ready");
 
@@ -201,9 +211,8 @@ async function main() {
     assert((await customer.request.get(photoUrl)).status() === 404, "anonymous visitor gets 404");
 
     step("admin settles the delivered order (POST /payments)");
-    await mgr.goto(`${BASE}/finance`);
-    await mgr.getByLabel(new RegExp(`Chọn.*${delivered[0].code}`)).check();
-    await mgr.getByRole("button", { name: /Xác nhận đã thu/ }).click();
+    await mgr.goto(`${BASE}/admin/orders/${delivered[0].code}`);
+    await mgr.getByTestId("payment-panel").getByRole("button", { name: "Xác nhận đã thu" }).click();
     await confirm(mgr);
     await until(() => order(delivered[0].code).then((o) => o.paid_at), (v) => v != null, "paid");
     assert(true, "payment recorded");
@@ -304,21 +313,21 @@ async function main() {
     assert(D2 !== D, "order after close rolls to the next day");
     const closeDay = async () => {
       await mgr.goto(`${BASE}/admin/production/${D2}`);
-      await mgr.getByRole("button", { name: "Chốt ngày và gửi lệnh sản xuất" }).click();
+      await mgr.getByRole("button", { name: "Gửi đơn cho xưởng" }).click();
       await confirm(mgr);
       await waitStatus(L, "in_production");
     };
     await closeDay();
     await mgr.goto(`${BASE}/admin/orders?date=${D2}`);
-    await mgr.getByRole("button", { name: "Mở lại ngày" }).click();
+    await mgr.getByRole("button", { name: "Rút lại đơn xưởng" }).click();
     await confirm(mgr);
     await waitStatus(L, "placed");
     assert(true, "reopen sends the day's orders back to placed");
     await closeDay();
-    await mgr.goto(`${BASE}/admin/orders?date=${D2}`);
-    await mgr.getByRole("button", { name: "Xác nhận đã nhận hàng" }).click();
-    await confirm(mgr);
+    await mgr.goto(`${BASE}/admin/production/${D2}`);
+    await receiveAllFactories(mgr);
     await waitStatus(L, "ready");
+    await mgr.goto(`${BASE}/admin/orders?date=${D2}`);
     await mgr.getByLabel(`Chọn ${L}`).check();
     await mgr.getByLabel("Tài xế", { exact: true }).selectOption(String(driver1));
     await mgr.getByRole("button", { name: "Giao cho tài xế" }).click();

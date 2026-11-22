@@ -11,11 +11,9 @@ const MANAGER_LINKS = [
 const ADMIN_LINKS = [
   ...MANAGER_LINKS,
   { href: "/admin/products", label: "Sản phẩm" },
-  { href: "/finance", label: "Công nợ" },
-  { href: "/finance/payments", label: "Lịch sử thu" },
 ];
 
-/** Shell for /admin and /finance. The manager sees only the read-only pages. */
+/** Shell for /admin. The manager sees only the read-only pages. */
 export async function AdminShell({ children }: { children: ReactNode }) {
   const staff = await currentStaff();
   return <StaffShell links={staff?.role === "admin" ? ADMIN_LINKS : MANAGER_LINKS}>{children}</StaffShell>;

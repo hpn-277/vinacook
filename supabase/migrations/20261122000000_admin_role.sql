@@ -78,7 +78,7 @@ begin
   end if;
   select * into v_day from production_days where date = p_date for update;
   if v_day is null or v_day.status <> 'closed' then
-    raise exception 'Ngày % chưa chốt sản xuất', p_date;
+    raise exception 'Ngày % chưa gửi đơn cho xưởng', p_date;
   end if;
 
   select count(*) into v_dispatched from orders

@@ -43,9 +43,9 @@ export default async function FactoryPage() {
 
   return (
     <>
-      <PageTitle>Lệnh sản xuất</PageTitle>
+      <PageTitle>Đơn đặt hàng</PageTitle>
       <p className="mb-4 text-sm text-muted-foreground">
-        Trước khi quản lý chốt, xưởng thấy số kg dự kiến của cả ngày để chuẩn bị. Sau khi chốt, đây là lệnh chính thức của xưởng.
+        Trước khi công ty gửi đơn, xưởng thấy số kg dự kiến của cả ngày để chuẩn bị. Sau khi gửi, đây là số hàng chính thức của xưởng.
       </p>
       <div className="space-y-4">
         {days.map(({ closed: isClosed, rows, ...d }) => {
@@ -55,18 +55,18 @@ export default async function FactoryPage() {
                 <CardTitle>
                   <h2 className="flex flex-wrap items-center gap-2">
                     {d.label} <span className="font-normal text-muted-foreground">· {d.date}</span>
-                    {isClosed ? <Badge variant="secondary">Đã chốt</Badge> : <Badge variant="outline">Dự kiến (chưa chốt)</Badge>}
+                    {isClosed ? <Badge variant="secondary">Đã gửi</Badge> : <Badge variant="outline">Dự kiến (chưa gửi)</Badge>}
                   </h2>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {rows.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">{isClosed ? "Xưởng không có lệnh ngày này." : "Chưa có đơn."}</p>
+                  <p className="text-sm text-muted-foreground">{isClosed ? "Xưởng không có đơn ngày này." : "Chưa có đơn."}</p>
                 ) : (
                   <>
                     <DayTable rows={rows} draft={!isClosed} />
                     {!isClosed && (
-                      <p className="mt-2 text-xs text-muted-foreground">Tổng nhu cầu của cả ngày, chưa chia cho từng xưởng. Số kg có thể thay đổi đến khi chốt.</p>
+                      <p className="mt-2 text-xs text-muted-foreground">Tổng nhu cầu của cả ngày, chưa chia cho từng xưởng. Số kg có thể thay đổi đến khi công ty gửi đơn.</p>
                     )}
                   </>
                 )}

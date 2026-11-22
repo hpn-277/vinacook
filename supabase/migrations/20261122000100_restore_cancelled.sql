@@ -9,7 +9,7 @@ begin
       raise exception 'Ngày sản xuất % đã qua; tạo đơn mới', new.production_date;
     end if;
     if exists (select 1 from production_days where date = new.production_date and status = 'closed') then
-      raise exception 'Ngày % đã chốt sản xuất; tạo đơn mới', new.production_date;
+      raise exception 'Đơn ngày % đã gửi cho xưởng; tạo đơn mới', new.production_date;
     end if;
   end if;
   return new;

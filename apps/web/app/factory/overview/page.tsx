@@ -13,9 +13,9 @@ export default async function FactoryOverviewPage({ searchParams }: PageProps<"/
   const { month, producedKg, producedCount, inProgressKg, products: productRows, days } = await factoryMonth(me.factory_id!, typeof raw === "string" ? raw : undefined);
 
   const tiles = [
-    { label: "Đã sản xuất", value: formatKg(producedKg), note: `${producedCount} lệnh đã giao cho công ty` },
+    { label: "Đã sản xuất", value: formatKg(producedKg), note: `${producedCount} mặt hàng đã giao cho công ty` },
     { label: "Đang sản xuất", value: formatKg(inProgressKg), note: inProgressKg ? "Chờ quản lý nhận hàng" : "Không có" },
-    { label: "Số ngày có lệnh", value: String(days.length), note: `Tháng ${month}` },
+    { label: "Số ngày có đơn", value: String(days.length), note: `Tháng ${month}` },
   ];
 
   return (
@@ -87,7 +87,7 @@ export default async function FactoryOverviewPage({ searchParams }: PageProps<"/
           </CardHeader>
           <CardContent>
             {days.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Không có lệnh trong tháng.</p>
+              <p className="text-sm text-muted-foreground">Không có đơn trong tháng.</p>
             ) : (
               <Table>
                 <TableHeader>

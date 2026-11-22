@@ -56,7 +56,7 @@ export const mutations = {
   assignDriver: (fd: FormData) => api.orders.assign.$post({ json: { driver_id: num(fd, "driver_id"), order_ids: ids(fd, "order_id") } }),
 
   closeDay: (fd: FormData) => api.days[":date"].close.$post({ param: day(fd) }),
-  receiveDay: (fd: FormData) => api.days[":date"].receive.$post({ param: day(fd) }),
+  receiveFactory: (fd: FormData) => api.days[":date"].receive.$post({ param: day(fd), json: { factory_ids: ids(fd, "factory_id") } }),
   unassignDay: (fd: FormData) => api.days[":date"].unassign.$post({ param: day(fd) }),
   reopenDay: (fd: FormData) => api.days[":date"].reopen.$post({ param: day(fd) }),
 
