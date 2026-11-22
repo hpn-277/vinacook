@@ -111,14 +111,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "address": string,"bl_no": string | null,"code": string,"company": string | null,"country": string,"created_at": string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id": number | null,"customer_id": number,"delivered_at": string | null,"delivery_photo_path": string | null,"departed_at": string | null,"district": string,"driver_id": number | null,"fail_reason": string | null,"id": number,"loading_port": string | null,"note": string | null,"paid_at": string | null,"paid_by": number | null,"payment_status": Database["public"]['Enums']["payment_status"],"phone": string,"postcode": string | null,"production_date": string,"region": string,"return_reason": string | null,"returned_by": number | null,"sale_id": number | null,"status": Database["public"]['Enums']["order_status"],"total": number
+                    "address": string,"bl_no": string | null,"code": string,"company": string | null,"country": string,"created_at": string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id": number | null,"customer_id": number,"delivered_at": string | null,"delivery_photo_path": string | null,"departed_at": string | null,"district": string,"driver_id": number | null,"fail_reason": string | null,"id": number,"loading_port": string | null,"note": string | null,"paid_at": string | null,"paid_by": number | null,"payment_status": Database["public"]['Enums']["payment_status"],"phone": string,"postcode": string | null,"production_date": string,"region": string,"return_reason": string | null,"returned_by": number | null,"review_note": string | null,"review_status": Database["public"]['Enums']["review_status"],"reviewed_at": string | null,"reviewed_by": number | null,"sale_id": number | null,"status": Database["public"]['Enums']["order_status"],"total": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "address": string,"bl_no"?: string | null,"code"?: string,"company"?: string | null,"country": string,"created_at"?: string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id": number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district": string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"loading_port"?: string | null,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone": string,"postcode"?: string | null,"production_date": string,"region": string,"return_reason"?: string | null,"returned_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total": number
+                    "address": string,"bl_no"?: string | null,"code"?: string,"company"?: string | null,"country": string,"created_at"?: string,"created_by": Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id": number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district": string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"loading_port"?: string | null,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone": string,"postcode"?: string | null,"production_date": string,"region": string,"return_reason"?: string | null,"returned_by"?: number | null,"review_note"?: string | null,"review_status"?: Database["public"]['Enums']["review_status"],"reviewed_at"?: string | null,"reviewed_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total": number
                   }
                   Update: {
-                    "address"?: string,"bl_no"?: string | null,"code"?: string,"company"?: string | null,"country"?: string,"created_at"?: string,"created_by"?: Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id"?: number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district"?: string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"loading_port"?: string | null,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone"?: string,"postcode"?: string | null,"production_date"?: string,"region"?: string,"return_reason"?: string | null,"returned_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total"?: number
+                    "address"?: string,"bl_no"?: string | null,"code"?: string,"company"?: string | null,"country"?: string,"created_at"?: string,"created_by"?: Database["public"]['Enums']["order_creator"],"created_by_staff_id"?: number | null,"customer_id"?: number,"delivered_at"?: string | null,"delivery_photo_path"?: string | null,"departed_at"?: string | null,"district"?: string,"driver_id"?: number | null,"fail_reason"?: string | null,"id"?: never,"loading_port"?: string | null,"note"?: string | null,"paid_at"?: string | null,"paid_by"?: number | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"phone"?: string,"postcode"?: string | null,"production_date"?: string,"region"?: string,"return_reason"?: string | null,"returned_by"?: number | null,"review_note"?: string | null,"review_status"?: Database["public"]['Enums']["review_status"],"reviewed_at"?: string | null,"reviewed_by"?: number | null,"sale_id"?: number | null,"status"?: Database["public"]['Enums']["order_status"],"total"?: number
                   }
                   Relationships: [
                     {
@@ -148,6 +148,12 @@ isOneToOne: false
     },{
       foreignKeyName: "orders_returned_by_fkey"
       columns: ["returned_by"]
+isOneToOne: false
+      referencedRelation: "staff"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_reviewed_by_fkey"
+      columns: ["reviewed_by"]
 isOneToOne: false
       referencedRelation: "staff"
       referencedColumns: ["id"]
@@ -364,7 +370,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "day_status": "open"|"closed","job_status": "producing"|"received","order_creator": "customer"|"sale"|"manager","order_status": "placed"|"in_production"|"ready"|"assigned"|"out_for_delivery"|"delivered"|"failed"|"cancelled","payment_action": "paid"|"unpaid","payment_status": "unpaid"|"paid","product_status": "pending"|"approved"|"rejected","staff_role": "admin"|"manager"|"sale"|"factory"|"driver"
+            "day_status": "open"|"closed","job_status": "producing"|"received","order_creator": "customer"|"sale"|"manager","order_status": "placed"|"in_production"|"ready"|"assigned"|"out_for_delivery"|"delivered"|"failed"|"cancelled","payment_action": "paid"|"unpaid","payment_status": "unpaid"|"paid","product_status": "pending"|"approved"|"rejected","review_status": "pending"|"approved"|"rejected","staff_role": "admin"|"manager"|"sale"|"factory"|"driver"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -484,7 +490,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "day_status": ["open", "closed"],"job_status": ["producing", "received"],"order_creator": ["customer", "sale", "manager"],"order_status": ["placed", "in_production", "ready", "assigned", "out_for_delivery", "delivered", "failed", "cancelled"],"payment_action": ["paid", "unpaid"],"payment_status": ["unpaid", "paid"],"product_status": ["pending", "approved", "rejected"],"staff_role": ["admin", "manager", "sale", "factory", "driver"]
+            "day_status": ["open", "closed"],"job_status": ["producing", "received"],"order_creator": ["customer", "sale", "manager"],"order_status": ["placed", "in_production", "ready", "assigned", "out_for_delivery", "delivered", "failed", "cancelled"],"payment_action": ["paid", "unpaid"],"payment_status": ["unpaid", "paid"],"product_status": ["pending", "approved", "rejected"],"review_status": ["pending", "approved", "rejected"],"staff_role": ["admin", "manager", "sale", "factory", "driver"]
           }
         }
 } as const

@@ -10,6 +10,7 @@ import { files } from "./routes/files";
 import { orders } from "./routes/orders";
 import { payments } from "./routes/payments";
 import { products } from "./routes/products";
+import { reviews } from "./routes/reviews";
 import { sale } from "./routes/sale";
 import { shop } from "./routes/shop";
 import { staff } from "./routes/staff";
@@ -18,6 +19,7 @@ const v1 = new Hono()
   .route("/auth", auth)
   .route("/shop", shop)
   .route("/orders", orders)
+  .route("/reviews", reviews)
   .route("/days", days)
   .route("/products", products)
   .route("/factories", factories)

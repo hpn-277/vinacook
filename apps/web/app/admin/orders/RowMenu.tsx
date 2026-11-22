@@ -17,24 +17,29 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { submit, type Mutation } from "@/lib/mutations";
 import { formatVnd } from "@noodle/core/domain/money";
-import { MANAGER_ORDER_MOVES, moveLabel, type OrderStatus } from "@noodle/core/domain/status";
+import { MANAGER_ORDER_MOVES, moveLabel, type OrderStatus, type ReviewStatus } from "@noodle/core/domain/status";
+import { Textarea } from "@/components/ui/textarea";
 
-type Order = { id: number; code: string; status: OrderStatus; payment_status: "paid" | "unpaid"; total: number };
-type Pending = { title: string; action: Mutation; fields: Record<string, string>; destructive?: boolean };
+type Order = { id: number; code: string; status: OrderStatus; review_status: ReviewStatus; payment_status: "paid" | "unpaid"; total: number };
+/** `reason`: the dialog asks for one and sends it as `note`. */
+type Pending = { title: string; action: Mutation; fields: Record<string, string>; destructive?: boolean; reason?: boolean };
 
-/** The row's "⋯" menu: status moves (admin) and marking paid (admin, manager). Every action asks to confirm first. */
+/** The row's "⋯" menu: reviewing and marking paid (admin, manager), status moves (admin). Every action asks to confirm first. */
 export function RowMenu({ order, canMove }: { order: Order; canMove: boolean }) {
   const router = useRouter();
   const [pending, setPending] = useState<Pending | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState("");
   const [busy, startTransition] = useTransition();
 
+  const toReview = order.status === "placed" && order.review_status === "pending";
   const moves = canMove ? (MANAGER_ORDER_MOVES[order.status] ?? []) : [];
   const canPay = order.status !== "cancelled" && order.payment_status === "unpaid";
   const canUnpay = order.status !== "cancelled" && order.payment_status === "paid";
 
   const ask = (p: Pending) => {
     setError(null);
+    setNote("");
     setPending(p);
   };
   const run = () =>
@@ -42,13 +47,14 @@ export function RowMenu({ order, canMove }: { order: Order; canMove: boolean }) 
       if (!pending) return;
       const fd = new FormData();
       for (const [k, v] of Object.entries(pending.fields)) fd.set(k, v);
+      if (pending.reason) fd.set("note", note);
       const result = await submit(pending.action, fd);
       if (!result.ok) return setError(result.error);
       setPending(null);
       router.refresh();
     });
 
-  if (moves.length === 0 && !canPay && !canUnpay) return null;
+  if (!toReview && moves.length === 0 && !canPay && !canUnpay) return null;
 
   return (
     <>
@@ -59,6 +65,29 @@ export function RowMenu({ order, canMove }: { order: Order; canMove: boolean }) 
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {toReview && (
+            <>
+              <DropdownMenuItem
+                onSelect={() => ask({ title: `Duyệt đơn ${order.code}?`, action: "reviewOrder", fields: { order_id: String(order.id), decision: "approved" } })}
+              >
+                Duyệt
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() =>
+                  ask({
+                    title: `Đơn ${order.code} không hợp lệ? Đơn sẽ bị hủy.`,
+                    action: "reviewOrder",
+                    fields: { order_id: String(order.id), decision: "rejected" },
+                    destructive: true,
+                    reason: true,
+                  })
+                }
+              >
+                Không hợp lệ
+              </DropdownMenuItem>
+            </>
+          )}
           {moves.map((to) => {
             const label = moveLabel(order.status, to);
             return (
@@ -88,11 +117,14 @@ export function RowMenu({ order, canMove }: { order: Order; canMove: boolean }) 
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{pending?.title}</AlertDialogTitle>
+            {pending?.reason && (
+              <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Lý do" aria-label="Lý do không hợp lệ" maxLength={500} rows={2} />
+            )}
             {error && <AlertDialogDescription className="text-destructive">{error}</AlertDialogDescription>}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Quay lại</AlertDialogCancel>
-            <Button variant={pending?.destructive ? "destructive" : "default"} disabled={busy} onClick={run}>
+            <Button variant={pending?.destructive ? "destructive" : "default"} disabled={busy || (pending?.reason && !note.trim())} onClick={run}>
               Xác nhận
             </Button>
           </AlertDialogFooter>

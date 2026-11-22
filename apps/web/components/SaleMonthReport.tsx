@@ -7,7 +7,7 @@ import { saleMonthReport } from "@noodle/core/queries/sale";
 
 const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
-/** Renders saleMonthReport. Shared by the manager and the sale. */
+/** Renders saleMonthReport on the sale's /sale page. */
 export async function SaleMonthReport({ sale, month, orderLinks }: { sale: { id: number; commission_pct: number | null }; month: string; orderLinks: boolean }) {
   const r = await saleMonthReport(sale, month);
   const tiles = [
@@ -94,53 +94,6 @@ export async function SaleMonthReport({ sale, month, orderLinks }: { sale: { id:
           )}
         </CardContent>
       </Card>
-
-      <Card size="sm" className="mt-4">
-        <CardHeader>
-          <CardTitle>
-            <h2>Khách hàng phụ trách ({r.customers.length})</h2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {r.customers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Chưa có khách hàng.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Khách hàng</TableHead>
-                  <TableHead>Quận</TableHead>
-                  <TableHead className="text-right">Đơn giao tháng này</TableHead>
-                  <TableHead className="text-right">Doanh số tháng này</TableHead>
-                  <TableHead className="text-right">Tổng số đơn</TableHead>
-                  <TableHead>Đơn gần nhất</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {r.customers.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell>
-                      <div className="font-medium">
-                        {c.name} {c.isNew && <OrderBadgeNew />}
-                      </div>
-                      <div className="text-xs text-muted-foreground">{c.phone}</div>
-                    </TableCell>
-                    <TableCell>{c.district ?? "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{c.monthOrders}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatVnd(c.monthSales)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{c.lifetimeOrders}</TableCell>
-                    <TableCell className="tabular-nums">{c.last ?? "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
     </>
   );
-}
-
-function OrderBadgeNew() {
-  return <span className="ml-1 rounded-full bg-lime-100 px-1.5 py-0.5 text-[10px] font-medium text-lime-800">Khách mới</span>;
 }

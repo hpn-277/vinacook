@@ -2,6 +2,7 @@ import Link from "next/link";
 import { deliveryArea } from "@noodle/core/domain/destination";
 import { NO_DRIVER } from "./row-filters";
 import { RowMenu } from "./RowMenu";
+import { ReviewBadge } from "@/components/status-badge";
 import { Returned, type AdminOrder } from "@/components/AdminOrderCard";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { itemLabel } from "@noodle/core/domain/catalog";
@@ -42,6 +43,13 @@ export function AdminOrderTable({ orders, readOnly }: { orders: AdminOrder[]; re
                   <div className="text-xs text-muted-foreground">
                     {o.phone} · {deliveryArea(o)}
                   </div>
+                  {o.review_status !== "approved" && (
+                    <div className="mt-1 text-xs">
+                      <ReviewBadge status={o.review_status} />
+                      {o.review_status === "pending" && !o.sale && <span className="ml-1 text-muted-foreground">khách vãng lai</span>}
+                      {o.review_note && <span className="ml-1 text-destructive">{o.review_note}</span>}
+                    </div>
+                  )}
                 </div>
               </div>
             </TableCell>

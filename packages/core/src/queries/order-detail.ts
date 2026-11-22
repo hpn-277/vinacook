@@ -1,7 +1,7 @@
 import { unwrap } from "../action";
 import { db } from "../db";
 import type { Country } from "../domain/destination";
-import type { OrderStatus } from "../domain/status";
+import type { OrderStatus, ReviewStatus } from "../domain/status";
 import { deliveryPhotoUrl } from "../files";
 
 export type OrderViewer = { role: "admin" | "manager" } | { role: "sale"; saleId: number };
@@ -10,6 +10,10 @@ export type OrderDetailOrder = {
   id: number;
   code: string;
   status: OrderStatus;
+  review_status: ReviewStatus;
+  review_note: string | null;
+  reviewer: { name: string } | null;
+  sale_id: number | null;
   payment_status: "paid" | "unpaid";
   total: number;
   phone: string;
@@ -59,8 +63,8 @@ export type OrderDetailOrder = {
 };
 
 // The head mirrors apps/web/components/AdminOrderCard's ADMIN_ORDER_SELECT, which the manager's order actions read.
-const DETAIL_SELECT = `id, code, status, payment_status, total, phone, country, region, district, postcode, address, company, bl_no, loading_port, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name)),
-  created_by, delivered_at, delivery_photo_path,
+const DETAIL_SELECT = `id, code, status, review_status, review_note, payment_status, total, phone, country, region, district, postcode, address, company, bl_no, loading_port, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name)),
+  created_by, delivered_at, delivery_photo_path, sale_id, reviewer:staff!orders_reviewed_by_fkey(name),
   creator:staff!orders_created_by_staff_id_fkey(name),
   driver_contact:staff!orders_driver_id_fkey(phone),
   customer:customers(id, name, phone, default_address, default_district, created_at, owner:staff(name, ref_code, commission_pct)),

@@ -1,18 +1,27 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { orderDetail } from "@noodle/core/queries/order-detail";
-import { customerLookup, monthParam, normalizePhone, orderForm, saleActiveOrders, saleCustomers, saleMonthReport } from "@noodle/core/queries/sale";
+import { parseIsoDate } from "@noodle/core/domain/time";
+import { today } from "@noodle/core/period";
+import { customerLookup, monthParam, normalizePhone, orderForm, saleCustomers, saleDayOrders, saleMonthDays, saleMonthReport, saleToReview } from "@noodle/core/queries/sale";
 import { role, valid } from "../http";
 
 /** A sale's own screens (mobile app): dashboard, customers, orders, and what the new-order form needs. */
 export const sale = new Hono()
   .use(role("sale"))
-  /** `?month=YYYY-MM`, default this month. */
-  .get("/dashboard", valid("query", z.object({ month: z.string().optional() })), async (c) => {
+  /** One production day's orders (`?date=YYYY-MM-DD`, default today) and every order still waiting for review. */
+  .get("/dashboard", valid("query", z.object({ date: z.string().optional() })), async (c) => {
+    const me = c.get("staff");
+    const date = parseIsoDate(c.req.valid("query").date ?? null) ?? today();
+    const [day, toReview] = await Promise.all([saleDayOrders(me.id, date), saleToReview(me.id)]);
+    return c.json({ date, day, toReview });
+  })
+  /** `?month=YYYY-MM` (default this month): orders per production day, and commission. */
+  .get("/month", valid("query", z.object({ month: z.string().optional() })), async (c) => {
     const me = c.get("staff");
     const month = monthParam(c.req.valid("query").month);
-    const [active, report] = await Promise.all([saleActiveOrders(me.id), saleMonthReport(me, month)]);
-    return c.json({ month, active, report });
+    const [days, report] = await Promise.all([saleMonthDays(me.id, month), saleMonthReport(me, month)]);
+    return c.json({ month, days, report });
   })
   .get("/customers", async (c) => c.json(await saleCustomers(c.get("staff").id)))
   /** Catalog, plus the customer for `?phone=` (null when no phone was given). */

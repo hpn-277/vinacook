@@ -8,20 +8,37 @@ import { monthRange, today } from "../period";
 /** `?month=YYYY-MM`, falling back to the current month. */
 export const monthParam = (raw: unknown): string => (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
 
-/** The sale's orders not yet delivered or cancelled, newest first. */
-export async function saleActiveOrders(saleId: number) {
+const SALE_ORDER_SELECT =
+  "id, code, production_date, status, review_status, total, payment_status, departed_at, phone, country, region, district, postcode, address, company, note, created_at, customers(name, phone), driver:staff!orders_driver_id_fkey(name, phone), order_items(id, pack_name, pack_qty, qty_kg, products(name))";
+
+/** The sale's orders for one production day (default today), every status, newest first. */
+export async function saleDayOrders(saleId: number, date: string = today()) {
   return unwrap(
     await db()
       .from("orders")
-      .select("id, code, production_date, status, total, departed_at, customers(name, phone), driver:staff!orders_driver_id_fkey(name, phone), order_items(id, pack_name, pack_qty, qty_kg, products(name))")
+      .select(SALE_ORDER_SELECT)
       .eq("sale_id", saleId)
-      .not("status", "in", "(delivered,cancelled)")
+      .eq("production_date", date)
       .order("created_at", { ascending: false })
       .order("id", { referencedTable: "order_items" }),
   );
 }
 
-export type SaleActiveOrder = Awaited<ReturnType<typeof saleActiveOrders>>[number];
+/** The sale's customers' orders still waiting for the sale to check them, any day. */
+export async function saleToReview(saleId: number) {
+  return unwrap(
+    await db()
+      .from("orders")
+      .select(SALE_ORDER_SELECT)
+      .eq("sale_id", saleId)
+      .eq("status", "placed")
+      .eq("review_status", "pending")
+      .order("created_at")
+      .order("id", { referencedTable: "order_items" }),
+  );
+}
+
+export type SaleOrder = Awaited<ReturnType<typeof saleDayOrders>>[number];
 
 /** A salesperson's month: delivered orders by delivery day, commission, and their customers. Shared by the manager and the sale. */
 export async function saleMonthReport(sale: { id: number; commission_pct: number | null }, month: string) {
@@ -146,4 +163,32 @@ export type CustomerLookup = Awaited<ReturnType<typeof customerLookup>>;
 /** What the staff order form needs: the catalog on sale. */
 export async function orderForm() {
   return { catalog: await loadCatalog() };
+}
+
+export type SaleDay = { day: string; orders: number; cancelled: number; kg: number; revenue: number; unpaid: number };
+
+/** The sale's orders per production day of `month` (YYYY-MM), newest day first; cancelled orders are counted apart. */
+export async function saleMonthDays(saleId: number, month: string): Promise<SaleDay[]> {
+  const { from, to } = monthRange(`${month}-01` as IsoDate);
+  const rows = unwrap(
+    await db()
+      .from("orders")
+      .select("production_date, status, total, payment_status, order_items(qty_kg)")
+      .eq("sale_id", saleId)
+      .gte("production_date", from.slice(0, 10))
+      .lt("production_date", to.slice(0, 10)),
+  );
+  const days = new Map<string, SaleDay>();
+  for (const o of rows) {
+    const d = days.get(o.production_date) ?? { day: o.production_date, orders: 0, cancelled: 0, kg: 0, revenue: 0, unpaid: 0 };
+    if (o.status === "cancelled") d.cancelled++;
+    else {
+      d.orders++;
+      d.kg += o.order_items.reduce((s, i) => s + Number(i.qty_kg), 0);
+      d.revenue += o.total;
+      if (o.payment_status === "unpaid") d.unpaid += o.total;
+    }
+    days.set(o.production_date, d);
+  }
+  return [...days.values()].map((d) => ({ ...d, kg: Math.round(d.kg * 100) / 100 })).sort((a, b) => b.day.localeCompare(a.day));
 }

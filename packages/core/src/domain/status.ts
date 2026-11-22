@@ -77,3 +77,12 @@ export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
   approved: "Đã duyệt",
   rejected: "Không duyệt",
 };
+
+/** Whether an order a customer placed has been checked: by its sale, or by admin/manager for walk-ins. */
+export type ReviewStatus = "pending" | "approved" | "rejected";
+
+export const REVIEW_STATUS_LABEL: Record<ReviewStatus, string> = {
+  pending: "Chưa duyệt",
+  approved: "Đã duyệt",
+  rejected: "Không hợp lệ",
+};

@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 import { formatVnd } from "@noodle/core/domain/money";
 import type { SaleMonth } from "@noodle/core/queries/sale";
-import { Badge, Body, Card, Heading, Muted, Row, colors } from "@/components/ui";
+import { Body, Card, Heading, Muted, Row, colors } from "@/components/ui";
 
 const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
@@ -66,30 +66,6 @@ export function MonthReport({ report: r }: { report: SaleMonth }) {
         )}
       </Card>
 
-      <Card>
-        <Heading>Khách hàng phụ trách ({r.customers.length})</Heading>
-        {r.customers.length === 0 ? (
-          <Muted>Chưa có khách hàng.</Muted>
-        ) : (
-          r.customers.map((c) => (
-            <View key={c.id} testID={`report-customer-${c.id}`} style={{ gap: 2, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8 }}>
-              <Row>
-                <Body style={{ fontWeight: "600" }}>{c.name}</Body>
-                {c.isNew && <Badge label="Khách mới" tone="success" />}
-              </Row>
-              <Muted>
-                {c.phone} · {c.district ?? "—"}
-              </Muted>
-              <Muted>
-                Đơn giao tháng này {c.monthOrders} · Doanh số tháng này {formatVnd(c.monthSales)}
-              </Muted>
-              <Muted>
-                Tổng số đơn {c.lifetimeOrders} · Đơn gần nhất {c.last ?? "—"}
-              </Muted>
-            </View>
-          ))
-        )}
-      </Card>
     </>
   );
 }

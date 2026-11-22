@@ -36,6 +36,9 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   const dispatched = orders.filter((o) => ["assigned", "out_for_delivery", "delivered", "failed"].includes(o.status)).length;
   const reopenable = (counts.get("in_production") ?? 0) + readyCount;
   const waitingToLoad = counts.get("assigned") ?? 0;
+  const unreviewed = orders.filter((o) => o.status === "placed" && o.review_status === "pending");
+  const walkIns = unreviewed.filter((o) => !o.sale).length;
+  const dayOpen = day.data?.status !== "closed";
 
   return (
     <>
@@ -50,6 +53,24 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
           </Badge>
         ))}
       </div>
+      {unreviewed.length > 0 && (
+        <Card size="sm" className="mb-3 border-amber-300 bg-amber-50" data-testid="review-bar">
+          <CardContent className="text-sm">
+            <b>{unreviewed.length} đơn chưa duyệt</b>
+            {walkIns > 0 && <> · {walkIns} khách vãng lai cần quản lý/quản trị duyệt (⋯ → Duyệt)</>}
+            {unreviewed.length > walkIns && <> · {unreviewed.length - walkIns} đơn chờ NVKD duyệt</>}
+            {dayOpen && <span className="text-muted-foreground"> · Chưa gửi xưởng được cho đến khi duyệt hết.</span>}
+          </CardContent>
+        </Card>
+      )}
+      {!admin && dayOpen && (counts.get("placed") ?? 0) > 0 && (
+        <div className="mb-4">
+          <ActionForm action="closeDay" confirm={`Gửi đơn ngày ${date} cho các xưởng?`}>
+            <input type="hidden" name="date" value={date} />
+            <Button>Gửi đơn cho xưởng</Button>
+          </ActionForm>
+        </div>
+      )}
       {admin && (
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Button asChild>

@@ -59,6 +59,11 @@ export const mutations = {
       },
     }),
 
+  reviewOrder: (fd: FormData) =>
+    api.reviews[":id"].$post({
+      param: param(fd),
+      json: text(fd, "decision") === "approved" ? { decision: "approved" } : { decision: "rejected", note: text(fd, "note") },
+    }),
   moveOrder: (fd: FormData) => api.orders[":id"].move.$post({ param: param(fd), json: { to: text(fd, "to") as OrderStatus } }),
   editContact: (fd: FormData) =>
     api.orders[":id"].contact.$patch({ param: param(fd), json: { phone: text(fd, "phone"), destination: destination(fd) } }),

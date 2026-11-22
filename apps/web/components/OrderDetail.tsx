@@ -6,7 +6,8 @@ import { EditContact } from "@/components/EditContact";
 import { ShippingInfo } from "@/components/ShippingInfo";
 import { dialable, formatDestination } from "@noodle/core/domain/destination";
 import { PaymentPanel } from "@/components/PaymentPanel";
-import { JobBadge, OrderBadge } from "@/components/status-badge";
+import { ReviewActions } from "@/components/ReviewActions";
+import { JobBadge, OrderBadge, ReviewBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -62,6 +63,8 @@ export async function OrderDetail({
   if (!detail) notFound();
   const { order, creatorLabel, customerSince, photo, kg, commission, timeline, jobs, history } = detail;
   const owner = order.customer?.owner;
+  const canReview =
+    order.status === "placed" && order.review_status === "pending" && (office || (viewer.role === "sale" && order.sale_id === viewer.saleId));
 
   return (
     <>
@@ -77,10 +80,23 @@ export async function OrderDetail({
       >
         <h1 className="text-xl font-bold tracking-tight">{order.code}</h1>
         <OrderBadge status={order.status} />
+        {order.review_status !== "approved" && <ReviewBadge status={order.review_status} />}
         <PaymentLabel order={order} />
         <span className="ml-auto text-xl font-bold tabular-nums">
           {formatVnd(order.total)}
         </span>
+        {(order.review_note || (order.review_status === "approved" && order.reviewer)) && (
+          <p className="w-full text-sm text-muted-foreground" data-testid="review-note">
+            {order.review_status === "rejected" ? "Không hợp lệ" : "Đã duyệt"}
+            {order.reviewer && ` bởi ${order.reviewer.name}`}
+            {order.review_note && `: ${order.review_note}`}
+          </p>
+        )}
+        {canReview && (
+          <div className="w-full">
+            <ReviewActions order={order} />
+          </div>
+        )}
         {admin && (MANAGER_ORDER_MOVES[order.status]?.length ?? 0) > 0 && (
           <div className="flex w-full flex-wrap gap-2">
             <OrderActions order={order} />
