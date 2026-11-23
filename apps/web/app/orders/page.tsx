@@ -18,7 +18,7 @@ export default async function OrderLookupPage({ searchParams }: PageProps<"/orde
     ? unwrap(
         await db()
           .from("orders")
-          .select(`id, status, payment_status, total, driver:staff!orders_driver_id_fkey(name, phone), ${REORDER_FIELDS}`)
+          .select(`id, status, payment_status, total, ship_carrier, driver:staff!orders_driver_id_fkey(name, phone), ${REORDER_FIELDS}`)
           .eq("phone", phone)
           .order("created_at", { ascending: false })
           .order("id", { referencedTable: "order_items" })
@@ -51,6 +51,7 @@ export default async function OrderLookupPage({ searchParams }: PageProps<"/orde
                       <div className="flex items-center gap-2 font-semibold">
                         <TruckIcon className="size-4 shrink-0" /> Đơn hàng đang trên đường giao đến bạn
                       </div>
+                      {o.ship_carrier && <div className="mt-0.5">Giao qua {o.ship_carrier}</div>}
                       {o.driver && (
                         <div className="mt-0.5">
                           Tài xế: {o.driver.name}

@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageTitle } from "@/components/page-title";
-import { ActionForm } from "@/components/ActionForm";
-import { Button } from "@/components/ui/button";
+import { SendToFactory } from "@/components/admin/SendToFactory";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SentTable, type SentGroup } from "./SentTable";
@@ -34,12 +33,12 @@ function byFactory(lines: Line[]): FactoryGroup[] {
 }
 
 export default async function ProductionDayPage({ params }: PageProps<"/admin/production/[date]">) {
-  await requireRole("admin");
+  await requireRole("admin", "manager");
   const date = parseIsoDate((await params).date);
   if (!date) notFound();
 
   const FACTORY = "id, name, active";
-  const [day, placedItems, jobs] = await Promise.all([
+  const [day, placedItems, jobs, unreviewed] = await Promise.all([
     db().from("production_days").select("status, closed_at").eq("date", date).maybeSingle(),
     db()
       .from("order_items")
@@ -48,6 +47,7 @@ export default async function ProductionDayPage({ params }: PageProps<"/admin/pr
       .eq("orders.status", "placed")
       .then(unwrap),
     db().from("production_jobs").select(`id, qty_kg, status, products(name), factories(${FACTORY})`).eq("date", date).order("factory_id").order("product_id").then(unwrap),
+    db().from("orders").select("id", { count: "exact", head: true }).eq("production_date", date).eq("status", "pending_review").then((r) => r.count ?? 0),
   ]);
   const closed = day.data?.status === "closed";
   const plan = byFactory(placedItems.flatMap((i) => (i.products?.factories ? [{ factory: i.products.factories, product: i.products.name, kg: i.qty_kg }] : [])));
@@ -71,8 +71,8 @@ export default async function ProductionDayPage({ params }: PageProps<"/admin/pr
         </Link>
       </p>
 
-      {!closed && plan.length === 0 && <p className="text-muted-foreground">Chưa có đơn cho ngày này.</p>}
-      {!closed && plan.length > 0 && (
+      {!closed && plan.length === 0 && unreviewed === 0 && <p className="text-muted-foreground">Chưa có đơn cho ngày này.</p>}
+      {!closed && (plan.length > 0 || unreviewed > 0) && (
         <Card size="sm">
           <CardContent className="space-y-3">
             <h2 className="font-semibold">Sẽ gửi cho xưởng</h2>
@@ -81,10 +81,7 @@ export default async function ProductionDayPage({ params }: PageProps<"/admin/pr
               xuất và mỗi xưởng nhận phần hàng của mình.
             </p>
             <FactoryTable groups={plan} />
-            <ActionForm action="closeDay" confirm={`Gửi đơn ngày ${date} cho các xưởng?`}>
-              <input type="hidden" name="date" value={date} />
-              <Button>Gửi đơn cho xưởng</Button>
-            </ActionForm>
+            <SendToFactory date={date} unreviewed={unreviewed} />
           </CardContent>
         </Card>
       )}

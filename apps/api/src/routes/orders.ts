@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { check, DomainError, unwrap } from "@noodle/core/action";
 import { db } from "@noodle/core/db";
-import { CONTACT_EDITABLE, MANAGER_ORDER_MOVES, ORDER_STATUS_LABEL, ORDER_STATUSES } from "@noodle/core/domain/status";
+import { CONTACT_EDITABLE, ORDER_STATUS_LABEL, ORDER_STATUSES, orderMoves } from "@noodle/core/domain/status";
 import { destination, id, phone } from "@noodle/core/form";
 import { transition } from "../lib/transition";
 import { role, valid } from "../http";
@@ -13,26 +13,28 @@ export async function logUnassign(staffId: number, codes: string[], driverId: nu
   check(await db().from("admin_events").insert({ staff_id: staffId, action: "unassign", detail: { codes, driver_id: driverId } }));
 }
 
-/** Manager moves on single orders and dispatch. */
+/** Dispatch and single-order moves (admin and manager, see orderMoves); editing an order is admin-only. */
 export const orders = new Hono()
-  .use(role("admin"))
-  .post("/assign", valid("json", z.object({ driver_id: id, order_ids: z.array(id).min(1, "Chọn ít nhất 1 đơn") })), async (c) => {
+  .post("/assign", role("admin", "manager"), valid("json", z.object({ driver_id: id, order_ids: z.array(id).min(1, "Chọn ít nhất 1 đơn") })), async (c) => {
     const { driver_id, order_ids } = c.req.valid("json");
     const { data: driver } = await db().from("staff").select("id").eq("id", driver_id).eq("role", "driver").eq("active", true).maybeSingle();
     if (!driver) throw new DomainError("Tài xế không hợp lệ");
     for (const orderId of order_ids) await transition("orders", orderId, "assigned", { patch: { driver_id: driver.id, returned_by: null, return_reason: null } });
     return c.json({ message: `Đã giao ${order_ids.length} đơn cho tài xế` });
   })
-  .post("/:id/move", orderParam, valid("json", z.object({ to: z.enum(ORDER_STATUSES) })), async (c) => {
+  .post("/:id/move", role("admin", "manager"), orderParam, valid("json", z.object({ to: z.enum(ORDER_STATUSES) })), async (c) => {
     const me = c.get("staff");
     const { id: orderId } = c.req.valid("param");
     const { to } = c.req.valid("json");
     const order = unwrap(await db().from("orders").select("code, status, driver_id").eq("id", orderId).single());
-    if (!MANAGER_ORDER_MOVES[order.status]?.includes(to)) throw new DomainError("Thao tác không hợp lệ cho đơn này");
-    await transition("orders", orderId, to, to === "ready" ? { patch: { driver_id: null, departed_at: null } } : {});
+    if (!orderMoves(me.role, order.status).includes(to)) throw new DomainError("Thao tác không hợp lệ cho đơn này");
+    // Back to Đã nhận hàng drops the driver or the outside carrier, so the order can be dispatched afresh.
+    const redispatch = { driver_id: null, departed_at: null, ship_carrier: null, ship_fee: null, ship_note: null, ship_booking_photo_path: null };
+    await transition("orders", orderId, to, to === "ready" ? { patch: redispatch } : {});
     if (order.status === "assigned") await logUnassign(me.id, [order.code], order.driver_id);
     return c.json({});
   })
+  .use(role("admin"))
   /** "Sửa SĐT, địa chỉ": corrects where the order goes, logging old and new values. The customer record is left alone. */
   .patch(
     "/:id/contact",

@@ -17,25 +17,27 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { submit, type Mutation } from "@/lib/mutations";
 import { formatVnd } from "@noodle/core/domain/money";
-import { MANAGER_ORDER_MOVES, moveLabel, type OrderStatus, type ReviewStatus } from "@noodle/core/domain/status";
+import { moveLabel, type OrderStatus } from "@noodle/core/domain/status";
 import { Textarea } from "@/components/ui/textarea";
 
-type Order = { id: number; code: string; status: OrderStatus; review_status: ReviewStatus; payment_status: "paid" | "unpaid"; total: number };
+type Order = { id: number; code: string; status: OrderStatus; payment_status: "paid" | "unpaid"; total: number };
 /** `reason`: the dialog asks for one and sends it as `note`. */
 type Pending = { title: string; action: Mutation; fields: Record<string, string>; destructive?: boolean; reason?: boolean };
 
-/** The row's "⋯" menu: reviewing and marking paid (admin, manager), status moves (admin). Every action asks to confirm first. */
-export function RowMenu({ order, canMove }: { order: Order; canMove: boolean }) {
+/**
+ * The row's "⋯" menu: reviewing and marking paid (admin, manager, the order's sale), the status `moves` the viewer may make,
+ * "Bỏ đã thu" only where `unpayHref` points at the page that takes the reason. Every action asks to confirm first.
+ */
+export function OrderRowMenu({ order, moves = [], unpayHref }: { order: Order; moves?: readonly OrderStatus[]; unpayHref?: string }) {
   const router = useRouter();
   const [pending, setPending] = useState<Pending | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [busy, startTransition] = useTransition();
 
-  const toReview = order.status === "placed" && order.review_status === "pending";
-  const moves = canMove ? (MANAGER_ORDER_MOVES[order.status] ?? []) : [];
+  const toReview = order.status === "pending_review";
   const canPay = order.status !== "cancelled" && order.payment_status === "unpaid";
-  const canUnpay = order.status !== "cancelled" && order.payment_status === "paid";
+  const canUnpay = unpayHref !== undefined && order.status !== "cancelled" && order.payment_status === "paid";
 
   const ask = (p: Pending) => {
     setError(null);
@@ -105,9 +107,9 @@ export function RowMenu({ order, canMove }: { order: Order; canMove: boolean }) 
               Đã thu
             </DropdownMenuItem>
           )}
-          {canUnpay && (
+          {canUnpay && unpayHref && (
             <DropdownMenuItem asChild>
-              <Link href={`/admin/orders/${order.code}#thanh-toan`}>Bỏ đã thu</Link>
+              <Link href={unpayHref}>Bỏ đã thu</Link>
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>

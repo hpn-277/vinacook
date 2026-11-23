@@ -9,7 +9,7 @@ import { monthRange, today } from "../period";
 export const monthParam = (raw: unknown): string => (typeof raw === "string" && parseIsoDate(`${raw}-01`)?.slice(0, 7)) || today().slice(0, 7);
 
 const SALE_ORDER_SELECT =
-  "id, code, production_date, status, review_status, total, payment_status, departed_at, phone, country, region, district, postcode, address, company, note, created_at, customers(name, phone), driver:staff!orders_driver_id_fkey(name, phone), order_items(id, pack_name, pack_qty, qty_kg, products(name))";
+  "id, code, production_date, status, ship_carrier, total, payment_status, departed_at, phone, country, region, district, postcode, address, company, note, created_at, customers(name, phone), driver:staff!orders_driver_id_fkey(name, phone), order_items(id, pack_name, pack_qty, qty_kg, products(name))";
 
 /** The sale's orders for one production day (default today), every status, newest first. */
 export async function saleDayOrders(saleId: number, date: string = today()) {
@@ -31,8 +31,7 @@ export async function saleToReview(saleId: number) {
       .from("orders")
       .select(SALE_ORDER_SELECT)
       .eq("sale_id", saleId)
-      .eq("status", "placed")
-      .eq("review_status", "pending")
+      .eq("status", "pending_review")
       .order("created_at")
       .order("id", { referencedTable: "order_items" }),
   );

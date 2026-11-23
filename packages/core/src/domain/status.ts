@@ -1,18 +1,19 @@
-export const ORDER_STATUSES = ["placed", "in_production", "ready", "assigned", "out_for_delivery", "delivered", "failed", "cancelled"] as const;
+export const ORDER_STATUSES = ["pending_review", "placed", "in_production", "ready", "assigned", "out_for_delivery", "delivered", "failed", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 export const JOB_STATUSES = ["producing", "received"] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];
 
 export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
+  pending_review: ["placed", "cancelled"],
   placed: ["in_production", "cancelled"],
   in_production: ["ready", "placed"],
-  ready: ["assigned", "placed"],
+  ready: ["assigned", "placed", "out_for_delivery"],
   assigned: ["out_for_delivery", "ready"],
   out_for_delivery: ["delivered", "failed"],
   delivered: [],
   failed: ["ready", "cancelled"],
-  cancelled: ["placed"],
+  cancelled: ["placed", "pending_review"],
 };
 
 export const JOB_TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
@@ -33,6 +34,7 @@ export function canTransition<M extends Machine>(machine: M, from: StatusOf<M>, 
 }
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  pending_review: "Chưa duyệt",
   placed: "Chờ xử lý",
   in_production: "Đang sản xuất",
   ready: "Đã nhận hàng",
@@ -49,16 +51,23 @@ export const JOB_STATUS_LABEL: Record<JobStatus, string> = {
 };
 
 /**
- * Order edges a manager clicks directly; the others happen via close-day, receive-day, assigning a driver, the driver,
+ * Order edges a manager clicks directly; the others happen via close-day, receive-day, assigning a driver, the driver, ship ngoài,
  * or reopen-day (in_production/ready -> placed, whole day only). cancelled -> placed ("Khôi phục") is refused by the
- * database once the order's production day is past or closed.
+ * database once the order's production day is past or closed, and lands on pending_review for a customer's order never approved.
  */
 export const MANAGER_ORDER_MOVES: Partial<Record<OrderStatus, readonly OrderStatus[]>> = {
+  pending_review: ["cancelled"],
   placed: ["cancelled"],
   assigned: ["ready"],
   failed: ["ready", "cancelled"],
   cancelled: ["placed"],
 };
+
+/** What a role may click on one order: the admin every MANAGER_ORDER_MOVES edge, the manager only "Hủy phân công". */
+export function orderMoves(role: string, from: OrderStatus): readonly OrderStatus[] {
+  if (role === "admin") return MANAGER_ORDER_MOVES[from] ?? [];
+  return role === "manager" && from === "assigned" ? ["ready"] : [];
+}
 
 /** Phone and address can be corrected until the order is delivered or cancelled. */
 export const CONTACT_EDITABLE = (status: OrderStatus) => status !== "delivered" && status !== "cancelled";
@@ -76,13 +85,4 @@ export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
   pending: "Chờ duyệt",
   approved: "Đã duyệt",
   rejected: "Không duyệt",
-};
-
-/** Whether an order a customer placed has been checked: by its sale, or by admin/manager for walk-ins. */
-export type ReviewStatus = "pending" | "approved" | "rejected";
-
-export const REVIEW_STATUS_LABEL: Record<ReviewStatus, string> = {
-  pending: "Chưa duyệt",
-  approved: "Đã duyệt",
-  rejected: "Không hợp lệ",
 };

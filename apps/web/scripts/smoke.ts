@@ -131,14 +131,15 @@ async function main() {
     const B = /DH\d{6}/.exec(saleMsg)?.[0];
     assert(B, `staff order placed: "${saleMsg}"`);
     assert((await order(B)).created_by === "sale", "staff order stored as the sale's");
-    assert((await order(B)).review_status === "approved", "an order the sale entered needs no review");
+    assert((await order(B)).status === "placed", "an order the sale entered needs no review");
 
     step("sale reviews the ref-link order on /sale (POST /reviews/:id)");
-    assert((await order(A)).review_status === "pending", "a customer's own order starts unreviewed");
-    await sale.goto(`${BASE}/sale`);
-    await sale.getByTestId("to-review").getByRole("button", { name: `Duyệt ${A}` }).click();
+    assert((await order(A)).status === "pending_review", "a customer's own order starts unreviewed");
+    await sale.goto(`${BASE}/sale?date=${D}`);
+    await sale.getByRole("button", { name: `Thao tác ${A}` }).click();
+    await sale.getByRole("menuitem", { name: "Duyệt" }).click();
     await confirm(sale);
-    await until(() => order(A).then((o) => o.review_status), (v) => v === "approved", "A approved");
+    await until(() => order(A).then((o) => o.status), (v) => v === "placed", "A approved");
     assert(true, "sale approved A");
 
     step("admin cancels the spam order (POST /orders/:id/move)");
@@ -319,7 +320,7 @@ async function main() {
     await mgr.goto(`${BASE}/admin/orders/${L}`);
     await mgr.getByRole("button", { name: `Duyệt ${L}` }).click();
     await confirm(mgr);
-    await until(() => order(L).then((o) => o.review_status), (v) => v === "approved", "walk-in L approved by admin");
+    await until(() => order(L).then((o) => o.status), (v) => v === "placed", "walk-in L approved by admin");
     const closeDay = async () => {
       await mgr.goto(`${BASE}/admin/production/${D2}`);
       await mgr.getByRole("button", { name: "Gửi đơn cho xưởng" }).click();

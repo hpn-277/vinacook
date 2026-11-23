@@ -6,7 +6,6 @@ import { staffByAuthUser, type Staff, type StaffRole } from "@noodle/core/staff"
 import { db } from "@noodle/core/db";
 import { sessionClient } from "./session";
 
-/** Validation failures answer 400 with the first issue's (Vietnamese) message, like every other error body. */
 /**
  * The slice of R2Bucket the API uses. Spelled out rather than the workers global so the web app,
  * which imports AppType and has no workers runtime types, can typecheck this source too.
@@ -20,9 +19,16 @@ export type Bucket = {
 /** Worker bindings, see wrangler.jsonc. */
 export type ApiEnv = { Bindings: { FILES: Bucket } };
 
+/**
+ * Validation failures answer 400 with the first issue's (Vietnamese) message, like every other error body,
+ * plus `fields`: each invalid field's first message, keyed by dotted path ("phone", "destination.address").
+ */
 export const valid = <T extends keyof ValidationTargets, S extends z.ZodType>(target: T, schema: S) =>
   zValidator(target, schema, (result, c) => {
-    if (!result.success) return c.json({ error: result.error.issues[0]?.message ?? "Dữ liệu không hợp lệ" }, 400);
+    if (result.success) return;
+    const fields: Record<string, string> = {};
+    for (const issue of result.error.issues) fields[issue.path.join(".")] ??= issue.message;
+    return c.json({ error: result.error.issues[0]?.message ?? "Dữ liệu không hợp lệ", fields }, 400);
   });
 
 /** Mobile sends `Authorization: Bearer <supabase access token>`; the web app rides on the Supabase session cookies. */

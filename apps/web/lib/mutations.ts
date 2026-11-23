@@ -94,6 +94,9 @@ export const mutations = {
   departOrders: (fd: FormData) => api.driver.orders.depart.$post({ json: { order_ids: ids(fd, "order_id") } }),
   completeDelivery: (fd: FormData) => multipart(api.driver.orders[":id"].complete.$url({ param: param(fd) }), "POST", fd),
   failDelivery: (fd: FormData) => api.driver.orders[":id"].fail.$post({ param: param(fd), json: { reason: text(fd, "reason") } }),
+  bookShip: (fd: FormData) => multipart(api.ship[":id"].book.$url({ param: param(fd) }), "POST", fd),
+  shipDelivered: (fd: FormData) => multipart(api.ship[":id"].delivered.$url({ param: param(fd) }), "POST", fd),
+  shipFailed: (fd: FormData) => api.ship[":id"].fail.$post({ param: param(fd), json: { reason: text(fd, "reason") } }),
   returnOrder: (fd: FormData) => api.driver.orders[":id"].return.$post({ param: param(fd), json: { reason: text(fd, "reason") } }),
 
   submitProduct: (fd: FormData) =>
@@ -105,13 +108,13 @@ export const mutations = {
 
 export type Mutation = keyof typeof mutations;
 
-export type MutationResult = { ok: true; message?: string; redirect?: string } | { ok: false; error: string } | null;
+export type MutationResult = { ok: true; message?: string; redirect?: string } | { ok: false; error: string; fields?: Record<string, string> } | null;
 
 export async function submit(mutation: Mutation, fd: FormData): Promise<NonNullable<MutationResult>> {
   try {
     const res = await mutations[mutation](fd);
-    const body = (await res.json().catch(() => ({}))) as { message?: string; redirect?: string; error?: string };
-    if (!res.ok) return { ok: false, error: body.error ?? "Có lỗi xảy ra, vui lòng thử lại" };
+    const body = (await res.json().catch(() => ({}))) as { message?: string; redirect?: string; error?: string; fields?: Record<string, string> };
+    if (!res.ok) return { ok: false, error: body.error ?? "Có lỗi xảy ra, vui lòng thử lại", fields: body.fields };
     return { ok: true, message: body.message, redirect: body.redirect };
   } catch {
     return { ok: false, error: "Không kết nối được máy chủ, vui lòng thử lại" };

@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { deliveryArea } from "@noodle/core/domain/destination";
+import { orderMoves } from "@noodle/core/domain/status";
 import { NO_DRIVER } from "./row-filters";
-import { RowMenu } from "./RowMenu";
-import { ReviewBadge } from "@/components/status-badge";
+import { OrderRowMenu } from "@/components/OrderRowMenu";
+import { OrderBadge } from "@/components/status-badge";
 import { Returned, type AdminOrder } from "@/components/AdminOrderCard";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { itemLabel } from "@noodle/core/domain/catalog";
 import { formatVnd } from "@noodle/core/domain/money";
 
-export function AdminOrderTable({ orders, readOnly }: { orders: AdminOrder[]; readOnly: boolean }) {
+export function AdminOrderTable({ orders, role }: { orders: AdminOrder[]; role: "admin" | "manager" }) {
   const live = orders.filter((o) => o.status !== "cancelled");
   return (
     <Table>
@@ -17,6 +18,7 @@ export function AdminOrderTable({ orders, readOnly }: { orders: AdminOrder[]; re
           <TableHead>Khách hàng</TableHead>
           <TableHead>Hàng</TableHead>
           <TableHead className="text-right">Tổng</TableHead>
+          <TableHead>Trạng thái</TableHead>
           <TableHead>NVKD</TableHead>
           <TableHead className="w-10 text-center">Thao tác</TableHead>
         </TableRow>
@@ -26,7 +28,7 @@ export function AdminOrderTable({ orders, readOnly }: { orders: AdminOrder[]; re
           <TableRow key={o.id} data-order-code={o.code} data-district={deliveryArea(o)} data-driver={o.driver ? String(o.driver.id) : NO_DRIVER} className={`relative cursor-pointer ${o.status === "cancelled" ? "opacity-60" : ""}`}>
             <TableCell>
               <div className="flex items-start gap-2">
-                {!readOnly && o.status === "ready" && (
+                {o.status === "ready" && (
                   <input
                     type="checkbox"
                     form="dispatch-form"
@@ -43,13 +45,6 @@ export function AdminOrderTable({ orders, readOnly }: { orders: AdminOrder[]; re
                   <div className="text-xs text-muted-foreground">
                     {o.phone} · {deliveryArea(o)}
                   </div>
-                  {o.review_status !== "approved" && (
-                    <div className="mt-1 text-xs">
-                      <ReviewBadge status={o.review_status} />
-                      {o.review_status === "pending" && !o.sale && <span className="ml-1 text-muted-foreground">khách vãng lai</span>}
-                      {o.review_note && <span className="ml-1 text-destructive">{o.review_note}</span>}
-                    </div>
-                  )}
                 </div>
               </div>
             </TableCell>
@@ -65,10 +60,16 @@ export function AdminOrderTable({ orders, readOnly }: { orders: AdminOrder[]; re
                 <div className={`mt-0.5 text-xs ${o.payment_status === "paid" ? "text-green-700" : "text-muted-foreground"}`}>{o.payment_status === "paid" ? "Đã trả" : "Chưa trả"}</div>
               )}
             </TableCell>
+            <TableCell>
+              <OrderBadge status={o.status} />
+              {o.ship_carrier && <div className="mt-0.5 text-xs text-muted-foreground">Ship ngoài · {o.ship_carrier}</div>}
+              {o.status === "pending_review" && !o.sale && <div className="mt-0.5 text-xs text-muted-foreground">khách vãng lai</div>}
+              {o.review_note && <div className="mt-0.5 max-w-48 text-xs whitespace-normal text-destructive">{o.review_note}</div>}
+            </TableCell>
             <TableCell>{o.sale?.name ?? "—"}</TableCell>
             <TableCell>
               <div className="relative z-10 flex justify-center">
-                <RowMenu order={o} canMove={!readOnly} />
+                <OrderRowMenu order={o} moves={orderMoves(role, o.status)} unpayHref={`/admin/orders/${o.code}#thanh-toan`} />
               </div>
             </TableCell>
           </TableRow>
@@ -79,7 +80,7 @@ export function AdminOrderTable({ orders, readOnly }: { orders: AdminOrder[]; re
           <TableRow>
             <TableCell colSpan={2}>Tổng {live.length} đơn (không tính đơn hủy)</TableCell>
             <TableCell className="text-right tabular-nums">{formatVnd(live.reduce((s, o) => s + o.total, 0))}</TableCell>
-            <TableCell colSpan={2} />
+            <TableCell colSpan={3} />
           </TableRow>
         </TableFooter>
       )}

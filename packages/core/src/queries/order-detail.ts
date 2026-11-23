@@ -1,7 +1,7 @@
 import { unwrap } from "../action";
 import { db } from "../db";
 import type { Country } from "../domain/destination";
-import type { OrderStatus, ReviewStatus } from "../domain/status";
+import type { OrderStatus } from "../domain/status";
 import { deliveryPhotoUrl } from "../files";
 
 export type OrderViewer = { role: "admin" | "manager" } | { role: "sale"; saleId: number };
@@ -10,7 +10,6 @@ export type OrderDetailOrder = {
   id: number;
   code: string;
   status: OrderStatus;
-  review_status: ReviewStatus;
   review_note: string | null;
   reviewer: { name: string } | null;
   sale_id: number | null;
@@ -39,6 +38,10 @@ export type OrderDetailOrder = {
   created_by: "customer" | "sale" | "manager";
   delivered_at: string | null;
   delivery_photo_path: string | null;
+  ship_carrier: string | null;
+  ship_fee: number | null;
+  ship_note: string | null;
+  ship_booking_photo_path: string | null;
   creator: { name: string } | null;
   driver_contact: { phone: string | null } | null;
   customer: {
@@ -63,8 +66,8 @@ export type OrderDetailOrder = {
 };
 
 // The head mirrors apps/web/components/AdminOrderCard's ADMIN_ORDER_SELECT, which the manager's order actions read.
-const DETAIL_SELECT = `id, code, status, review_status, review_note, payment_status, total, phone, country, region, district, postcode, address, company, bl_no, loading_port, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name)),
-  created_by, delivered_at, delivery_photo_path, sale_id, reviewer:staff!orders_reviewed_by_fkey(name),
+const DETAIL_SELECT = `id, code, status, review_note, payment_status, total, phone, country, region, district, postcode, address, company, bl_no, loading_port, note, fail_reason, return_reason, returner:staff!orders_returned_by_fkey(name), departed_at, production_date, created_at, customers(name), sale:staff!orders_sale_id_fkey(name), driver:staff!orders_driver_id_fkey(id, name), order_items(id, pack_name, pack_qty, qty_kg, price_per_kg, line_total, products(name)),
+  created_by, delivered_at, delivery_photo_path, ship_carrier, ship_fee, ship_note, ship_booking_photo_path, sale_id, reviewer:staff!orders_reviewed_by_fkey(name),
   creator:staff!orders_created_by_staff_id_fkey(name),
   driver_contact:staff!orders_driver_id_fkey(phone),
   customer:customers(id, name, phone, default_address, default_district, created_at, owner:staff(name, ref_code, commission_pct)),
@@ -114,12 +117,16 @@ export async function orderDetail(code: string, viewer: OrderViewer) {
       at: received.length ? when(received.sort().at(-1)) : null,
       note: jobs.length ? `${received.length}/${jobs.length} mặt hàng đã nhận` : "Chưa gửi xưởng",
     },
-    { label: "Giao cho tài xế", at: null, done: !!order.driver, note: order.driver ? order.driver.name : "Chưa phân công" },
-    {
-      label: "Hàng đã lên xe",
-      at: when(order.departed_at),
-      note: order.departed_at ? "Xe đã rời kho" : order.status === "assigned" ? "Chờ tài xế xác nhận" : "",
-    },
+    ...(order.ship_carrier
+      ? [{ label: "Đặt ship ngoài", at: when(order.departed_at), note: order.ship_carrier }]
+      : [
+          { label: "Giao cho tài xế", at: null, done: !!order.driver, note: order.driver ? order.driver.name : "Chưa phân công" },
+          {
+            label: "Hàng đã lên xe",
+            at: when(order.departed_at),
+            note: order.departed_at ? "Xe đã rời kho" : order.status === "assigned" ? "Chờ tài xế xác nhận" : "",
+          },
+        ]),
     {
       label: "Giao thành công",
       at: when(order.delivered_at),
@@ -132,6 +139,7 @@ export async function orderDetail(code: string, viewer: OrderViewer) {
     creatorLabel: CREATED_BY[order.created_by] + (order.creator ? ` · ${order.creator.name}` : ""),
     customerSince: order.customer ? dateOnly.format(new Date(order.customer.created_at)) : null,
     photo: order.delivery_photo_path ? deliveryPhotoUrl(order.delivery_photo_path) : null,
+    bookingPhoto: order.ship_booking_photo_path ? deliveryPhotoUrl(order.ship_booking_photo_path) : null,
     kg: order.items.reduce((s, i) => s + i.qty_kg, 0),
     commission: order.sale && owner?.commission_pct != null && order.status === "delivered" ? Math.round((order.total * owner.commission_pct) / 100) : null,
     timeline,

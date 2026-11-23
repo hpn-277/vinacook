@@ -21,12 +21,12 @@ export const reviews = new Hono().use(role("sale", "admin", "manager")).post("/:
   const body = c.req.valid("json");
   const order = unwrap(await db().from("orders").select("code, status, sale_id").eq("id", orderId).maybeSingle());
   if (!order || (me.role === "sale" && order.sale_id !== me.id)) throw new DomainError("Không tìm thấy hoặc bạn không có quyền");
-  if (order.status !== "placed") throw new DomainError(`Đơn ${order.code} đã gửi xưởng hoặc đã hủy, không duyệt lại được`);
+  if (order.status !== "pending_review") throw new DomainError(`Đơn ${order.code} đã duyệt hoặc đã hủy`);
   const reviewed = { reviewed_by: me.id, reviewed_at: new Date().toISOString() };
   if (body.decision === "approved") {
-    unwrap(await db().from("orders").update({ review_status: "approved", review_note: null, ...reviewed }).eq("id", orderId).eq("status", "placed").select("id"));
+    await transition("orders", orderId, "placed", { patch: { ...reviewed, review_note: null } });
     return c.json({ message: `Đã duyệt đơn ${order.code}` });
   }
-  await transition("orders", orderId, "cancelled", { patch: { review_status: "rejected", review_note: body.note, ...reviewed } });
+  await transition("orders", orderId, "cancelled", { patch: { ...reviewed, review_note: body.note } });
   return c.json({ message: `Đơn ${order.code} không hợp lệ, đã hủy` });
 });

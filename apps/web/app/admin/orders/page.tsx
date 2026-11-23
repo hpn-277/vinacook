@@ -19,7 +19,6 @@ import { today } from "@noodle/core/period";
 
 export default async function AdminOrdersPage({ searchParams }: PageProps<"/admin/orders">) {
   const me = await requireRole("admin", "manager");
-  const admin = me.role === "admin";
   const sp = await searchParams;
   const date = parseIsoDate(typeof sp.date === "string" ? sp.date : null) ?? today();
 
@@ -36,7 +35,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   const dispatched = orders.filter((o) => ["assigned", "out_for_delivery", "delivered", "failed"].includes(o.status)).length;
   const reopenable = (counts.get("in_production") ?? 0) + readyCount;
   const waitingToLoad = counts.get("assigned") ?? 0;
-  const unreviewed = orders.filter((o) => o.status === "placed" && o.review_status === "pending");
+  const unreviewed = orders.filter((o) => o.status === "pending_review");
   const walkIns = unreviewed.filter((o) => !o.sale).length;
   const dayOpen = day.data?.status !== "closed";
 
@@ -63,15 +62,6 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
           </CardContent>
         </Card>
       )}
-      {!admin && dayOpen && (counts.get("placed") ?? 0) > 0 && (
-        <div className="mb-4">
-          <ActionForm action="closeDay" confirm={`Gửi đơn ngày ${date} cho các xưởng?`}>
-            <input type="hidden" name="date" value={date} />
-            <Button>Gửi đơn cho xưởng</Button>
-          </ActionForm>
-        </div>
-      )}
-      {admin && (
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Button asChild>
           <Link href={`/admin/production/${date}`}>{day.data?.status !== "closed" ? "Gửi đơn cho xưởng" : (counts.get("in_production") ?? 0) > 0 ? "Nhận hàng từ xưởng" : "Xem hàng đã đặt xưởng"}</Link>
@@ -91,8 +81,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
             </Button>
           ))}
       </div>
-      )}
-      {admin && readyCount > 0 && (
+      {readyCount > 0 && (
         <Card size="sm" className="mb-3 border-primary/30 bg-primary/5" data-testid="dispatch-bar">
           <CardContent>
             <ActionForm id="dispatch-form" action="assignDriver" className="flex flex-wrap items-center gap-3">
@@ -120,7 +109,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
             drivers={[...Map.groupBy(orders.filter((o) => o.driver), (o) => o.driver!.id)].map(([id, os]) => ({ id, name: os[0].driver!.name, count: os.length })).sort((a, b) => a.name.localeCompare(b.name, "vi"))}
             unassigned={orders.filter((o) => !o.driver).length}
           />
-          {admin && waitingToLoad > 0 && (
+          {waitingToLoad > 0 && (
             <ActionForm action="unassignDay" confirm={`Hủy phân công ${waitingToLoad} đơn đang chờ lên xe? Các đơn quay về "Đã nhận hàng".`} className="ml-auto">
               <input type="hidden" name="date" value={date} />
               <Button variant="outline" size="sm">
@@ -135,7 +124,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
       ) : (
         <Card size="sm">
           <CardContent>
-            <AdminOrderTable orders={orders} readOnly={!admin} />
+            <AdminOrderTable orders={orders} role={me.role} />
           </CardContent>
         </Card>
       )}

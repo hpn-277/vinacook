@@ -8,6 +8,7 @@ import { factories } from "./routes/factories";
 import { factory } from "./routes/factory";
 import { files } from "./routes/files";
 import { orders } from "./routes/orders";
+import { ship } from "./routes/ship";
 import { payments } from "./routes/payments";
 import { products } from "./routes/products";
 import { reviews } from "./routes/reviews";
@@ -19,6 +20,7 @@ const v1 = new Hono()
   .route("/auth", auth)
   .route("/shop", shop)
   .route("/orders", orders)
+  .route("/ship", ship)
   .route("/reviews", reviews)
   .route("/days", days)
   .route("/products", products)

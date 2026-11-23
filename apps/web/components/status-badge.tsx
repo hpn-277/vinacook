@@ -3,14 +3,13 @@ import {
   JOB_STATUS_LABEL,
   ORDER_STATUS_LABEL,
   PRODUCT_STATUS_LABEL,
-  REVIEW_STATUS_LABEL,
   type JobStatus,
   type OrderStatus,
   type ProductStatus,
-  type ReviewStatus,
 } from "@noodle/core/domain/status";
 
 const ORDER_TONE: Record<OrderStatus, string> = {
+  pending_review: "bg-amber-100 text-amber-900",
   placed: "bg-yellow-100 text-yellow-900",
   in_production: "bg-indigo-100 text-indigo-900",
   ready: "bg-teal-100 text-teal-900",
@@ -42,18 +41,4 @@ const PRODUCT_TONE: Record<ProductStatus, string> = {
 
 export function ProductStatusBadge({ status }: { status: ProductStatus }) {
   return <Badge className={PRODUCT_TONE[status]}>{PRODUCT_STATUS_LABEL[status]}</Badge>;
-}
-
-const REVIEW_TONE: Record<ReviewStatus, string> = {
-  pending: "bg-amber-100 text-amber-900",
-  approved: "bg-emerald-100 text-emerald-900",
-  rejected: "bg-red-100 text-red-900",
-};
-
-export function ReviewBadge({ status }: { status: ReviewStatus }) {
-  return (
-    <Badge className={REVIEW_TONE[status]} data-review={status}>
-      {REVIEW_STATUS_LABEL[status]}
-    </Badge>
-  );
 }

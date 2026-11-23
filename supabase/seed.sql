@@ -72,4 +72,4 @@ join product_packs pk on pk.product_id = p.id and pk.name = l.pack and pk.kg_per
 
 update orders o set total = (select sum(line_total) from order_items where order_id = o.id);
 -- Seeded history predates reviews.
-update orders set review_status = 'approved' where review_status = 'pending';
+update orders set status = 'placed', reviewed_at = created_at where status = 'pending_review';

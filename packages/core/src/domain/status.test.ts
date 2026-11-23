@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { canTransition, JOB_STATUSES, MANAGER_ORDER_MOVES, moveLabel, ORDER_STATUSES, type OrderStatus } from "./status";
+import { canTransition, JOB_STATUSES, MANAGER_ORDER_MOVES, moveLabel, ORDER_STATUSES, orderMoves, type OrderStatus } from "./status";
 
 describe("order transitions", () => {
   it.each([
+    ["pending_review", "placed"],
+    ["pending_review", "cancelled"],
     ["placed", "in_production"],
     ["placed", "cancelled"],
     ["in_production", "ready"],
     ["ready", "assigned"],
+    ["ready", "out_for_delivery"],
     ["assigned", "out_for_delivery"],
     ["out_for_delivery", "delivered"],
     ["out_for_delivery", "failed"],
@@ -18,6 +21,8 @@ describe("order transitions", () => {
   });
 
   it.each([
+    ["pending_review", "in_production"],
+    ["placed", "pending_review"],
     ["placed", "ready"],
     ["placed", "delivered"],
     ["in_production", "cancelled"],
@@ -27,7 +32,6 @@ describe("order transitions", () => {
     ["assigned", "cancelled"],
     ["assigned", "delivered"],
     ["assigned", "failed"],
-    ["ready", "out_for_delivery"],
     ["out_for_delivery", "cancelled"],
     ["out_for_delivery", "ready"],
     ["failed", "out_for_delivery"],
@@ -42,10 +46,10 @@ describe("order transitions", () => {
     expect(sources).toEqual(["out_for_delivery"]);
   });
 
-  it("delivered is terminal; cancelled can only be restored to placed", () => {
+  it("delivered is terminal; cancelled can only be restored to placed or pending_review", () => {
     for (const to of ORDER_STATUSES) {
       expect(canTransition("orders", "delivered", to)).toBe(false);
-      expect(canTransition("orders", "cancelled", to)).toBe(to === "placed");
+      expect(canTransition("orders", "cancelled", to)).toBe(to === "placed" || to === "pending_review");
     }
   });
 });
@@ -93,5 +97,15 @@ describe("manager order moves", () => {
     expect(moveLabel("failed", "ready")).toBe("Giao lại");
     expect(moveLabel("placed", "cancelled")).toBe("Hủy");
     expect(moveLabel("cancelled", "placed")).toBe("Khôi phục");
+  });
+});
+
+describe("orderMoves", () => {
+  it("admin gets every manager move; manager only takes an order back from its driver; others nothing", () => {
+    for (const s of ORDER_STATUSES) {
+      expect(orderMoves("admin", s)).toEqual(MANAGER_ORDER_MOVES[s] ?? []);
+      expect(orderMoves("manager", s)).toEqual(s === "assigned" ? ["ready"] : []);
+      expect(orderMoves("sale", s)).toEqual([]);
+    }
   });
 });

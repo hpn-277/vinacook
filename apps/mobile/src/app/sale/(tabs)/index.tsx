@@ -4,7 +4,7 @@ import { Pressable, Text } from "react-native";
 import { itemLabel } from "@noodle/core/domain/catalog";
 import { formatVnd } from "@noodle/core/domain/money";
 import { ReviewCard } from "@/components/sale/ReviewCard";
-import { OrderBadge, ReviewBadge } from "@/components/status";
+import { OrderBadge } from "@/components/status";
 import { Body, Button, Card, Heading, Loaded, Muted, Row, Screen, Title, colors } from "@/components/ui";
 import { api, json } from "@/lib/api";
 import { API_URL } from "@/lib/config";
@@ -63,7 +63,6 @@ export default function SaleDashboard() {
                     <Muted>{o.order_items.map(itemLabel).join(", ")}</Muted>
                     <Row style={{ flexWrap: "wrap" }}>
                       <OrderBadge status={o.status} />
-                      {o.review_status !== "approved" && <ReviewBadge status={o.review_status} />}
                       <Muted>
                         {o.driver ? `${o.driver.name}${o.driver.phone ? ` · ${o.driver.phone}` : ""}` : "Chưa có tài xế"}
                         {o.driver && o.departed_at ? ` · Đã rời kho · ${departedAt.format(new Date(o.departed_at))}` : ""}

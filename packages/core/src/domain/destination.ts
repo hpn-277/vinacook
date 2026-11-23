@@ -59,17 +59,20 @@ export type Destination = {
   company: string | null;
 };
 
-/** Why a destination is invalid, or null. The API and the forms share it. */
-export function destinationError(d: Destination): string | null {
-  if (!d.address.trim()) return "Nhập địa chỉ";
+export type DestinationIssue = { field: "address" | "region" | "district" | "postcode"; message: string };
+
+/** Why a destination is invalid, and which field, or null. The API and the forms share it. */
+export function destinationError(d: Destination): DestinationIssue | null {
+  const bad = (field: DestinationIssue["field"], message: string) => ({ field, message });
+  if (!d.address.trim()) return bad("address", "Nhập địa chỉ");
   if (d.country === "VN") {
-    if (!(VN_PROVINCES as readonly string[]).includes(d.region)) return "Chọn tỉnh/thành";
-    if (d.region === HCMC) return (DISTRICTS as readonly string[]).includes(d.district) ? null : "Chọn quận/huyện";
-    return d.district.trim() ? null : "Nhập quận/huyện, phường/xã";
+    if (!(VN_PROVINCES as readonly string[]).includes(d.region)) return bad("region", "Chọn tỉnh/thành");
+    if (d.region === HCMC) return (DISTRICTS as readonly string[]).includes(d.district) ? null : bad("district", "Chọn quận/huyện");
+    return d.district.trim() ? null : bad("district", "Nhập quận/huyện, phường/xã");
   }
-  if (!(AU_STATES as readonly string[]).includes(d.region)) return "Chọn bang (state)";
-  if (!d.district.trim()) return "Nhập suburb";
-  return /^\d{4}$/.test(d.postcode ?? "") ? null : "Postcode gồm 4 số";
+  if (!(AU_STATES as readonly string[]).includes(d.region)) return bad("region", "Chọn bang (state)");
+  if (!d.district.trim()) return bad("district", "Nhập suburb");
+  return /^\d{4}$/.test(d.postcode ?? "") ? null : bad("postcode", "Postcode gồm 4 số");
 }
 
 type Place = { country: string; region: string; district: string; postcode?: string | null; address: string; company?: string | null };

@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { rememberContact, setCart, useCart, useContact } from "@/components/shop/cart";
 import { destination, submit, type MutationResult } from "@/lib/mutations";
-import { DestinationFields } from "@/components/DestinationFields";
+import { DestinationFields, type DestinationErrors } from "@/components/DestinationFields";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cartLines, lineLabel, type CartLine, type CatalogProduct } from "@noodle/core/domain/catalog";
@@ -20,6 +20,8 @@ type Reorder = { code: string; skipped: string[] } | null;
 export function CheckoutForm({ catalog, reorder }: { catalog: CatalogProduct[]; reorder: Reorder }) {
   const cart = useCart();
   const contact = useContact();
+  // Only "Đặt lại" fills in the customer; a fresh checkout starts blank. The contact is still remembered for the shop's last-order card.
+  const prefill = reorder ? contact : null;
   const order = priceLines(cartLines(catalog, cart));
   const [placed, setPlaced] = useState<PricedOrder<CartLine> | null>(null);
   const [state, formAction, pending] = useActionState(async (_prev: MutationResult, fd: FormData): Promise<MutationResult> => {
@@ -37,6 +39,11 @@ export function CheckoutForm({ catalog, reorder }: { catalog: CatalogProduct[]; 
   useEffect(() => {
     if (state?.ok) setCart({});
   }, [state]);
+
+  const errors = (state && !state.ok && state.fields) || {};
+  const destinationErrors = Object.fromEntries(
+    Object.entries(errors).flatMap(([k, v]) => (k.startsWith("destination.") ? [[k.slice(12), v]] : [])),
+  ) as DestinationErrors;
 
   if (state?.ok) {
     return (
@@ -68,31 +75,50 @@ export function CheckoutForm({ catalog, reorder }: { catalog: CatalogProduct[]; 
   }
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form
+      className="space-y-4"
+      // Not `action=`: React resets a form after its action runs, wiping what the customer typed when the API rejects it.
+      onSubmit={(e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
+        startTransition(() => formAction(fd));
+      }}
+    >
       {reorder && <ReorderNotice reorder={reorder} />}
       <OrderLines order={order} />
       <input type="hidden" name="items" value={JSON.stringify(order.lines.map((l) => ({ pack_id: l.pack.id, pack_qty: l.packQty })))} />
-      <fieldset disabled={pending} key={contact ? JSON.stringify(contact) : "new"}>
+      <fieldset disabled={pending} key={prefill ? JSON.stringify(prefill) : "new"}>
         <FieldGroup className="gap-4">
-          <Field>
+          <Field data-invalid={!!errors.name}>
             <FieldLabel htmlFor="checkout-name">Họ tên</FieldLabel>
-            <Input id="checkout-name" name="name" required defaultValue={contact?.name} />
+            <Input id="checkout-name" name="name" required defaultValue={prefill?.name} aria-invalid={!!errors.name || undefined} />
+            <FieldError>{errors.name}</FieldError>
           </Field>
-          <Field>
+          <Field data-invalid={!!errors.phone}>
             <FieldLabel htmlFor="checkout-phone">Số điện thoại</FieldLabel>
-            <Input id="checkout-phone" name="phone" type="tel" inputMode="tel" required defaultValue={contact?.phone} />
+            <Input
+              id="checkout-phone"
+              name="phone"
+              type="tel"
+              inputMode="tel"
+              required
+              defaultValue={prefill?.phone}
+              aria-invalid={!!errors.phone || undefined}
+            />
+            <FieldError>{errors.phone}</FieldError>
           </Field>
-          <DestinationFields id="checkout" value={contact?.destination} />
-          <Field>
+          <DestinationFields id="checkout" value={prefill?.destination} errors={destinationErrors} />
+          <Field data-invalid={!!errors.note}>
             <FieldLabel htmlFor="checkout-note">Ghi chú</FieldLabel>
-            <Textarea id="checkout-note" name="note" rows={2} />
+            <Textarea id="checkout-note" name="note" rows={2} aria-invalid={!!errors.note || undefined} />
+            <FieldError>{errors.note}</FieldError>
           </Field>
           <Button type="submit" size="lg" className="h-11 w-full text-base">
             Xác nhận đặt hàng
           </Button>
         </FieldGroup>
       </fieldset>
-      {state && !state.ok && (
+      {state && !state.ok && !errors.name && !errors.phone && !errors.note && Object.keys(destinationErrors).length === 0 && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>

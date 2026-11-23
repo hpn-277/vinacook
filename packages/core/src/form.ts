@@ -35,7 +35,7 @@ export const destination = z
   })
   .transform((d): Destination => ({ ...d, postcode: d.country === "AU" ? d.postcode : null }))
   .superRefine((d, ctx) => {
-    const error = destinationError(d);
-    if (error) ctx.addIssue({ code: "custom", message: error });
+    const issue = destinationError(d);
+    if (issue) ctx.addIssue({ code: "custom", message: issue.message, path: [issue.field] });
   });
 export const kg = z.coerce.number().min(0, "Số kg không hợp lệ").max(100000);
